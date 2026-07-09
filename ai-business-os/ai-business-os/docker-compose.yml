@@ -1,7 +1,7 @@
 # Local development stack. One command: `docker compose up`
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: abos
       POSTGRES_PASSWORD: abos

@@ -6,13 +6,13 @@ hard-coded per environment; the same image runs in dev, staging, and prod.
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, PostgresDsn
+from pydantic import Field, PostgresDsn, RedisDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env"),
+        env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 20
 
     # --- Redis ---
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: RedisDsn = Field(default="redis://localhost:6379/0")
 
     # --- Rate limiting ---
     RATE_LIMIT_PER_MINUTE: int = 120
@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str | None = None
     EMAIL_FROM: str = "no-reply@example.com"
 
+    @computed_field
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"

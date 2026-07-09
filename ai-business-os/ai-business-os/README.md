@@ -65,8 +65,9 @@ Routers never touch the database. Services never import HTTPException. Repositor
 1. ✅ Part 1 — Foundation: architecture, tenant isolation, security core, CI
 2. ✅ Part 2 — Product & UX layer: design system, shell, ⌘K palette, dashboard
 3. ✅ Part 3 — Database architecture: 37 tables, RBAC, audit log, isolation tests
-4. ✅ **Part 4 — Design system** (this): tokens, component library, /design style guide, component tests
-5. Part 5 — Auth module: register, login, refresh rotation, email verification
+4. ✅ Part 4 — Design system: tokens, component library, /design style guide, component tests
+5. ✅ **Part 5 — Frontend architecture & roadmap** (this): `docs/Part-05-Frontend-Architecture-and-Implementation-Roadmap.md`
+6. Part 6 — Auth module: register, login, refresh rotation, email verification
 5. Parts 5+ — CRM, Projects, Tasks, HR, Finance, Inventory, Documents, Reports, AI Assistant, Workflows
 
 > Demo mode: until Part 4, the login form creates a local demo session (any valid email + 8-char password) so the entire product is walkable.

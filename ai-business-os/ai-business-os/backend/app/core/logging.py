@@ -7,7 +7,6 @@ bound by the RequestContextMiddleware.
 """
 import logging
 import sys
-from typing import Any
 
 import structlog
 
@@ -22,7 +21,7 @@ def configure_logging() -> None:
     ]
 
     if settings.is_production:
-        renderer: Any = structlog.processors.JSONRenderer()
+        renderer = structlog.processors.JSONRenderer()
     else:
         renderer = structlog.dev.ConsoleRenderer(colors=True)
 

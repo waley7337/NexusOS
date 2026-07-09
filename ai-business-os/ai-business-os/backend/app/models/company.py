@@ -1,15 +1,11 @@
 """companies — the tenant root. Not tenant-scoped itself (it IS the tenant)."""
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import ActiveMixin, Base, SoftDeleteMixin, TimestampMixin
 from app.models.enums import SubscriptionPlan, SubscriptionStatus
-
-if TYPE_CHECKING:
-    from app.models.user import User
 
 
 class Company(Base, TimestampMixin, SoftDeleteMixin, ActiveMixin):

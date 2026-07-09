@@ -6,7 +6,6 @@ RBAC model:
   * role_permissions / user_roles are pure association tables
 """
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean, Column, DateTime, Enum, ForeignKey, Index, String, Table, Text,
@@ -19,9 +18,6 @@ from app.models.base import (
     ActiveMixin, Base, SoftDeleteMixin, TenantMixin, TimestampMixin,
 )
 from app.models.enums import UserStatus
-
-if TYPE_CHECKING:
-    from app.models.company import Company
 
 role_permissions = Table(
     "role_permissions",
