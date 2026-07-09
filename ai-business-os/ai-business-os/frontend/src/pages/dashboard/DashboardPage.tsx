@@ -5,10 +5,15 @@
  * renders its own skeleton until it arrives.
  */
 import { useAuthStore } from "@/stores/auth";
-import { useDashboard } from "@/features/dashboard/api";
 import {
-  ActivityFeed, AiInsights, KpiGrid, PipelineChart, RevenueChart, UpcomingMeetings,
-} from "@/features/dashboard/widgets";
+  useDashboard,
+  ActivityFeed,
+  AiInsights,
+  KpiGrid,
+  PipelineChart,
+  RevenueChart,
+  UpcomingMeetings,
+} from "@/features/dashboard";
 import { ErrorState } from "@/components/ui/error-state";
 
 function greeting(): string {
@@ -35,7 +40,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight" tabIndex={-1}>
           {greeting()}, {user?.name?.split(" ")[0] ?? "there"} 👋
         </h1>
         <p className="text-sm text-muted-foreground">Here's what's happening today.</p>

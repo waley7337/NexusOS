@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -14,5 +14,19 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         },
       }),
   );
+
+  useEffect(() => {
+    return onlineManager.setEventListener((setOnline) => {
+      const onOnline = () => setOnline(true);
+      const onOffline = () => setOnline(false);
+      window.addEventListener("online", onOnline);
+      window.addEventListener("offline", onOffline);
+      return () => {
+        window.removeEventListener("online", onOnline);
+        window.removeEventListener("offline", onOffline);
+      };
+    });
+  }, []);
+
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

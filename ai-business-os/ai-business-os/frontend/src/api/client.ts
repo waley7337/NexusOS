@@ -8,11 +8,12 @@
  *  - unwrap the standard envelope so callers work with `data` directly
  */
 import axios, { AxiosError, type AxiosRequestConfig } from "axios";
+import { env } from "@/config/env";
 import { useAuthStore } from "@/stores/auth";
 import type { ApiResponse } from "@/types/api";
 
 export const api = axios.create({
-  baseURL: "/api/v1",
+  baseURL: env.apiBaseUrl,
   timeout: 30_000,
 });
 
@@ -29,7 +30,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null;
   try {
     const res = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-      "/api/v1/auth/refresh",
+      `${env.apiBaseUrl}/auth/refresh`,
       { refreshToken },
     );
     const tokens = res.data.data;

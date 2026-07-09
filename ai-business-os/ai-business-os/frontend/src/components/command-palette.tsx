@@ -1,50 +1,71 @@
 /**
  * Command Palette — ⌘K / Ctrl+K, available everywhere in the app shell.
  *
- * Part 2 scope: navigation + quick actions with static definitions.
- * When modules ship, each registers a search provider here so customers,
- * invoices, tasks, documents, etc. appear in the same palette.
+ * Static navigation + action providers. Feature modules register entity
+ * search providers through CommandPaletteProvider in Parts 7+.
  */
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Command } from "cmdk";
-import {
-  LayoutDashboard, Users, FolderKanban, CheckSquare, UserRound, Wallet,
-  Boxes, FileText, BarChart3, Sparkles, Settings, Plus, Moon, Sun, Palette,
-} from "lucide-react";
+import { Plus, Moon, Sun } from "lucide-react";
+import { PALETTE_PAGES } from "@/constants/routes";
 import { useTheme } from "@/providers/theme-provider";
+import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
+import { useUiStore } from "@/stores/ui";
+import type { CommandPaletteProvider } from "@/components/command-palette-types";
 import { toast } from "sonner";
 
-const PAGES = [
-  { label: "Dashboard", to: "/", icon: LayoutDashboard },
-  { label: "CRM", to: "/crm", icon: Users },
-  { label: "Projects", to: "/projects", icon: FolderKanban },
-  { label: "Tasks", to: "/tasks", icon: CheckSquare },
-  { label: "HR", to: "/hr", icon: UserRound },
-  { label: "Finance", to: "/finance", icon: Wallet },
-  { label: "Inventory", to: "/inventory", icon: Boxes },
-  { label: "Documents", to: "/documents", icon: FileText },
-  { label: "Reports", to: "/reports", icon: BarChart3 },
-  { label: "AI Assistant", to: "/assistant", icon: Sparkles },
-  { label: "Settings", to: "/settings", icon: Settings },
-  { label: "Design system", to: "/design", icon: Palette },
-];
-
 export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+  const open = useUiStore((s) => s.isCommandPaletteOpen);
+  const setOpen = useUiStore((s) => s.setCommandPaletteOpen);
+  const toggleCommandPalette = useUiStore((s) => s.toggleCommandPalette);
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
+  useKeyboardShortcut({ key: "k", meta: true }, () => toggleCommandPalette());
+  useKeyboardShortcut({ key: "k", ctrl: true }, () => toggleCommandPalette());
+
+  const providers = useMemo<CommandPaletteProvider[]>(() => {
+    const run = (fn: () => void) => {
+      setOpen(false);
+      fn();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+
+    return [
+      {
+        id: "navigation",
+        group: "Go to",
+        search: () =>
+          PALETTE_PAGES.map(({ label, to, icon }) => ({
+            id: `nav-${to}`,
+            label,
+            value: `go ${label}`,
+            icon,
+            onSelect: () => run(() => navigate(to)),
+          })),
+      },
+      {
+        id: "actions",
+        group: "Actions",
+        search: () => [
+          {
+            id: "new-customer",
+            label: "New customer",
+            value: "new customer",
+            icon: Plus,
+            onSelect: () => run(() => toast.info("Customer creation ships with the CRM module.")),
+          },
+          {
+            id: "toggle-theme",
+            label: "Toggle theme",
+            value: "toggle theme dark light",
+            icon: theme === "dark" ? Sun : Moon,
+            onSelect: () => run(() => setTheme(theme === "dark" ? "light" : "dark")),
+          },
+        ],
+      },
+    ];
+  }, [navigate, setOpen, setTheme, theme]);
 
   const run = (fn: () => void) => {
     setOpen(false);
@@ -74,44 +95,25 @@ export function CommandPalette() {
           Nothing matches that. Try a page or action name.
         </Command.Empty>
 
-        <Command.Group
-          heading="Go to"
-          className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
-        >
-          {PAGES.map(({ label, to, icon: Icon }) => (
-            <Command.Item
-              key={to}
-              value={`go ${label}`}
-              onSelect={() => run(() => navigate(to))}
-              className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm data-[selected=true]:bg-secondary"
-            >
-              <Icon className="h-4 w-4 text-muted-foreground" />
-              {label}
-            </Command.Item>
-          ))}
-        </Command.Group>
-
-        <Command.Group
-          heading="Actions"
-          className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
-        >
-          <Command.Item
-            value="new customer"
-            onSelect={() => run(() => toast.info("Customer creation ships with the CRM module."))}
-            className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm data-[selected=true]:bg-secondary"
+        {providers.map((provider) => (
+          <Command.Group
+            key={provider.id}
+            heading={provider.group}
+            className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
           >
-            <Plus className="h-4 w-4 text-muted-foreground" />
-            New customer
-          </Command.Item>
-          <Command.Item
-            value="toggle theme dark light"
-            onSelect={() => run(() => setTheme(theme === "dark" ? "light" : "dark"))}
-            className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm data-[selected=true]:bg-secondary"
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4 text-muted-foreground" /> : <Moon className="h-4 w-4 text-muted-foreground" />}
-            Toggle theme
-          </Command.Item>
-        </Command.Group>
+            {provider.search().map(({ id, label, value, icon: Icon, onSelect }) => (
+              <Command.Item
+                key={id}
+                value={value}
+                onSelect={() => run(onSelect)}
+                className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm data-[selected=true]:bg-secondary"
+              >
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                {label}
+              </Command.Item>
+            ))}
+          </Command.Group>
+        ))}
       </Command.List>
     </Command.Dialog>
   );

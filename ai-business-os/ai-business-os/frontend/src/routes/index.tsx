@@ -1,42 +1,79 @@
-/** Application routes. ProtectedRoute gates the shell; guests go to /login. */
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
-import { Users, FolderKanban, CheckSquare, UserRound, Wallet, Boxes, FileText, BarChart3, Sparkles, Settings } from "lucide-react";
-import { toast } from "sonner";
+/** Application route table — lazy-loaded pages behind guards and error boundaries. */
+import { lazy, Suspense } from "react";
+import { createBrowserRouter } from "react-router-dom";
 import { AppLayout } from "@/layouts/AppLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
-import { DashboardPage } from "@/pages/dashboard/DashboardPage";
-import { LoginPage } from "@/pages/auth/LoginPage";
-import { DesignSystemPage } from "@/pages/design/DesignSystemPage";
-import { useAuthStore } from "@/stores/auth";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ROUTES } from "@/constants/routes";
+import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import { PermissionRoute } from "@/routes/PermissionRoute";
+import { RouteErrorBoundary } from "@/components/route-error-boundary";
+import { PageLoading } from "@/components/page-loading";
 
-function ProtectedRoute() {
-  const authed = useAuthStore((s) => s.isAuthenticated());
-  return authed ? <Outlet /> : <Navigate to="/login" replace />;
-}
+const LoginPage = lazy(() =>
+  import("@/pages/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
+);
+const DashboardPage = lazy(() =>
+  import("@/pages/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage })),
+);
+const DesignSystemPage = lazy(() =>
+  import("@/pages/design/DesignSystemPage").then((m) => ({ default: m.DesignSystemPage })),
+);
+const NotFoundPage = lazy(() =>
+  import("@/pages/errors/NotFoundPage").then((m) => ({ default: m.NotFoundPage })),
+);
 
-/** Placeholder pages demo the empty-state pattern until each module ships. */
-function ModulePlaceholder({
-  title, icon, description, action,
-}: { title: string; icon: React.ComponentType<{ className?: string }>; description: string; action: string }) {
+const CrmPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.CrmPlaceholder })),
+);
+const ProjectsPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.ProjectsPlaceholder })),
+);
+const TasksPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.TasksPlaceholder })),
+);
+const HrPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.HrPlaceholder })),
+);
+const FinancePlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.FinancePlaceholder })),
+);
+const InventoryPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.InventoryPlaceholder })),
+);
+const DocumentsPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.DocumentsPlaceholder })),
+);
+const ReportsPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.ReportsPlaceholder })),
+);
+const AssistantPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.AssistantPlaceholder })),
+);
+const SettingsPlaceholder = lazy(() =>
+  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.SettingsPlaceholder })),
+);
+
+function AuthRoute({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <EmptyState
-        icon={icon}
-        title={`No ${title.toLowerCase()} yet`}
-        description={description}
-        actionLabel={action}
-        onAction={() => toast.info(`${title} ships in an upcoming part.`)}
-      />
-    </div>
+    <RouteErrorBoundary>
+      <Suspense fallback={<PageLoading />}>{children}</Suspense>
+    </RouteErrorBoundary>
   );
 }
 
 export const router = createBrowserRouter([
   {
     element: <AuthLayout />,
-    children: [{ path: "/login", element: <LoginPage /> }],
+    children: [
+      {
+        path: ROUTES.login,
+        element: (
+          <AuthRoute>
+            <LoginPage />
+          </AuthRoute>
+        ),
+      },
+    ],
   },
   {
     element: <ProtectedRoute />,
@@ -44,21 +81,34 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: "/", element: <DashboardPage /> },
-          { path: "/design", element: <DesignSystemPage /> },
-          { path: "/crm", element: <ModulePlaceholder title="CRM" icon={Users} description="Track companies, contacts, leads, and deals in one connected pipeline." action="Create customer" /> },
-          { path: "/projects", element: <ModulePlaceholder title="Projects" icon={FolderKanban} description="Plan work with boards, lists, timelines, and calendars." action="Create project" /> },
-          { path: "/tasks", element: <ModulePlaceholder title="Tasks" icon={CheckSquare} description="Everything assigned to you and your team, in one place." action="Create task" /> },
-          { path: "/hr", element: <ModulePlaceholder title="HR" icon={UserRound} description="Employee profiles, attendance, leave, and performance." action="Add employee" /> },
-          { path: "/finance", element: <ModulePlaceholder title="Finance" icon={Wallet} description="Revenue, expenses, invoices, and payments — all visual." action="Create invoice" /> },
-          { path: "/inventory", element: <ModulePlaceholder title="Inventory" icon={Boxes} description="Products, warehouses, purchase orders, and stock movements." action="Add product" /> },
-          { path: "/documents", element: <ModulePlaceholder title="Documents" icon={FileText} description="Store, organize, and share every business document." action="Upload document" /> },
-          { path: "/reports", element: <ModulePlaceholder title="Reports" icon={BarChart3} description="Export, schedule, and share reports across every module." action="Create report" /> },
-          { path: "/assistant", element: <ModulePlaceholder title="AI Assistant" icon={Sparkles} description="Ask questions about your business in plain language." action="Start a conversation" /> },
-          { path: "/settings", element: <ModulePlaceholder title="Settings" icon={Settings} description="Company profile, members, roles, and preferences." action="Open settings" /> },
+          { path: ROUTES.home, element: <DashboardPage /> },
+          { path: ROUTES.design, element: <DesignSystemPage /> },
+          { path: ROUTES.crm, element: <CrmPlaceholder /> },
+          { path: ROUTES.projects, element: <ProjectsPlaceholder /> },
+          { path: ROUTES.tasks, element: <TasksPlaceholder /> },
+          { path: ROUTES.hr, element: <HrPlaceholder /> },
+          {
+            element: <PermissionRoute permission="finance.view" />,
+            children: [{ path: ROUTES.finance, element: <FinancePlaceholder /> }],
+          },
+          { path: ROUTES.inventory, element: <InventoryPlaceholder /> },
+          { path: ROUTES.documents, element: <DocumentsPlaceholder /> },
+          { path: ROUTES.reports, element: <ReportsPlaceholder /> },
+          { path: ROUTES.assistant, element: <AssistantPlaceholder /> },
+          {
+            element: <PermissionRoute permission="settings.view" />,
+            children: [{ path: ROUTES.settings, element: <SettingsPlaceholder /> }],
+          },
         ],
       },
     ],
   },
-  { path: "*", element: <Navigate to="/" replace /> },
+  {
+    path: "*",
+    element: (
+      <AuthRoute>
+        <NotFoundPage />
+      </AuthRoute>
+    ),
+  },
 ]);

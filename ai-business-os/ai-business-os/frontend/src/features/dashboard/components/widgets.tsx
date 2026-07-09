@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type {
   ActivityItem, AiInsight, Kpi, Meeting, PipelineStage, RevenuePoint,
-} from "./types";
+} from "../types";
 
 /* ----------------------------- KPI cards ------------------------------ */
 export function KpiGrid({ kpis }: { kpis?: Kpi[] }) {

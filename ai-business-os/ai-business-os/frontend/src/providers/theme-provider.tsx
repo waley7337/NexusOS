@@ -3,6 +3,7 @@
  * Adds/removes the `dark` class on <html>; Tailwind handles the rest.
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { STORAGE_KEYS } from "@/constants/storage";
 
 type Theme = "light" | "dark" | "system";
 
@@ -12,11 +13,9 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-const STORAGE_KEY = "abos-theme";
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(
-    () => (localStorage.getItem(STORAGE_KEY) as Theme) ?? "system",
+    () => (localStorage.getItem(STORAGE_KEYS.theme) as Theme) ?? "system",
   );
 
   useEffect(() => {
@@ -32,7 +31,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const setTheme = (t: Theme) => {
-    localStorage.setItem(STORAGE_KEY, t);
+    localStorage.setItem(STORAGE_KEYS.theme, t);
     setThemeState(t);
   };
 

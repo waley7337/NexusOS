@@ -5,6 +5,7 @@
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { STORAGE_KEYS } from "@/constants/storage";
 
 export interface AuthUser {
   id: string;
@@ -36,6 +37,6 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
       clear: () => set({ accessToken: null, refreshToken: null, user: null }),
     }),
-    { name: "abos-auth" },
+    { name: STORAGE_KEYS.auth },
   ),
 );

@@ -1,49 +1,34 @@
 /**
  * NexusOS shell — implements the Part 2 navigation wireframe:
  *   sidebar (collapsible) · top bar with global search · content · profile footer.
- * Every page inside answers: Where am I? (sidebar) What can I do? (page header)
- * What next? (primary action).
  */
-import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import {
-  LayoutDashboard, Users, FolderKanban, CheckSquare, UserRound, Wallet,
-  Boxes, FileText, BarChart3, Sparkles, Settings, Search, Bell,
-  PanelLeftClose, PanelLeftOpen, Moon, Sun,
-} from "lucide-react";
+import { Search, Bell, PanelLeftClose, PanelLeftOpen, Moon, Sun, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/providers/theme-provider";
+import { useUiStore } from "@/stores/ui";
+import { useRouteFocus } from "@/hooks/useRouteFocus";
 import { CommandPalette } from "@/components/command-palette";
+import { AppNavigation, MobileSidebar } from "@/components/app-navigation";
+import { OfflineBanner } from "@/components/offline-banner";
+import { LazyOutlet } from "@/routes/LazyOutlet";
 import { Button } from "@/components/ui/button";
-
-const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/crm", label: "CRM", icon: Users },
-  { to: "/projects", label: "Projects", icon: FolderKanban },
-  { to: "/tasks", label: "Tasks", icon: CheckSquare },
-  { to: "/hr", label: "HR", icon: UserRound },
-  { to: "/finance", label: "Finance", icon: Wallet },
-  { to: "/inventory", label: "Inventory", icon: Boxes },
-  { to: "/documents", label: "Documents", icon: FileText },
-  { to: "/reports", label: "Reports", icon: BarChart3 },
-  { to: "/assistant", label: "AI Assistant", icon: Sparkles },
-  { to: "/settings", label: "Settings", icon: Settings },
-];
 
 export function AppLayout() {
   const user = useAuthStore((s) => s.user);
   const { theme, setTheme } = useTheme();
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useUiStore((s) => s.isSidebarCollapsed);
+  const toggleCollapsed = useUiStore((s) => s.toggleSidebarCollapsed);
+  const toggleMobileSidebar = useUiStore((s) => s.toggleMobileSidebar);
+  const toggleCommandPalette = useUiStore((s) => s.toggleCommandPalette);
 
-  const openPalette = () =>
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
+  useRouteFocus();
 
   return (
     <div className="flex min-h-screen">
       <CommandPalette />
+      <MobileSidebar />
 
-      {/* ---------- Sidebar ---------- */}
       <aside
         className={cn(
           "hidden shrink-0 flex-col border-r bg-card transition-[width] duration-200 md:flex",
@@ -55,30 +40,8 @@ export function AppLayout() {
           {!collapsed && <span className="truncate text-sm font-semibold tracking-tight">NexusOS</span>}
         </div>
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              title={collapsed ? label : undefined}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  collapsed && "justify-center px-0",
-                  isActive
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-                )
-              }
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {!collapsed && label}
-            </NavLink>
-          ))}
-        </nav>
+        <AppNavigation collapsed={collapsed} />
 
-        {/* Profile / notifications footer (wireframe bottom row) */}
         <div className={cn("border-t p-3", collapsed && "flex justify-center")}>
           <div className={cn("flex items-center gap-3", collapsed && "flex-col gap-2")}>
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold">
@@ -98,21 +61,31 @@ export function AppLayout() {
         </div>
       </aside>
 
-      {/* ---------- Main ---------- */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center gap-3 border-b px-4 md:px-6">
           <Button
             variant="ghost"
             size="icon"
+            className="md:hidden"
+            aria-label="Open navigation menu"
+            onClick={toggleMobileSidebar}
+          >
+            <Menu />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
             className="hidden md:inline-flex"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={() => setCollapsed((v) => !v)}
+            onClick={toggleCollapsed}
           >
             {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
           </Button>
 
           <button
-            onClick={openPalette}
+            type="button"
+            onClick={toggleCommandPalette}
             className="flex h-9 flex-1 items-center gap-2 rounded-md border bg-background px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 md:max-w-md"
           >
             <Search className="h-4 w-4" />
@@ -132,8 +105,10 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-6 md:p-8">
-          <Outlet />
+        <OfflineBanner />
+
+        <main className="flex-1 p-6 md:p-8" tabIndex={-1}>
+          <LazyOutlet />
         </main>
       </div>
     </div>
