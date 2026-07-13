@@ -3,7 +3,7 @@
 **Project:** NexusOS — AI Business Operating System
 **Status:** Approved engineering document
 **Audience:** Frontend engineers implementing Parts 6+
-**Builds on:** Part 1 (Product Requirements) · Part 2 (Product & UX) · Part 3 (Database & Backend Architecture, `docs/database.md`) · Part 4 (Design System, `docs/design-system.md`)
+**Builds on:** Part 1 (Product Requirements) · Part 2 (Product & UX) · Part 3 (Database & Backend Architecture, `docs/product/database.md`) · Part 4 (Design System, `docs/product/design-system.md`)
 
 This document defines *how the frontend is architected* before feature implementation begins. It changes no approved decision from Parts 1–4; where those parts already answer a question, this document cross-references instead of repeating.
 

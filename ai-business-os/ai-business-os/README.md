@@ -2,7 +2,7 @@
 
 Enterprise multi-tenant Business Operating System. Modular monolith: FastAPI + PostgreSQL backend, React 19 + TypeScript frontend.
 
-> **Status: Part 4 — Design system.** Complete token layer (exact spec colors, type scale, 8px spacing, radii, shadows, motion, z-index), a tested component library (buttons, form fields with wired a11y, dialogs, drawer, tabs, DataTable with sort/search/select/export), and a living style guide at **/design**. See `docs/design-system.md`. Previously (Part 3): Full 37-table schema (CRM, Projects, HR, Finance, Inventory, Documents, AI, Workflows, Audit) with UUID v7 keys, per-tenant uniqueness, 200+ indexes, seeded RBAC catalog, and a tenant-isolation test suite that runs against live PostgreSQL in CI. See `docs/database.md`. Previously (Part 2): On top of the Part 1 foundation, the app now has its design system, collapsible navigation shell, ⌘K command palette, and a full dashboard (KPIs, charts, activity, AI insights) — all following the UX contract below.
+> **Status: Part 4 — Design system.** Complete token layer (exact spec colors, type scale, 8px spacing, radii, shadows, motion, z-index), a tested component library (buttons, form fields with wired a11y, dialogs, drawer, tabs, DataTable with sort/search/select/export), and a living style guide at **/design**. See `docs/product/design-system.md`. Previously (Part 3): Full 37-table schema (CRM, Projects, HR, Finance, Inventory, Documents, AI, Workflows, Audit) with UUID v7 keys, per-tenant uniqueness, 200+ indexes, seeded RBAC catalog, and a tenant-isolation test suite that runs against live PostgreSQL in CI. See `docs/product/database.md`. Previously (Part 2): On top of the Part 1 foundation, the app now has its design system, collapsible navigation shell, ⌘K command palette, and a full dashboard (KPIs, charts, activity, AI insights) — all following the UX contract below.
 
 ## UX contract (enforced by shared components)
 
@@ -66,7 +66,7 @@ Routers never touch the database. Services never import HTTPException. Repositor
 2. ✅ Part 2 — Product & UX layer: design system, shell, ⌘K palette, dashboard
 3. ✅ Part 3 — Database architecture: 37 tables, RBAC, audit log, isolation tests
 4. ✅ Part 4 — Design system: tokens, component library, /design style guide, component tests
-5. ✅ **Part 5 — Frontend architecture & roadmap** (this): `docs/Part-05-Frontend-Architecture-and-Implementation-Roadmap.md`
+5. ✅ **Part 5 — Frontend architecture & roadmap** (this): `docs/product/Part-05-Frontend-Architecture-and-Implementation-Roadmap.md`
 6. Part 6 — Auth module: register, login, refresh rotation, email verification
 5. Parts 5+ — CRM, Projects, Tasks, HR, Finance, Inventory, Documents, Reports, AI Assistant, Workflows
 
