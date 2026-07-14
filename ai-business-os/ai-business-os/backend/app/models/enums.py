@@ -23,6 +23,13 @@ class UserStatus(str, enum.Enum):
     SUSPENDED = "suspended"
 
 
+class AuthTokenPurpose(str, enum.Enum):
+    """Single-use token purposes — see app/models/auth.py `AuthToken`."""
+
+    EMAIL_VERIFICATION = "email_verification"
+    PASSWORD_RESET = "password_reset"
+
+
 class CustomerStatus(str, enum.Enum):
     LEAD = "lead"
     ACTIVE = "active"

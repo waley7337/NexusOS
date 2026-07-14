@@ -33,34 +33,6 @@ export const ALL_PERMISSIONS = Object.entries(MODULES).flatMap(([module, actions
   actions.map((action) => `${module}.${action}`),
 ) as Permission[];
 
-/** Demo role → permission sets until Part 6 GET /auth/me ships. */
-export const DEMO_ROLE_PERMISSIONS: Record<string, readonly Permission[]> = {
-  owner: ALL_PERMISSIONS,
-  admin: ALL_PERMISSIONS,
-  manager: [
-    "customers.read", "customers.create", "customers.update", "customers.delete",
-    "contacts.read", "contacts.create", "contacts.update", "contacts.delete",
-    "leads.read", "leads.create", "leads.update", "leads.delete",
-    "deals.read", "deals.create", "deals.update", "deals.delete",
-    "projects.read", "projects.create", "projects.update", "projects.delete", "projects.manage",
-    "tasks.read", "tasks.create", "tasks.update", "tasks.delete",
-    "invoices.read", "finance.view", "inventory.read",
-    "documents.read", "documents.upload", "documents.delete",
-    "reports.view", "reports.export", "ai.use", "users.read",
-  ],
-  employee: [
-    "customers.read", "contacts.read", "leads.read",
-    "projects.read", "tasks.read", "tasks.create", "tasks.update", "tasks.delete",
-    "documents.read", "documents.upload", "ai.use",
-  ],
-  viewer: ["customers.read", "projects.read", "tasks.read", "reports.view"],
-};
-
-export function permissionsForRole(role: string): readonly Permission[] {
-  const key = role.toLowerCase();
-  return DEMO_ROLE_PERMISSIONS[key] ?? DEMO_ROLE_PERMISSIONS.viewer;
-}
-
 export function hasPermission(
   permissions: readonly string[],
   required: Permission,

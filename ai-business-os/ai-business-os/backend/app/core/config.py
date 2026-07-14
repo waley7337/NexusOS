@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     # --- CORS ---
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
+    # --- Frontend ---
+    # Base URL used to build user-facing links (email verification/reset).
+    # Deliberately separate from CORS_ORIGINS: that list is security config
+    # (which origins may call the API) and may hold multiple/ordered entries
+    # for unrelated reasons — not a safe source for "the" app URL.
+    FRONTEND_URL: str = "http://localhost:5173"
+
     # --- Database ---
     DATABASE_URL: PostgresDsn
     DB_ECHO: bool = False

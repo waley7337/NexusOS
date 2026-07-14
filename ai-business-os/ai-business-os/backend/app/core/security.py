@@ -4,6 +4,8 @@ Access tokens are short-lived and carry identity + tenant claims.
 Refresh tokens are long-lived, rotated on use, and revocable (jti stored
 server-side — implemented with the sessions table in Part 2).
 """
+import hashlib
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
@@ -24,6 +26,22 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
+
+
+def generate_opaque_token() -> str:
+    """URL-safe random token for email verification / password reset links.
+
+    Opaque (not a JWT) on purpose: it's single-use and looked up by hash in
+    `auth_tokens`, so it can be revoked/expired server-side — a stateless JWT
+    can't be invalidated before its own expiry.
+    """
+    return secrets.token_urlsafe(32)
+
+
+def hash_opaque_token(token: str) -> str:
+    """SHA-256 hex digest. Fast lookup hash, not a password hash — the token
+    is already high-entropy random data, so no salt/slow-hash is needed."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _create_token(

@@ -1,26 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/constants/queryKeys";
-import {
-  hasPermission,
-  permissionsForRole,
-  type Permission,
-} from "@/constants/permissions";
+import { hasPermission, type Permission } from "@/constants/permissions";
+import { getMe, type MeDto } from "@/features/auth";
 import { useAuthStore } from "@/stores/auth";
 
-export interface AuthMe {
-  permissions: Permission[];
-}
-
-/** Hydrates the current user + flattened permissions. Part 6 replaces with GET /auth/me. */
+/** Hydrates the current user + flattened permissions from `GET /auth/me`
+ * (§5.11) — loads before first render of the protected tree so gated UI
+ * never flashes (staleTime: Infinity, `usePermission.ts` is the only
+ * consumer that needs a manual `invalidateQueries` after login/logout). */
 export function useAuthMe() {
-  const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.accessToken);
 
   return useQuery({
     queryKey: queryKeys.auth.me,
-    queryFn: async (): Promise<AuthMe> => ({
-      permissions: [...permissionsForRole(user?.role ?? "viewer")],
-    }),
+    queryFn: ({ signal }): Promise<MeDto> => getMe(signal),
     enabled: Boolean(token),
     staleTime: Infinity,
   });

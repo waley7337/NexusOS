@@ -14,6 +14,7 @@ export interface AuthUser {
   role: string;
   companyId: string;
   companyName: string;
+  emailVerified?: boolean;
 }
 
 interface AuthState {

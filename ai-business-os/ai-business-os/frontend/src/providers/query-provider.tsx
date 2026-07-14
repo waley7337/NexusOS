@@ -1,20 +1,8 @@
-import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import { useEffect, type ReactNode } from "react";
+import { queryClient } from "@/lib/query-client";
 
 export function QueryProvider({ children }: { children: ReactNode }) {
-  const [client] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 30_000,
-            retry: 1,
-            refetchOnWindowFocus: false,
-          },
-        },
-      }),
-  );
-
   useEffect(() => {
     return onlineManager.setEventListener((setOnline) => {
       const onOnline = () => setOnline(true);
@@ -28,5 +16,5 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

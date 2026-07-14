@@ -7,6 +7,10 @@ import {
 export const ROUTES = {
   home: "/",
   login: "/login",
+  register: "/register",
+  forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
+  verifyEmail: "/verify-email",
   design: "/design",
   crm: "/crm",
   projects: "/projects",

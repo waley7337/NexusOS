@@ -9,6 +9,8 @@
  */
 import axios, { AxiosError, type AxiosRequestConfig } from "axios";
 import { env } from "@/config/env";
+import { queryClient } from "@/lib/query-client";
+import { ROUTES } from "@/constants/routes";
 import { useAuthStore } from "@/stores/auth";
 import type { ApiResponse } from "@/types/api";
 
@@ -25,8 +27,17 @@ api.interceptors.request.use((config) => {
 
 let refreshPromise: Promise<string | null> | null = null;
 
+/** Session expiration teardown — §5.11: tenant data must not survive logout. */
+function expireSession() {
+  useAuthStore.getState().clear();
+  queryClient.clear();
+  if (!window.location.pathname.startsWith(ROUTES.login)) {
+    window.location.href = `${ROUTES.login}?sessionExpired=1`;
+  }
+}
+
 async function refreshAccessToken(): Promise<string | null> {
-  const { refreshToken, setTokens, clear } = useAuthStore.getState();
+  const { refreshToken, setTokens } = useAuthStore.getState();
   if (!refreshToken) return null;
   try {
     const res = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
@@ -38,7 +49,7 @@ async function refreshAccessToken(): Promise<string | null> {
     setTokens(tokens.accessToken, tokens.refreshToken);
     return tokens.accessToken;
   } catch {
-    clear();
+    expireSession();
     return null;
   }
 }

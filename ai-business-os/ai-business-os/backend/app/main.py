@@ -16,6 +16,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppError, TenantIsolationError
 from app.core.logging import configure_logging
+from app.db.session import engine
 from app.middleware.request_context import RequestContextMiddleware
 
 logger = structlog.get_logger("app")
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI):
     configure_logging()
     logger.info("startup", app=settings.APP_NAME, env=settings.ENVIRONMENT)
     yield
+    await engine.dispose()  # release pooled connections bound to this loop
     logger.info("shutdown")
 
 

@@ -102,6 +102,44 @@
     --shadow-modal: 0 24px 64px -12px rgb(0 0 0 / 0.7);
   }
 
+  /* ------------------------------------------------------------
+     Auth shell (Part 2 — design review).
+     Sign-in/sign-up/reset always render on NexusOS's jet-black brand
+     surface, independent of the viewer's light/dark preference
+     elsewhere in the product (the same pattern Linear, Vercel and
+     Stripe use for their sign-in shells). Applied by adding both
+     `dark` and `auth-shell` to the layout root, so:
+       - `.dark`'s already AA-audited semantic tokens (primary,
+         destructive, success, warning, info, ring) are inherited
+         as-is — brand meaning stays identical to the rest of the app.
+       - Only the neutral scale + shadows go deeper here, toward the
+         requested #050505–#090909 range.
+     No component needs to know this scope exists: Button, Input,
+     Field, Card, etc. all read the same CSS variables everywhere. */
+  .dark.auth-shell {
+    --background: 0 0% 2%;           /* #050505 page */
+    --card: 0 0% 5.5%;               /* #0E0E0E card surface */
+    --card-foreground: 0 0% 96%;     /* #F5F5F5 */
+    --foreground: 0 0% 96%;          /* #F5F5F5 text primary */
+    --muted: 0 0% 9%;                /* #171717 subtle fills */
+    --muted-foreground: 0 0% 60%;    /* #999999 text secondary */
+    --disabled-foreground: 0 0% 40%; /* #666666 text disabled */
+    --border: 0 0% 15%;              /* #262626 hairline */
+    --input: 0 0% 15%;
+    --secondary: 0 0% 9%;            /* #171717 */
+    --secondary-foreground: 0 0% 96%;
+    --accent: 0 0% 11%;              /* #1C1C1C */
+    --accent-foreground: 0 0% 96%;
+    --ring: 217 91% 63%;             /* brighter focus ring for AA on near-black */
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.6);
+    --shadow-md: 0 2px 10px -2px rgb(0 0 0 / 0.7);
+    --shadow-lg: 0 24px 60px -16px rgb(0 0 0 / 0.85);
+    --shadow-hover: 0 4px 16px -2px rgb(0 0 0 / 0.7);
+    --shadow-dropdown: 0 8px 30px -4px rgb(0 0 0 / 0.8);
+    --shadow-modal: 0 32px 80px -20px rgb(0 0 0 / 0.9);
+  }
+
   * { @apply border-border; }
   html { font-feature-settings: "cv11", "ss01"; }
   body { @apply bg-background text-foreground antialiased; }
@@ -118,6 +156,20 @@
   .text-body    { @apply text-sm  font-normal  leading-[1.55]; }                      /* 14/400 */
   .text-small   { @apply text-xs  font-normal  leading-[1.5]; }                       /* 12/400 */
   .text-caption { @apply text-xs  font-medium  uppercase tracking-[0.06em] text-muted-foreground; }
+
+  /* Auth shell backdrop — one soft radial glow + a barely-visible grid,
+     both built from existing tokens (primary / foreground). Deliberately
+     minimal: this is texture, not decoration. */
+  .auth-page { @apply relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-16; }
+  .auth-grid {
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
+  }
+  .auth-glow { background: radial-gradient(680px circle at 50% -10%, hsl(var(--primary) / 0.18), transparent 60%); }
 }
 
 /* Accessibility: respect reduced motion globally. */
