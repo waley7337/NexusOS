@@ -25,7 +25,6 @@ logger = structlog.get_logger("app")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
-    logger.info("cors_config", cors_origins=settings.CORS_ORIGINS)
     logger.info("startup", app=settings.APP_NAME, env=settings.ENVIRONMENT)
     yield
     await engine.dispose()  # release pooled connections bound to this loop
