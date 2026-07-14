@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     # for unrelated reasons — not a safe source for "the" app URL.
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # --- Observability ---
+    SENTRY_DSN: str | None = None
+
     # --- Database ---
     DATABASE_URL: PostgresDsn
     DB_ECHO: bool = False

@@ -6,6 +6,7 @@ in exactly one place.
 """
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -20,6 +21,16 @@ from app.db.session import engine
 from app.middleware.request_context import RequestContextMiddleware
 
 logger = structlog.get_logger("app")
+
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        send_default_pii=False,
+        traces_sample_rate=0.0,
+        profiles_sample_rate=0.0,
+    )
 
 
 @asynccontextmanager
