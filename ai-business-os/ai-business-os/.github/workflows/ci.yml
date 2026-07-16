@@ -19,20 +19,31 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U nexus"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       SECRET_KEY: ci-secret-key-must-be-32-chars-long!!!
       DATABASE_URL: postgresql+asyncpg://nexus:nexus@localhost:5432/nexus
+      REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt
-      - run: ruff check app
+      - run: ruff check .
+      - name: Type check
+        run: mypy app
       - name: Apply migrations (validates the schema end-to-end)
         run: alembic upgrade head
+      - name: Schema drift check (models must match migrations exactly)
+        run: alembic check
       - name: Seed permission catalog
         run: python -m app.db.seed
-      - name: Tests (incl. tenant-isolation suite against live Postgres)
+      - name: Tests (incl. security + tenant-isolation suites against live Postgres/Redis)
         run: python -m pytest -q
 
   frontend:
