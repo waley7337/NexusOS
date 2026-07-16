@@ -1,0 +1,9 @@
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = false
+
+[[tool.mypy.overrides]]
+# No published type stubs for passlib; not worth a stub-only dependency
+# just to satisfy mypy for a single import.
+module = "passlib.*"
+ignore_missing_imports = true

@@ -59,3 +59,9 @@ class TenantIsolationError(AppError):
     status_code = 404
     code = "not_found"
     message = "Resource not found."
+
+
+class RateLimitExceededError(AppError):
+    status_code = 429
+    code = "rate_limited"
+    message = "Too many requests. Please try again later."

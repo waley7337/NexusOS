@@ -3,7 +3,8 @@ import uuid
 from datetime import date
 
 from sqlalchemy import (
-    Date, Enum, ForeignKey, Index, Integer, Numeric, String, Text,
+    Date, Enum, ForeignKey, ForeignKeyConstraint, Index, Integer, Numeric,
+    String, Text, UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -17,6 +18,8 @@ class Project(Base, TenantBusinessMixin):
     __table_args__ = (
         Index("ix_projects_company_status", "company_id", "status"),
         Index("ix_projects_company_owner", "company_id", "owner_id"),
+        # Composite-FK anchor for Task.project_id (see below).
+        UniqueConstraint("id", "company_id", name="uq_projects_id_company"),
     )
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -37,7 +40,9 @@ class Project(Base, TenantBusinessMixin):
     budget: Mapped[float | None] = mapped_column(Numeric(14, 2))
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 0–100
 
-    tasks: Mapped[list["Task"]] = relationship(back_populates="project")
+    tasks: Mapped[list["Task"]] = relationship(
+        back_populates="project", foreign_keys="Task.project_id"
+    )
 
 
 class Task(Base, TenantBusinessMixin):
@@ -47,6 +52,12 @@ class Task(Base, TenantBusinessMixin):
         Index("ix_tasks_company_assignee", "company_id", "assignee_id"),
         Index("ix_tasks_company_due", "company_id", "due_date"),
         Index("ix_tasks_project_status", "project_id", "status"),
+        ForeignKeyConstraint(
+            ["project_id", "company_id"], ["projects.id", "projects.company_id"],
+            name="fk_tasks_project_id_tenant_scoped", ondelete="CASCADE",
+        ),
+        # Composite-FK anchor for TaskComment/TaskAttachment.task_id (below).
+        UniqueConstraint("id", "company_id", name="uq_tasks_id_company"),
     )
 
     project_id: Mapped[uuid.UUID] = mapped_column(
@@ -73,12 +84,22 @@ class Task(Base, TenantBusinessMixin):
     estimated_hours: Mapped[float | None] = mapped_column(Numeric(6, 2))
     actual_hours: Mapped[float | None] = mapped_column(Numeric(6, 2))
 
-    project: Mapped["Project"] = relationship(back_populates="tasks")
-    comments: Mapped[list["TaskComment"]] = relationship(back_populates="task")
+    project: Mapped["Project"] = relationship(
+        back_populates="tasks", foreign_keys=[project_id]
+    )
+    comments: Mapped[list["TaskComment"]] = relationship(
+        back_populates="task", foreign_keys="TaskComment.task_id"
+    )
 
 
 class TaskComment(Base, TenantBusinessMixin):
     __tablename__ = "task_comments"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["task_id", "company_id"], ["tasks.id", "tasks.company_id"],
+            name="fk_task_comments_task_id_tenant_scoped", ondelete="CASCADE",
+        ),
+    )
 
     task_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"),
@@ -89,11 +110,19 @@ class TaskComment(Base, TenantBusinessMixin):
     )
     message: Mapped[str] = mapped_column(Text, nullable=False)
 
-    task: Mapped["Task"] = relationship(back_populates="comments")
+    task: Mapped["Task"] = relationship(
+        back_populates="comments", foreign_keys=[task_id]
+    )
 
 
 class TaskAttachment(Base, TenantBusinessMixin):
     __tablename__ = "task_attachments"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["task_id", "company_id"], ["tasks.id", "tasks.company_id"],
+            name="fk_task_attachments_task_id_tenant_scoped", ondelete="CASCADE",
+        ),
+    )
 
     task_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"),

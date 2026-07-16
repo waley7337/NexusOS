@@ -50,8 +50,75 @@ async def db():
                 session.add(Permission(name=name, description=name))
             await session.commit()
         yield session
+        # NOTE: a plain rollback is *not* sufficient cleanup here. Some
+        # flows under test (refresh-token-reuse / compromise detection) must
+        # commit for real — see the "commit before raising" note in
+        # `auth_service.refresh()` — so this session may already hold
+        # committed rows by the time the test ends. See
+        # `_cleanup_committed_rows` for the real sweep.
         await session.rollback()
     await engine.dispose()
+
+
+_EMAIL_DOMAIN = "example.com"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _cleanup_committed_rows():
+    """Some tests exercise a path that commits for real (refresh-token
+    compromise detection revokes sessions and writes an audit record, and
+    that write must survive even though the request ultimately raises —
+    see `auth_service.refresh`). A plain `session.rollback()` in the `db`
+    fixture can't undo already-committed rows, so sweep them here instead,
+    the same way `test_auth_api.py` does for its real, committing flows."""
+    yield
+    import asyncio
+
+    from sqlalchemy import delete
+    from sqlalchemy.ext.asyncio import async_sessionmaker as _async_sessionmaker
+    from sqlalchemy.ext.asyncio import create_async_engine as _create_async_engine
+    from sqlalchemy.pool import NullPool as _NullPool
+
+    from app.models import AuditLog, AuthToken, Company, Role, Session, User, role_permissions, user_roles
+
+    async def _sweep():
+        # Deliberately NOT `app.db.session.AsyncSessionLocal`: that engine's
+        # pooled connections may be bound to an event loop from an earlier
+        # test (e.g. `test_auth_api.py`'s `TestClient`), and `asyncio.run()`
+        # here always creates a *new* loop — mixing the two raises "Future
+        # attached to a different loop". A fresh NullPool engine (same
+        # pattern as the `db` fixture above) never shares connections across
+        # loops, so it's the only safe choice for a standalone `asyncio.run()`.
+        sweep_engine = _create_async_engine(TEST_DB, poolclass=_NullPool)
+        session_factory = _async_sessionmaker(sweep_engine, expire_on_commit=False)
+        async with session_factory() as db:
+            user_ids = (
+                await db.execute(select(User.id).where(User.email.like(f"%@{_EMAIL_DOMAIN}")))
+            ).scalars().all()
+            company_ids = (
+                await db.execute(select(User.company_id).where(User.id.in_(user_ids)))
+            ).scalars().all()
+            role_ids = (
+                await db.execute(select(Role.id).where(Role.company_id.in_(company_ids)))
+            ).scalars().all()
+
+            if company_ids:
+                await db.execute(delete(AuditLog).where(AuditLog.company_id.in_(company_ids)))
+            if user_ids:
+                await db.execute(delete(Session).where(Session.user_id.in_(user_ids)))
+                await db.execute(delete(AuthToken).where(AuthToken.user_id.in_(user_ids)))
+                await db.execute(user_roles.delete().where(user_roles.c.user_id.in_(user_ids)))
+            if role_ids:
+                await db.execute(role_permissions.delete().where(role_permissions.c.role_id.in_(role_ids)))
+                await db.execute(delete(Role).where(Role.id.in_(role_ids)))
+            if user_ids:
+                await db.execute(delete(User).where(User.id.in_(user_ids)))
+            if company_ids:
+                await db.execute(delete(Company).where(Company.id.in_(company_ids)))
+            await db.commit()
+        await sweep_engine.dispose()
+
+    asyncio.run(_sweep())
 
 
 async def _register(db, *, email="owner@example.com", company="Test Co", password="Secret123x"):

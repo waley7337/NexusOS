@@ -6,10 +6,11 @@ RBAC model:
   * role_permissions / user_roles are pure association tables
 """
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean, Column, DateTime, Enum, ForeignKey, Index, String, Table, Text,
-    UniqueConstraint,
+    UniqueConstraint, text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -18,6 +19,9 @@ from app.models.base import (
     ActiveMixin, Base, SoftDeleteMixin, TenantMixin, TimestampMixin,
 )
 from app.models.enums import UserStatus
+
+if TYPE_CHECKING:
+    from app.models.company import Company
 
 role_permissions = Table(
     "role_permissions",
@@ -38,8 +42,18 @@ class User(Base, TenantMixin, TimestampMixin, SoftDeleteMixin, ActiveMixin):
     __tablename__ = "users"
     __table_args__ = (
         # Email is unique WITHIN a company (same person can join two tenants)
-        UniqueConstraint("company_id", "email", name="uq_users_company_email"),
+        # among ACTIVE rows only — a plain (unfiltered) unique constraint
+        # would permanently squat the email after a soft delete, blocking a
+        # legitimate re-invite. Partial index is the soft-delete-safe form
+        # (§18 — soft-delete/uniqueness compatibility).
+        Index(
+            "ix_users_company_email_active_uq", "company_id", "email",
+            unique=True, postgresql_where=text("deleted_at IS NULL"),
+        ),
         Index("ix_users_company_status", "company_id", "status"),
+        # Composite-FK anchor for Employee.user_id (app/models/hr.py) — an
+        # employee record must be tied to a user in that same company.
+        UniqueConstraint("id", "company_id", name="uq_users_id_company"),
     )
 
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -59,8 +73,19 @@ class User(Base, TenantMixin, TimestampMixin, SoftDeleteMixin, ActiveMixin):
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     two_factor_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    company: Mapped["Company"] = relationship(back_populates="users")  # noqa: F821
-    roles: Mapped[list["Role"]] = relationship(secondary=user_roles, back_populates="users")
+    company: Mapped["Company"] = relationship(back_populates="users")
+    # `order_by` makes `user.roles[0]` (the "primary role" used for the JWT
+    # `role` claim and `require_roles()`, see `auth_service._primary_role_name`
+    # / `dependencies.auth.get_current_active_user`) a deterministic function
+    # of role *name* rather than unspecified DB/relationship-load order
+    # (Part 3.1 remediation, SEC-002). This does not encode a privilege
+    # hierarchy — it only guarantees the same user always resolves to the
+    # same "primary" role across requests/processes. Not reachable today
+    # (registration assigns exactly one role); becomes load-bearing the
+    # moment multi-role assignment ships.
+    roles: Mapped[list["Role"]] = relationship(
+        secondary=user_roles, back_populates="users", order_by="Role.name"
+    )
 
     @property
     def full_name(self) -> str:

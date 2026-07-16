@@ -4,12 +4,21 @@ verify-email.
 Kept as plain async functions taking `db: AsyncSession` (mirrors
 `db/seed.py`'s style) rather than a stateful class: nothing here needs
 per-instance state, and `AuthService` would just be a namespace around
-`self.db`. Repositories are used where a query is genuinely tenant-scoped
-list/CRUD (`BaseRepository`); the auth-only concerns (session issuance,
-token consumption, cross-tenant email lookup) are direct queries, since
-`BaseRepository` intentionally refuses to query without tenant context and
-login *is* the one place that must look across tenants (see database.md:
-"the same person can belong to two tenants").
+`self.db`. Every query in this module is a direct, hand-written query, not
+`BaseRepository` — deliberately, since `BaseRepository` intentionally
+refuses to query without a trusted tenant context and login *is* the one
+place that must look across tenants (see database.md: "the same person can
+belong to two tenants"), and the rest of this module's queries are narrowly
+scoped by primary key or a token hash rather than an unscoped tenant list.
+
+Documentation-accuracy note (Part 3.1 remediation, ARCH-001): as of this
+pass, `BaseRepository` has **zero live callers anywhere in the
+application** — it is a tested, tenant-aware repository foundation with no
+current consumer, not (yet) "the" tenant-isolation mechanism this module or
+any other live code path actually runs through. The first real CRUD/business
+module built on top of it is the point where that live-usage claim becomes
+true and should be re-verified (see `docs/reports/Part-03.1/RLS-Decision-Note.md`
+§2/§4 for the same correction applied to the RLS analysis).
 """
 import re
 import uuid
@@ -35,6 +44,7 @@ from app.db.seed import DEFAULT_ROLES, expand
 from app.dependencies.auth import CurrentUser
 from app.models import AuthToken, Company, Permission, Role, Session, User
 from app.models.enums import AuthTokenPurpose, UserStatus
+from app.services import audit_service
 from app.schemas.auth import (
     AuthSessionResponse,
     ForgotPasswordRequest,
@@ -106,6 +116,9 @@ async def _flatten_permissions(db: AsyncSession, user: User) -> list[str]:
 
 
 def _primary_role_name(user: User) -> str:
+    # `User.roles` is ordered by `Role.name` (see `models/user.py`, SEC-002
+    # remediation) specifically so `roles[0]` is deterministic across
+    # requests/processes for a multi-role user, not an unspecified DB order.
     return user.roles[0].name.lower() if user.roles else "viewer"
 
 
@@ -164,7 +177,13 @@ async def _get_user_with_relations(db: AsyncSession, user_id: uuid.UUID) -> User
 # Public operations
 # --------------------------------------------------------------------------- #
 
-async def register(db: AsyncSession, data: RegisterRequest) -> AuthSessionResponse:
+async def register(
+    db: AsyncSession,
+    data: RegisterRequest,
+    *,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> AuthSessionResponse:
     slug = await _unique_slug(db, data.company_name)
     company = Company(name=data.company_name, slug=slug, email=str(data.email))
     db.add(company)
@@ -203,6 +222,17 @@ async def register(db: AsyncSession, data: RegisterRequest) -> AuthSessionRespon
 
     tokens = await _issue_session(db, user)
     logger.info("auth.register", user_id=str(user.id), company_id=str(company.id))
+    await audit_service.record(
+        db,
+        company_id=company.id,
+        user_id=user.id,
+        action="auth.user_registered",
+        entity="users",
+        entity_id=user.id,
+        new_values={"email": user.email, "role": "owner"},
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
     return AuthSessionResponse(
         accessToken=tokens.access_token,
         refreshToken=tokens.refresh_token,
@@ -210,7 +240,13 @@ async def register(db: AsyncSession, data: RegisterRequest) -> AuthSessionRespon
     )
 
 
-async def login(db: AsyncSession, data: LoginRequest) -> AuthSessionResponse:
+async def login(
+    db: AsyncSession,
+    data: LoginRequest,
+    *,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> AuthSessionResponse:
     # No tenant context yet — deliberately queries across companies (the one
     # legitimate exception to BaseRepository's fail-closed tenant scoping).
     stmt = (
@@ -232,6 +268,16 @@ async def login(db: AsyncSession, data: LoginRequest) -> AuthSessionResponse:
     user.last_login_at = datetime.now(timezone.utc)
     tokens = await _issue_session(db, user)
     logger.info("auth.login", user_id=str(user.id))
+    await audit_service.record(
+        db,
+        company_id=user.company_id,
+        user_id=user.id,
+        action="auth.login_succeeded",
+        entity="users",
+        entity_id=user.id,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
     return AuthSessionResponse(
         accessToken=tokens.access_token,
         refreshToken=tokens.refresh_token,
@@ -239,7 +285,13 @@ async def login(db: AsyncSession, data: LoginRequest) -> AuthSessionResponse:
     )
 
 
-async def refresh(db: AsyncSession, data: RefreshRequest) -> TokenPair:
+async def refresh(
+    db: AsyncSession,
+    data: RefreshRequest,
+    *,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> TokenPair:
     try:
         payload = decode_token(data.refresh_token, expected_type="refresh")
     except Exception as exc:  # noqa: BLE001
@@ -258,6 +310,27 @@ async def refresh(db: AsyncSession, data: RefreshRequest) -> TokenPair:
         # one means it was copied (e.g. stolen). Treat it as compromise: kill
         # every session for this user, not just the replayed one.
         await _revoke_all_sessions(db, session.user_id)
+        company_id = (
+            await db.execute(select(User.company_id).where(User.id == session.user_id))
+        ).scalar_one_or_none()
+        if company_id is not None:
+            await audit_service.record(
+                db,
+                company_id=company_id,
+                user_id=session.user_id,
+                action="auth.session_compromise_detected",
+                entity="sessions",
+                new_values={"reason": "refresh_token_reuse", "response": "all_sessions_revoked"},
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+        # Commit *now*, before raising. `get_db` rolls back the whole request
+        # on any exception — without this explicit commit, the revocation
+        # and the audit record above would be silently discarded the moment
+        # we raise below, i.e. the compromise response would never actually
+        # take effect. A security control that gets undone by its own error
+        # path is worse than having none.
+        await db.commit()
         raise UnauthorizedError("Invalid or expired refresh token.")
 
     if not session.is_valid:

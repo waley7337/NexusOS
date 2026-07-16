@@ -3,8 +3,8 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
-    Date, DateTime, Enum, ForeignKey, Index, Numeric, String, Text,
-    UniqueConstraint,
+    Date, DateTime, Enum, ForeignKey, ForeignKeyConstraint, Index, Numeric,
+    String, Text, UniqueConstraint, text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -18,13 +18,37 @@ from app.models.enums import (
 class Employee(Base, TenantBusinessMixin):
     __tablename__ = "employees"
     __table_args__ = (
-        UniqueConstraint("company_id", "employee_number", name="uq_employees_company_number"),
+        # Partial unique index: a terminated/soft-deleted employee record
+        # must free its employee_number for reuse.
+        Index(
+            "ix_employees_company_number_active_uq", "company_id", "employee_number",
+            unique=True, postgresql_where=text("deleted_at IS NULL"),
+        ),
         Index("ix_employees_company_status", "company_id", "status"),
+        # manager_id is self-referential — pin it to a manager in the same
+        # tenant (a stale/forged id must not resolve to another company's
+        # employee).
+        ForeignKeyConstraint(
+            ["manager_id", "company_id"], ["employees.id", "employees.company_id"],
+            name="fk_employees_manager_id_tenant_scoped", ondelete="SET NULL",
+        ),
+        ForeignKeyConstraint(
+            ["user_id", "company_id"], ["users.id", "users.company_id"],
+            name="fk_employees_user_id_tenant_scoped", ondelete="CASCADE",
+        ),
+        # Composite-FK anchor for LeaveRequest/Attendance.employee_id (below).
+        UniqueConstraint("id", "company_id", name="uq_employees_id_company"),
+        # Partial unique index, not a plain unique column: a terminated and
+        # soft-deleted employee record must free the user for a rehire.
+        Index(
+            "ix_employees_user_id_active_uq", "user_id",
+            unique=True, postgresql_where=text("deleted_at IS NULL"),
+        ),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, unique=True,
+        nullable=False,
     )
     employee_number: Mapped[str] = mapped_column(String(40), nullable=False)
     department: Mapped[str | None] = mapped_column(String(120))
@@ -42,13 +66,19 @@ class Employee(Base, TenantBusinessMixin):
         default=EmployeeStatus.ACTIVE, nullable=False,
     )
 
-    manager: Mapped["Employee | None"] = relationship(remote_side="Employee.id")
+    manager: Mapped["Employee | None"] = relationship(
+        remote_side="Employee.id", foreign_keys=[manager_id]
+    )
 
 
 class LeaveRequest(Base, TenantBusinessMixin):
     __tablename__ = "leave_requests"
     __table_args__ = (
         Index("ix_leave_requests_company_status", "company_id", "approval_status"),
+        ForeignKeyConstraint(
+            ["employee_id", "company_id"], ["employees.id", "employees.company_id"],
+            name="fk_leave_requests_employee_id_tenant_scoped", ondelete="CASCADE",
+        ),
     )
 
     employee_id: Mapped[uuid.UUID] = mapped_column(
@@ -70,8 +100,15 @@ class LeaveRequest(Base, TenantBusinessMixin):
 class Attendance(Base, TenantBusinessMixin):
     __tablename__ = "attendance"
     __table_args__ = (
-        UniqueConstraint("employee_id", "date", name="uq_attendance_employee_date"),
+        Index(
+            "ix_attendance_employee_date_active_uq", "employee_id", "date",
+            unique=True, postgresql_where=text("deleted_at IS NULL"),
+        ),
         Index("ix_attendance_company_date", "company_id", "date"),
+        ForeignKeyConstraint(
+            ["employee_id", "company_id"], ["employees.id", "employees.company_id"],
+            name="fk_attendance_employee_id_tenant_scoped", ondelete="CASCADE",
+        ),
     )
 
     employee_id: Mapped[uuid.UUID] = mapped_column(

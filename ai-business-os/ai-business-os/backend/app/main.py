@@ -17,8 +17,13 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import AppError, TenantIsolationError
 from app.core.logging import configure_logging
+from app.core.rate_limit import close_redis_client
 from app.db.session import engine
 from app.middleware.request_context import RequestContextMiddleware
+from app.middleware.security_headers import (
+    SecurityHeadersMiddleware,
+    apply_baseline_security_headers,
+)
 
 logger = structlog.get_logger("app")
 
@@ -39,6 +44,7 @@ async def lifespan(app: FastAPI):
     logger.info("startup", app=settings.APP_NAME, env=settings.ENVIRONMENT)
     yield
     await engine.dispose()  # release pooled connections bound to this loop
+    await close_redis_client()
     logger.info("shutdown")
 
 
@@ -54,6 +60,7 @@ def create_app() -> FastAPI:
 
     # --- Middleware (order matters: outermost first) ---
     app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
@@ -96,8 +103,30 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
-        logger.exception("unhandled_error")
-        return JSONResponse(
+        # Part 3.1 remediation (OBS-001, request-ID correlation): Starlette
+        # treats a bare `Exception`/500 handler as belonging to
+        # `ServerErrorMiddleware`, the one middleware layer *outside* every
+        # `add_middleware(...)` call — so this code path runs outside
+        # `RequestContextMiddleware` entirely. Concretely, that means two
+        # things this handler cannot rely on the normal way every other
+        # response does:
+        #   1. structlog's contextvars (`request_id` bound by that
+        #      middleware) are invisible here — `BaseHTTPMiddleware` runs
+        #      the rest of the chain in a *child* anyio task per layer, and
+        #      a contextvar set in a child task never propagates back to an
+        #      ancestor task. Passed explicitly to `logger.exception(...)`
+        #      below instead of relying on context merging.
+        #   2. The response never passes back through
+        #      `RequestContextMiddleware`'s own "stamp X-Request-ID on the
+        #      way out" line, or through `SecurityHeadersMiddleware`, so
+        #      both have to be applied here directly instead.
+        # `request.state`, unlike a contextvar, is backed by the shared ASGI
+        # `scope` dict and has no task-boundary problem — see
+        # `RequestContextMiddleware.dispatch`, which sets it before calling
+        # the rest of the chain.
+        request_id = getattr(request.state, "request_id", None)
+        logger.exception("unhandled_error", request_id=request_id)
+        response = JSONResponse(
             status_code=500,
             content={
                 "success": False,
@@ -106,6 +135,10 @@ def create_app() -> FastAPI:
                 "errors": [{"code": "internal_error"}],
             },
         )
+        if request_id:
+            response.headers["X-Request-ID"] = request_id
+        apply_baseline_security_headers(response, request)
+        return response
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
     return app
