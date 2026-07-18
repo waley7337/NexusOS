@@ -19,9 +19,24 @@ export const api = axios.create({
   timeout: 30_000,
 });
 
+console.log("env.apiBaseUrl =", env.apiBaseUrl);
+console.log("api.defaults.baseURL =", api.defaults.baseURL);
+
 api.interceptors.request.use((config) => {
+  console.log("========== AXIOS REQUEST ==========");
+  console.log("env.apiBaseUrl:", env.apiBaseUrl);
+  console.log("api.defaults.baseURL:", api.defaults.baseURL);
+  console.log("config.baseURL:", config.baseURL);
+  console.log("config.url:", config.url);
+  console.log("Final URL:", `${config.baseURL}${config.url}`);
+  console.log("===================================");
+
   const token = useAuthStore.getState().accessToken;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   return config;
 });
 

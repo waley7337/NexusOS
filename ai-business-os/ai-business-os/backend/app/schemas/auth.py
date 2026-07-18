@@ -90,3 +90,4 @@ class AuthSessionResponse(TokenPair):
 class MeResponse(CamelModel):
     user: UserResponse
     permissions: list[str]
+q
