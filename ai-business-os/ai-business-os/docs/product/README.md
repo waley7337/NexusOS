@@ -6,6 +6,7 @@ This folder holds documentation that belongs exclusively to **NexusOS**. Unlike 
 
 - `database.md` — Database architecture (Part 3)
 - `design-system.md` — Design system / component library (Part 4)
+- `Part-03.1-Backend-Security-Hardening-Governance-Roadmap.md` — Part 3.1 governing roadmap (Backend Security Hardening; retrospective)
 - `Part-03.2-Deployment-Configuration-and-Production-Verification-Roadmap.md` — Part 3.2 governing roadmap (Deployment Configuration & Production Verification)
 - `Part-05-Frontend-Architecture-and-Implementation-Roadmap.md` — Frontend architecture & roadmap (Part 5)
 
