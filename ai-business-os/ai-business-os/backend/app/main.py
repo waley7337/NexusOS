@@ -58,9 +58,13 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if not settings.is_production else None,
     )
 
-    # --- Middleware (order matters: outermost first) ---
+    # Middleware registration.
+    # Note: Starlette executes middleware in reverse registration order.
+    # CORSMiddleware is added last so it runs first and can handle preflight requests.
+
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
