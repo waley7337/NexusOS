@@ -25,6 +25,12 @@ SENSITIVE_KEY_MARKERS: tuple[str, ...] = (
     "password", "passwd", "secret", "token", "authorization", "auth_header",
     "api_key", "apikey", "access_key", "private_key", "credential",
     "cookie", "session_id", "jti", "otp", "pin_code", "ssn", "card_number", "cvv",
+    # Action-link / recipient fields — defense in depth if a caller ever
+    # reintroduces `link=` / `reset_link=` structured kwargs. Bare `link`
+    # is intentional: a false positive on a rare key is preferable to
+    # leaking a token-bearing URL.
+    "link", "reset_link", "verification_link", "action_link", "magic_link",
+    "recipient",
 )
 
 REDACTED = "***REDACTED***"
