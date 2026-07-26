@@ -7,7 +7,7 @@ import ipaddress
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, PostgresDsn, RedisDsn, field_validator
+from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Values that show up verbatim in .env.example / docs / CI fixtures. A real
@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    # Temporary Railway proxy-path diagnostic endpoint (disabled by default).
+    # Never enable in production without a strong one-time token; remove after
+    # Part 3.2 edge verification. See `app.api.v1.internal`.
+    PROXY_DIAGNOSTICS_ENABLED: bool = False
+    PROXY_DIAGNOSTICS_TOKEN: SecretStr | None = None
 
     # --- CORS ---
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
