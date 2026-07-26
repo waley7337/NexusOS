@@ -51,7 +51,7 @@ Part 3.2 is a **configuration and verification** phase. It is not a feature buil
 | Auth API surface | register/login/refresh/logout/me (+ rate limits) | `backend/app/api/v1/auth.py` | **Implemented**; Part 2 smoke exists; **post–3.1 re-smoke required** |
 | Sentry integration | Optional `SENTRY_DSN` | `backend/app/main.py`; Part 2 report | **Implemented**; re-verify after config changes |
 | Local compose stack | Postgres 16 + Redis 7 + API + web | `docker-compose.yml` | Local only — **not** production proof |
-| `.env.example` | Documents DB/Redis/CORS/rate-limit; **omits `TRUSTED_PROXY_*`** | `.env.example` | **Missing documentation** for Part 3.1 deploy knobs |
+| `.env.example` | Documents DB/Redis/CORS/rate-limit plus `TRUSTED_PROXY_MODE=none`, `TRUSTED_PROXY_NETWORKS=[]`, a commented `static`-mode format example, and warnings against universal `/0` networks and unverified proxy CIDRs | `.env.example` | **Documentation complete**; production Railway `TRUSTED_PROXY_*` configuration remains outstanding |
 
 **Hard rule:** Railway/Vercel being online does **not** mean Part 3.2 (or Part 3.1 production security) is complete.
 
@@ -201,7 +201,7 @@ Minimum production set (names from `backend/app/core/config.py` + Part 2 practic
 
 Repository hygiene:
 
-- Extend `.env.example` with commented `TRUSTED_PROXY_*` documentation (no secrets).
+- [x] Document `TRUSTED_PROXY_*` in `.env.example` (safe defaults `none`/`[]`, commented `static` example, `/0` and unverified-CIDR warnings — no secrets). **COMPLETE**
 - Never commit live values.
 
 Boot requirement: application starts successfully with `validate_production_config()` raising no errors.
@@ -500,17 +500,17 @@ Rejected counts from Proposal A/B do not apply.
 | **Objective** | Make production config complete, documented, and validator-clean. |
 | **Scope** | §12 variables; `.env.example` TRUSTED_PROXY docs; boot validation |
 | **Acceptance criteria** | Validator passes on prod boot; `.env.example` documents proxy knobs |
-| **Required evidence** | Boot log; PR updating `.env.example` |
+| **Required evidence** | Boot log; `.env.example` TRUSTED_PROXY documentation (repo) |
 | **Dependencies** | 3.2.2–3.2.6 |
 | **Suggested labels** | `backend`, `Documentation` |
-| **Initial status** | **Missing documentation** (`.env.example` gap) + **Not started** live validator proof |
+| **Initial status** | `.env.example` TRUSTED_PROXY documentation **COMPLETE**; live Railway config checklist + validator proof **Not started** |
 
 **Sub-issues**
 
 | Title | Initial status |
 |---|---|
 | Prove `validate_production_config()` on production boot | Not started |
-| Document `TRUSTED_PROXY_*` in `.env.example` | Missing documentation |
+| Document `TRUSTED_PROXY_*` in `.env.example` | **COMPLETE** |
 | Checklist all §12 variables present on Railway | Not started |
 
 ---

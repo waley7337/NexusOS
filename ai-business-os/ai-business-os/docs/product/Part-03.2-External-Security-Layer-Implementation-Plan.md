@@ -23,7 +23,7 @@
 | Headers / HSTS | App sets baseline headers; HSTS gated on trusted `X-Forwarded-Proto` |
 | Auth model | Bearer + localStorage — not cookie sessions |
 | Part 3.2 blocker | **3.2.2** Trusted Proxy & Edge Topology still missing real CIDRs |
-| `.env.example` | Omits `TRUSTED_PROXY_*` |
+| `.env.example` | **Documents** `TRUSTED_PROXY_MODE=none`, `TRUSTED_PROXY_NETWORKS=[]`, a commented `static`-mode format example, and warnings against universal `/0` networks and unverified proxy CIDRs |
 | Cloudflare in Part 3.2 IDs | Not named in roadmap numbering — this plan is the first execution slice of 3.2.2 (+ related verify work) |
 
 ---
@@ -304,7 +304,7 @@ Done for **External Security Layer v1** only when all are true:
 | Deliverable | Location |
 |---|---|
 | CIDR decision record + hop diagram | Part 3.2 runbook / `docs/reports/Part-03.2/` |
-| `.env.example` commented `TRUSTED_PROXY_*` | Repo root (no secrets) |
+| `.env.example` commented `TRUSTED_PROXY_*` | **COMPLETE** — Repo root (no secrets); safe defaults `none`/`[]`, commented `static` example, `/0` and unverified-CIDR warnings |
 | Cloudflare ops notes (WAF profile, SSL mode, hostname) | Runbook (redacted) |
 | Verification evidence | `docs/reports/Part-03.2/` verification report (when evidence exists) |
 | Part 3.2 readiness reassessment | Inside verification report vs Part 3.1 NOT READY matrix |
@@ -323,7 +323,7 @@ Done for **External Security Layer v1** only when all are true:
 4. Configure TRUSTED_PROXY_* (3.2.2)
 5. Prove spoof resistance + per-client rate limits
 6. Point Vercel API base at Cloudflare hostname; re-verify CORS/auth (3.2.6 / 3.2.9 / 3.2.11)
-7. Capture evidence; update .env.example + runbook
+7. Capture evidence; update runbook (`.env.example` TRUSTED_PROXY documentation already complete)
 8. Only then continue broader Part 3.2 (Redis effectiveness sign-off, probes, rollback docs, full gate)
 ```
 
