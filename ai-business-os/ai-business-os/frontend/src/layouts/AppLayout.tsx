@@ -13,11 +13,13 @@ import {
   LogOut,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn, formatRelativeTime } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/providers/theme-provider";
 import { useUiStore } from "@/stores/ui";
 import { useRouteFocus } from "@/hooks/useRouteFocus";
+import { useLiveClock } from "@/hooks/useLiveClock";
+import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { useLogout } from "@/features/auth";
 import { ROUTES } from "@/constants/routes";
 import { CommandPalette } from "@/components/command-palette";
@@ -28,6 +30,7 @@ import {
 import { OfflineBanner } from "@/components/offline-banner";
 import { LazyOutlet } from "@/routes/LazyOutlet";
 import { Button } from "@/components/ui/button";
+import { SystemStatusBar } from "@/components/ui/system-status-bar";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -50,6 +53,12 @@ export function AppLayout() {
   );
 
   useRouteFocus();
+
+  const systemStatus = useSystemStatus();
+  const clock = useLiveClock();
+  const syncedDetail = systemStatus.lastSyncedAt
+    ? `Synced ${formatRelativeTime(systemStatus.lastSyncedAt, clock.getTime())}`
+    : undefined;
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
@@ -91,9 +100,18 @@ export function AppLayout() {
         <div
           className={cn(
             "mt-auto border-t p-3",
-            collapsed && "flex justify-center",
+            collapsed && "flex flex-col items-center",
           )}
         >
+          {!collapsed && (
+            <SystemStatusBar
+              variant={systemStatus.variant}
+              label={systemStatus.label}
+              detail={syncedDetail}
+              className="mb-3"
+            />
+          )}
+
           <div
             className={cn(
               "flex items-center gap-3",
