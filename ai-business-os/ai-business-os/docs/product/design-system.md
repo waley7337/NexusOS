@@ -78,6 +78,7 @@ The classes above are *what exists*; this table is *which one to reach for*. Eve
 ## Spacing · Radius · Elevation · Motion · Z-index
 
 - **Spacing (§4.6):** 8px system — sanctioned values `4 8 12 16 24 32 40 48 64` (Tailwind `1 2 3 4 6 8 10 12 16`). Never invent gaps.
+- **Page rhythm (Part 04, Phase 4):** every page root uses `space-y-6`; grids and multi-widget rows inside a page use `gap-4`. This is what `DashboardPage` and every module placeholder already do — Phase 4 codifies it as the rule new module pages (Part 6+) follow, rather than each page picking its own gap.
 - **Radius (§4.7):** `rounded-btn` 10px · `rounded-input` 10px · `rounded-card` 12px · `rounded-dialog` 16px · avatars full circle.
 - **Shadows (§4.8):** `shadow-sm/md/lg/hover/dropdown/modal` — all CSS vars, tuned separately for dark mode.
 - **Motion (§4.23):** `duration-fast` 150ms · `duration-base` 200ms · `duration-slow` 250ms, easing `cubic-bezier(0.2,0,0,1)`. Framer presets in `src/lib/motion.ts` (`fadeInUp`, `staggerChildren`, `scaleIn`). Every animation communicates state; `prefers-reduced-motion` collapses all of it.
@@ -98,6 +99,7 @@ The classes above are *what exists*; this table is *which one to reach for*. Eve
 | Tabs · Breadcrumb · Pagination | — | arrow-key tabs; windowed page numbers |
 | Skeleton · EmptyState · ErrorState | — | the only sanctioned loading/empty/error patterns |
 | Toasts | Sonner | **top-right**, auto-dismiss, close button |
+| PageHeader (Part 04, Phase 4) | `page-header.tsx` | eyebrow · Display-scale title · directive (emphasis-capable) · actions · reserved status slot; `as="h2"` only for pages that already own their h1 |
 
 ## Definition of Done (§4.29)
 

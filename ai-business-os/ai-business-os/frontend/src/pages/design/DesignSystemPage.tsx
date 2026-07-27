@@ -25,6 +25,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -227,6 +228,41 @@ export function DesignSystemPage() {
             <p className="text-xs text-muted-foreground">One per screen, marks the dominant focal point</p>
           </div>
         </div>
+      </Section>
+
+      {/* ------------------------ Layout (Part 04, Phase 4) -------------------- */}
+      <Section id="layout" title="Layout — PageHeader (Part 04, Phase 4)">
+        <p className="text-sm text-muted-foreground">
+          The shared top-of-page block every module inherits: eyebrow, Display-scale title,
+          directive with an optional emphasized segment, actions, and a slot reserved for Phase
+          5's live-status pill. Page root spacing is <code className="font-mono text-xs">space-y-6</code>;
+          grids inside a page use <code className="font-mono text-xs">gap-4</code> — the same rhythm
+          <code className="mx-1 font-mono text-xs">DashboardPage</code> and every module placeholder
+          already use.
+        </p>
+        <Card>
+          <CardContent>
+            <PageHeader
+              as="h2"
+              eyebrow="Mission control"
+              title="Good morning, Waley"
+              description={
+                <>
+                  This week's directive —{" "}
+                  <span className="font-medium text-primary">protect the deep work, repair the base layer</span>.
+                </>
+              }
+              actions={
+                <>
+                  <Button variant="outline">Begin weekly review</Button>
+                  <Button>
+                    <Plus /> Capture
+                  </Button>
+                </>
+              }
+            />
+          </CardContent>
+        </Card>
       </Section>
 
       {/* ---------------------------- Typography --------------------------- */}
