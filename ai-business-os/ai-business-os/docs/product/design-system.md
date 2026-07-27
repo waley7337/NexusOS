@@ -4,22 +4,76 @@ Single source of truth for every screen. Live version: run the app and open **/d
 
 The rule that makes the system work: **no component uses a value that isn't a token.** Colors, radii, shadows, durations, and z-indexes are all CSS variables — which is also why dark mode is full-parity by construction.
 
+## Surface ladder
+
+Every neutral fill in the product comes from one six-step ladder. The
+shadcn-style aliases (`--background`, `--card`, `--muted`, `--secondary`,
+`--accent`) are defined as `var()` references *into* it, so the ladder is the
+single source of truth and every existing `bg-card` / `bg-muted` class inherits
+it unchanged. Use `bg-surface-N` directly when a surface needs an explicit
+elevation rather than a semantic role.
+
+| Step | Light | Dark | Used for | Alias |
+|---|---|---|---|---|
+| `--surface-0` | `#F7F7F7` | `#000000` | Page canvas | `--background` |
+| `--surface-1` | `#FFFFFF` | `#080808` | Shell chrome — sidebar, topbar, status bar | — |
+| `--surface-2` | `#FFFFFF` | `#0D0D0D` | Card / panel | `--card`, `--surface-glass` |
+| `--surface-3` | `#FFFFFF` | `#121212` | Raised / hover / active nav row / tooltip | — |
+| `--surface-4` | `#F5F5F5` | `#171717` | Control fill — secondary buttons, keycaps | `--muted`, `--secondary` |
+| `--surface-5` | `#ECECEC` | `#1C1C1C` | Control hover | `--accent` |
+
+Dark is 0% saturation throughout — genuinely neutral, measured B−R delta of 0
+on both page and card. Depth comes from the shadow/inset/border system, not
+from hue. (The LifeOS reference carries a ~1.2% cool tint; that was
+deliberately not adopted.)
+
+**Hairlines are translucent**, so a border reads as a lit edge over whatever
+surface is beneath it rather than a fixed grey, and three strengths encode
+hierarchy. These are complete `rgb()` values carrying alpha, not HSL triplets:
+
+| Token | Light | Dark |
+|---|---|---|
+| `--line` | `rgb(15 23 42 / 0.10)` | `rgb(255 255 255 / 0.09)` |
+| `--line-soft` | `rgb(15 23 42 / 0.06)` | `rgb(255 255 255 / 0.055)` |
+| `--line-strong` | `rgb(15 23 42 / 0.16)` | `rgb(255 255 255 / 0.14)` |
+
+`--border` / `--input` remain HSL triplets set to the composited equivalent,
+for the call sites that still use `hsl(var(--border))`.
+
 ## Color
 
 | Token | Light | Dark | Used for |
 |---|---|---|---|
-| `--primary` | `#2563EB` | `#3B82F6` | Primary buttons, links, active nav, focus rings |
-| `--success` | `#16A34A` | `#22C55E` | Confirmations, positive deltas |
-| `--warning` | `#F59E0B` | `#F59E0B` | Caution states (dark text for AA on amber) |
-| `--destructive` | `#DC2626` | `#EF4444` | Destructive actions, errors |
-| `--info` | `#0891B2` | `#06B6D4` | Informational callouts |
-| `--background` | `#F8FAFC` | `#0B1220` | App background |
-| `--card` | `#FFFFFF` | `#111927` | Surfaces |
-| `--border` / `--input` | `#E2E8F0` | `#1E293B` | Hairlines, control borders |
-| `--muted` | `#F1F5F9` | `#1B2537` | Subtle fills, table header rows |
-| `--foreground` | `#0F172A` | `#E2E8F0` | Text primary |
-| `--muted-foreground` | `#64748B` | `#94A3B8` | Text secondary |
-| `--disabled-foreground` | `#94A3B8` | `#64748B` | Text disabled |
+| `--primary` | `#5B51E8` | `#7C74FF` | Accent: text, icons, borders, focus ring, glow |
+| `--primary-fill` | `#5B51E8` | `#5B51E8` | Filled controls carrying a white label |
+| `--primary-soft` | `#3D30CF` | `#A29BFF` | Emphasis / hover |
+| `--success` | `#0F7535` | `#3ECF8E` | Confirmations, positive deltas |
+| `--warning` | `#90570A` | `#F5B84B` | Caution states |
+| `--destructive` | `#D01F1F` | `#F26D6D` | Destructive actions, errors |
+| `--info` | `#096699` | `#38BDF8` | Informational callouts |
+| `--foreground` | `#0F172A` | `#EDEDED` | Text primary |
+| `--muted-foreground` | `#5A6577` | `#A3A3A3` | Text secondary |
+| `--disabled-foreground` | `#94A3B8` | `#6B6B6B` | Text disabled |
+
+**Why the primary is two tokens.** The contrast requirement inverts between
+themes: on near-black the accent must be *light* to be legible as text
+(`#7C74FF` measures 5.44:1 on a card), while white on that same violet is only
+3.62:1 — below AA for a 14px button label. So `--primary` is the accent and is
+mode-aware, `--primary-fill` is the deep violet reserved for filled controls,
+and `--primary-foreground` is mode-aware to match. Both roles pass AA in both
+themes. The LifeOS reference ships the 3.62:1 button; that defect was not
+copied.
+
+**Why the light-mode semantics are dark.** They do double duty — the fill
+behind `*-foreground` text *and* the text colour for tinted badges and delta
+pills (`text-success` on `bg-success/10`). They had only ever been audited in
+the first role; as text, success measured 3.52:1. The binding case is the
+tinted backdrop, not paper, so each value is set against that.
+
+Chart series are re-tuned away from the violet so no series can be mistaken for
+the brand — `--chart-1` was previously byte-identical to `--primary`, which is
+much of why the UI read as monochrome blue. Hues now span 207 / 172 / 27 / 329
+/ 83 / 292.
 
 ## Tokens 2.0 — Core Platform (Part 04, Phase 1 draft)
 
@@ -36,9 +90,18 @@ Additive tokens for the Core Platform's depth system (glow, glass, chart palette
 
 New utility classes (`globals.css` `@layer components`):
 
-- `.surface-glass` — `--surface-glass` background (72% opacity) + `--surface-glass-border` (60% opacity) + backdrop blur + `shadow-lg`. Opt-in only; solid `--card` remains the default for every existing surface.
-- `.glow-banner` — the `.auth-glow` radial-gradient recipe generalized for use outside the auth shell, bound to `--glow-primary`.
-- `.pulse-live` — subtle opacity/scale pulse for a live-status indicator; collapses under the existing global `prefers-reduced-motion` rule.
+- `.surface` — the elevated-panel recipe: ladder fill + translucent hairline + inset top highlight + deep drop shadow, at `--radius-surface` (18px). This is what `Card` renders. Before it existed, Card was `rounded-xl border bg-card` and measured `boxShadow: none` — **no card in the product cast a shadow**, which was the single biggest reason the UI read as flat.
+- `.surface-raised` — the same recipe one step up the ladder, for a surface sitting on top of another surface (the command palette).
+- `.surface-glass` — 72%-opacity fill + backdrop blur + `shadow-lg`. Opt-in only, for floating surfaces; never data-dense content.
+- `.card-lift` — restrained hover elevation: `translateY(-2px)`, border to `--line-strong`, `--shadow-lift`. Opt-in via `Card interactive`, because a grid where every card lifts reads as noise.
+- `.spotlight` — pointer-tracked radial highlight, positioned from `--mx`/`--my` written by `useSpotlight`. Defaults to 50%/0% so the class is safe without the hook.
+- `.glow-banner` — radial glow marking the one dominant focal point, bound to `--glow-primary` at 10%.
+- `.grid-field` — barely-visible 44px structural grid with a radial mask, for hero panels.
+- `.eyebrow` / `.num` / `.kbd` / `.focus-ring` — see Typography below.
+- `.pulse-live` / `.drift` — live-status pulse and 14s ambient drift; both switched off under `prefers-reduced-motion`.
+
+Composed shadow tokens: `--shadow-surface` (inset highlight + drop) and
+`--shadow-lift`, exposed as `shadow-surface` / `shadow-lift` / `shadow-inset`.
 
 ## Typography — Inter, fallback system-ui
 
@@ -139,6 +202,78 @@ Dashboard's hero (`pages/dashboard/DashboardPage.tsx`) matches the visual langua
 - **`StatCard` + `useCountUp`:** `StatCard`'s `value` animates only when it's a plain integer string (`/^\d+$/` — e.g. "23", "3"); pre-formatted values ("$128,430", "11.4mo") render statically. Animating a reformatted currency string mid-flight was judged real added complexity for what the Constitution asks to stay a restrained, legible reveal — not a data-model change.
 - **`staggerSection` (`lib/motion.ts`):** a `Variants` preset for page-level sections (hero, KPI row, chart row, activity row) — same per-child 200ms `transition`/`fadeInUp` token already used by `/design`'s `staggerChildren`, just a larger stagger interval suited to a handful of big chunks instead of many small list items. Wired into `DashboardPage`'s four top-level sections.
 - **jsdom gap fixed:** `useMediaQuery`/`useCountUp` are real, shipped dependencies of `StatCard` now (not a one-off), so `test/setup.ts` gained a permanent `window.matchMedia` stub (jsdom doesn't implement it) — defaults to "no match" (motion not reduced); tests that care about reduced-motion override it themselves.
+
+## LifeOS Visual Convergence (Part 04, Commits A–G)
+
+A visual-system correction applied after Phase 8, using an attached LifeOS
+build as the concrete reference. No backend, API contract, route, auth rule,
+business logic or mock dataset was touched — the whole correction lives in the
+frontend visual layer.
+
+### What was actually wrong (measured, not asserted)
+
+| Finding | Evidence |
+|---|---|
+| One surface, not a hierarchy | Sidebar, hero and all 12 dashboard cards measured the identical `rgb(26,26,26)` on a `rgb(15,15,15)` page |
+| Nothing had depth | `boxShadow: "none"` on every card, hero included; six shadow tokens existed but `Card` consumed none |
+| Blue was structural, not accent | `--chart-1` was byte-identical to `--primary`, as was `--ring`; active nav was `bg-primary/10 text-primary` |
+| Hero wasted its own space | 122px of slack below the left column — 44% of the hero's height — from `items-start` with a 159px column against a 280px one |
+| No tabular numerics | KPI values measured `font-variant-numeric: normal`, so the count-up reflowed its card every frame |
+| No mono webfont | A mono stack was declared but none loaded; measured fallback to `ui-monospace/SFMono/Menlo` |
+| Charts were library defaults | 12px sans ticks, full dashed grid at `--border`, 8px tooltip, both series on `--primary` |
+| The "harsh blue outline" was a bug | `useRouteFocus` fell through to focusing `<main tabIndex={-1}>` on every navigation because the h1 lives in a lazy chunk; Chromium painted its platform ring around the content region |
+| Command palette scrim never worked | The `fixed inset-0` scrim was inside an element carrying `-translate-x-1/2`, which made it the containing block — measured: no full-viewport overlay existed |
+| Ambient drift never ran | `@keyframes drift` shipped without the `.drift` class; measured `animation-name: none` |
+| Both webfonts were failing | `rsms.me` and `fonts.googleapis.com` both errored on a restricted network; `document.fonts` reported zero loaded families |
+
+### Motion system
+
+| Preset | Timing | For |
+|---|---|---|
+| `transition` / `transitionFast` | 200 / 150ms, brand curve | Interaction feedback the user is waiting on |
+| `transitionReveal` | 700ms, `--ease-out-expo` | Entrances only |
+| `fadeInUp` | opacity + 14px + blur(6px)→0 | Section reveal — the blur is what makes it read as *resolving into place* |
+| `fadeInPlain` | opacity, 200ms | Reduced-motion counterpart |
+| `staggerSection` | 60ms delay, 80ms interval | Page-level section cascade |
+| `useCountUp` | 1.1s, expo-out | Numeric reveal |
+| `.card-lift` | 250ms, `translateY(-2px)` | Hover elevation |
+| `.drift` | 14s, ~3% travel | Ambient hero backdrop |
+| SVG `draw` | 1.1s sparkline, 0.9s gauge + 80ms/spoke stagger | Stroke drawing |
+
+**Reduced motion** is handled in two places, because one is not enough.
+CSS covers stylesheet animation: effects that *move* are switched off and
+pinned to their finished state explicitly — which cannot fail the way a
+0.01ms replay can — while colour/opacity feedback keeps working, with a
+blanket cap retained as a backstop. Framer Motion animates through inline
+styles from JS and the media query cannot reach it, so `App.tsx` wraps the
+tree in `<MotionConfig reducedMotion="user">`; that drops the transform but
+*not* `filter`, so `useRevealVariants` additionally swaps in an opacity-only
+variant. Verified in a real browser across both preference states.
+
+### Shell
+
+The system status moved out of the sidebar footer into a dedicated `h-8`
+monospace bar across the foot of the shell, rendered in exactly one place so
+the two can never disagree. The shell became `h-dvh` + `overflow-hidden` with
+`<main>` owning the scroll, so the bar stays put; `dvh` rather than `vh` so
+collapsing mobile browser chrome cannot push it off-screen, plus
+`env(safe-area-inset-bottom)`. It lives in the content column, which makes it
+correct for expanded, collapsed and mobile sidebar states with no per-state
+handling. Every value is derived from a real signal — `useSystemStatus` reads
+`navigator.onLine` and the dashboard query's cache state, giving four honest
+states (offline / syncing / sync failed / nominal). Nothing is hardcoded.
+
+### Verification
+
+37/37 responsive + accessibility checks pass: no horizontal overflow at
+375/768/1440/1920 in both themes; status bar visible and never overlapping
+main at any size; content capped at 1400px; sidebar 270px→64px with the bar
+tracking it; mobile drawer opens with the desktop sidebar correctly hidden;
+24/24 keyboard tab stops paint a focus indicator with no trap; 132 dark + 131
+light text/background pairs all AA; one `h1` with a `1,2,2,2,2,2` outline; the
+status region is a polite live region; the gauge keeps its `sr-only` text
+equivalent; every button has an accessible name; console clean across all
+eight viewport/theme combinations.
 
 ## Definition of Done (§4.29)
 

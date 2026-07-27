@@ -27,6 +27,7 @@ import { Input, Select, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChecklistCard } from "@/components/ui/checklist-card";
 import { PageHeader } from "@/components/ui/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Progress } from "@/components/ui/progress";
 import { ProgressListItem } from "@/components/ui/progress-list-item";
 import { RadialGauge } from "@/components/ui/radial-gauge";
@@ -140,21 +141,24 @@ export function DesignSystemPage() {
 
       {/* ------------------------------ Colors ----------------------------- */}
       <Section id="colors" title="Color">
-        <p className="text-caption">Brand & semantic</p>
+        {/* Hex labels are the DARK-theme values — the theme the product is
+            designed in. Light-mode equivalents are deliberately darker for the
+            semantic colours, because they double as text on a tinted fill. */}
+        <p className="text-caption">Brand &amp; semantic (dark)</p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-          <Swatch name="Primary" varName="--primary" hex="#2563EB" />
-          <Swatch name="Success" varName="--success" hex="#16A34A" />
-          <Swatch name="Warning" varName="--warning" hex="#F59E0B" />
-          <Swatch name="Danger" varName="--destructive" hex="#DC2626" />
-          <Swatch name="Info" varName="--info" hex="#0891B2" />
+          <Swatch name="Primary" varName="--primary" hex="#7C74FF" />
+          <Swatch name="Success" varName="--success" hex="#3ECF8E" />
+          <Swatch name="Warning" varName="--warning" hex="#F5B84B" />
+          <Swatch name="Danger" varName="--destructive" hex="#F26D6D" />
+          <Swatch name="Info" varName="--info" hex="#38BDF8" />
         </div>
-        <p className="text-caption">Neutrals (light)</p>
+        <p className="text-caption">Neutrals (dark)</p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-          <Swatch name="Background" varName="--background" hex="#F8FAFC" />
-          <Swatch name="Surface" varName="--card" hex="#FFFFFF" />
-          <Swatch name="Border" varName="--border" hex="#E2E8F0" />
-          <Swatch name="Muted" varName="--muted" hex="#F1F5F9" />
-          <Swatch name="Text" varName="--foreground" hex="#0F172A" />
+          <Swatch name="Background" varName="--background" hex="#000000" />
+          <Swatch name="Surface" varName="--card" hex="#0D0D0D" />
+          <Swatch name="Raised" varName="--surface-3" hex="#121212" />
+          <Swatch name="Control" varName="--muted" hex="#171717" />
+          <Swatch name="Text" varName="--foreground" hex="#EDEDED" />
         </div>
       </Section>
 
@@ -275,20 +279,109 @@ export function DesignSystemPage() {
       {/* ------------------------ Shell (Part 04, Phase 5) --------------------- */}
       <Section id="shell" title="Shell — status &amp; nav (Part 04, Phase 5)">
         <p className="text-sm text-muted-foreground">
-          Live-status chrome for the sidebar footer, plus the nav grouping and active-state
-          restyle now used in <code className="font-mono text-xs">AppLayout</code>. See the
-          real thing in the sidebar on the left.
+          Live-status chrome, plus the nav grouping and active-state restyle used in{" "}
+          <code className="font-mono text-xs">AppLayout</code>. As of the LifeOS convergence the
+          system status lives in the shell&apos;s bottom bar — visible at the foot of this window
+          right now — and is deliberately rendered in exactly one place, so{" "}
+          <code className="font-mono text-xs">SystemStatusBar</code> below is the standalone
+          primitive rather than a second live copy. Only the healthy state animates: a degraded
+          or offline system sits still rather than pulsing reassuringly.
         </p>
         <Card>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-6">
-              <StatusPill variant="online" label="Online" />
+              <StatusPill variant="online" label="All systems nominal" />
               <StatusPill variant="warning" label="Syncing" />
               <StatusPill variant="offline" label="Offline" />
             </div>
             <SystemStatusBar detail="Synced just now" />
           </CardContent>
         </Card>
+      </Section>
+
+      {/* ------------- LifeOS convergence (Part 04, Commits A–F) --------------- */}
+      <Section id="convergence" title="Surface ladder, accent &amp; sections (Part 04 convergence)">
+        <p className="text-sm text-muted-foreground">
+          The six-step neutral ladder every surface token aliases into, the two-step violet, and
+          the SectionHeader that marks each panel. Before this, the product had exactly one
+          surface colour and no card cast a shadow.
+        </p>
+
+        <Card>
+          <CardContent className="space-y-6">
+            <div>
+              <p className="eyebrow mb-2">Surface ladder</p>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {([0, 1, 2, 3, 4, 5] as const).map((step) => (
+                  <div key={step} className="space-y-1.5">
+                    <div
+                      className="h-12 rounded-lg border"
+                      style={{ background: `hsl(var(--surface-${step}))`, borderColor: "var(--line)" }}
+                    />
+                    <p className="num text-2xs text-muted-foreground">surface-{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="eyebrow mb-2">Two-step violet</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary" style={{ background: "hsl(var(--primary) / 0.10)" }}>
+                  --primary · accent text
+                </span>
+                <span className="rounded-lg bg-primary-fill px-3 py-1.5 text-sm font-medium text-white">
+                  --primary-fill · white label
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Two values because the requirement inverts by theme: on near-black the accent must
+                be light to be legible as text, on white it must be dark. Splitting them keeps both
+                roles AA instead of shipping the reference&apos;s 3.62:1 button.
+              </p>
+            </div>
+
+            <div>
+              <p className="eyebrow mb-2">Chart series</p>
+              <div className="flex flex-wrap gap-2">
+                {([1, 2, 3, 4, 5, 6] as const).map((n) => (
+                  <span
+                    key={n}
+                    className="num rounded-md px-2.5 py-1 text-2xs font-medium"
+                    style={{ background: `hsl(var(--chart-${n}) / 0.15)`, color: `hsl(var(--chart-${n}))` }}
+                  >
+                    chart-{n}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Re-tuned away from the violet so no series can be mistaken for the brand —
+                --chart-1 used to be byte-identical to --primary.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardContent className="space-y-4">
+              <SectionHeader title="Section header" subtitle="Default primary tone" as="h3" />
+              <SectionHeader title="Healthy" subtitle="success" tone="success" as="h3" />
+              <SectionHeader title="Needs attention" subtitle="warning" tone="warning" as="h3" />
+              <SectionHeader title="At risk" subtitle="danger" tone="danger" as="h3" />
+            </CardContent>
+          </Card>
+          <Card interactive>
+            <CardContent className="space-y-2">
+              <SectionHeader title="Interactive card" subtitle="Hover me" tone="info" as="h3" />
+              <p className="text-sm text-muted-foreground">
+                <code className="font-mono text-xs">interactive</code> opts a Card into the 2px
+                hover lift and the pointer-tracked spotlight. Deliberately opt-in: a grid where
+                every card lifts reads as noise.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </Section>
 
       {/* ---------------- Dashboard Framework (Part 04, Phase 7) --------------- */}
