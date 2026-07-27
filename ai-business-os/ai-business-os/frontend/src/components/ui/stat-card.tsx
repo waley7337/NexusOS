@@ -4,6 +4,24 @@ import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { Card, CardContent } from "./card";
 import { Sparkline } from "./sparkline";
 import { cn } from "@/lib/utils";
+import { useCountUp } from "@/hooks/useCountUp";
+
+const PLAIN_INTEGER = /^\d+$/;
+
+/**
+ * Renders `value` as a count-up entrance (Part 04, Phase 8) when it's a
+ * plain integer string ("23", "312") — the common case for counts. Values
+ * that already carry formatting ("$128,430", "11.4mo") render statically:
+ * animating a reformatted currency string mid-flight is real added
+ * complexity for what the Design Constitution asks to stay a restrained,
+ * legible number reveal, not a bigger data-model change.
+ */
+function AnimatedValue({ value }: { value: string }) {
+  const isPlainInteger = PLAIN_INTEGER.test(value);
+  const animated = useCountUp(isPlainInteger ? Number(value) : 0);
+  if (!isPlainInteger) return <>{value}</>;
+  return <>{Math.round(animated)}</>;
+}
 
 interface StatCardProps {
   label: string;
@@ -47,7 +65,9 @@ export function StatCard({
           {delta !== undefined && <DeltaPill delta={delta} />}
         </div>
 
-        <p className="mt-3 font-mono text-2xl font-semibold tracking-tight">{value}</p>
+        <p className="mt-3 font-mono text-2xl font-semibold tracking-tight">
+          <AnimatedValue value={value} />
+        </p>
         <p className="text-sm text-muted-foreground">{label}</p>
 
         {trend && trend.length > 1 && (

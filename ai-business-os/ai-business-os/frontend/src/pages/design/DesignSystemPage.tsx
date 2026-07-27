@@ -25,8 +25,10 @@ import { ErrorState } from "@/components/ui/error-state";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ChecklistCard } from "@/components/ui/checklist-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
+import { ProgressListItem } from "@/components/ui/progress-list-item";
 import { RadialGauge } from "@/components/ui/radial-gauge";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -123,6 +125,7 @@ const demoColumns: ColumnDef<DemoCustomer, unknown>[] = [
 /* -------------------------------- page --------------------------------- */
 export function DesignSystemPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [thesisChecked, setThesisChecked] = useState(true);
 
   return (
     <motion.div variants={staggerChildren} initial="hidden" animate="visible" className="max-w-4xl space-y-12 pb-16">
@@ -324,6 +327,38 @@ export function DesignSystemPage() {
             />
           </CardContent>
         </Card>
+      </Section>
+
+      {/* ------------------------ Component library ------------------------ */}
+      <Section id="component-library" title="Component library (Part 04, Phase 8)">
+        <p className="text-sm text-muted-foreground">
+          ProgressListItem and ChecklistCard — row-level primitives for lists of tracked work.
+          StatCard's plain-integer values (Tasks due today, Inventory alerts, above) now count up
+          on mount via <code className="font-mono text-xs">useCountUp</code>, and this page's
+          sections stagger in via <code className="font-mono text-xs">staggerSection</code>; both
+          fall back to an instant, unanimated render under prefers-reduced-motion.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardContent className="space-y-4">
+              <ProgressListItem title="Q3 roadmap" description="Design → build → ship" percent={68} />
+              <ProgressListItem title="Onboarding checklist" percent={100} />
+              <ProgressListItem title="Migration to Part 04 tokens" percent={24} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-3">
+              <ChecklistCard
+                label="Draft the promotion thesis"
+                tag="Career"
+                checked={thesisChecked}
+                onCheckedChange={setThesisChecked}
+              />
+              <ChecklistCard label="Review Q3 pipeline" tag="Sales" />
+              <ChecklistCard label="Deep work block" />
+            </CardContent>
+          </Card>
+        </div>
       </Section>
 
       {/* ---------------------------- Typography --------------------------- */}

@@ -102,6 +102,7 @@ The classes above are *what exists*; this table is *which one to reach for*. Eve
 | PageHeader (Part 04, Phase 4) | `page-header.tsx` | eyebrow · Display-scale title · directive (emphasis-capable) · actions · reserved status slot; `as="h2"` only for pages that already own their h1 |
 | StatusPill / SystemStatusBar (Part 04, Phase 5) | `status-pill.tsx` / `system-status-bar.tsx` | dot + label, `online`/`warning`/`offline`; `online` pulses via `.pulse-live` (§Tokens 2.0), respects reduced motion |
 | StatCard / Sparkline / RadialGauge (Part 04, Phase 7) | `stat-card.tsx` / `sparkline.tsx` / `radial-gauge.tsx` | icon chip + delta pill + trend line; hand-drawn SVG sparkline (not Recharts — see §Dashboard Framework); RadialGauge ships a screen-reader text-equivalent alongside its SVG |
+| ProgressListItem / ChecklistCard (Part 04, Phase 8) | `progress-list-item.tsx` / `checklist-card.tsx` | row-level primitives for lists of tracked work — title/description + `Progress` bar; checkbox + label + optional trailing `Badge` tag. Consumers compose rows inside their own `Card` |
 
 ### Application Shell (Part 04, Phase 5)
 
@@ -130,6 +131,14 @@ Dashboard's hero (`pages/dashboard/DashboardPage.tsx`) matches the visual langua
 - **Loading state:** every dynamic piece of the hero (directive, progress bar, gauge, metrics) renders its own skeleton while `useDashboard()` is pending — same "no spinners" contract every other widget already follows. `StatusPill` even shows a real `"Syncing"` state during load, since `useSystemStatus()` reads the same query's live cache state, not a hardcoded label.
 - **Sparkline is plain SVG, not Recharts:** at the small size used here (embedded in a grid cell), Recharts' `ResponsiveContainer` relies on `ResizeObserver` timing that doesn't reliably fire on first paint inside a CSS grid and rendered nothing in real-browser testing — a hand-drawn path with `viewBox` scaling has no such dependency.
 - **Unchanged:** `RevenueChart`, `PipelineChart`, `ActivityFeed`, `UpcomingMeetings`, `AiInsights` — every existing chart/list widget below the hero, and the `useDashboard()` query key/shape Part 6+ will eventually swap for a real endpoint.
+
+### Component Library Evolution (Part 04, Phase 8)
+
+- **`ProgressListItem` / `ChecklistCard`:** new row-level primitives (see table above) — wrap the existing `Progress`/`Checkbox`/`Label`/`Badge` components rather than reinventing them. Demoed in `/design`'s new "Component library" section.
+- **`useCountUp` (`hooks/useCountUp.ts`):** animates a number from 0 to its target over 600ms on mount — the LifeOS-style number reveal. Lives in `hooks/`, not `lib/motion.ts`, matching this codebase's actual convention (one hook per file for anything stateful; `lib/motion.ts` holds only declarative `Variants`/`Transition` constants). Reuses the existing `useMediaQuery` hook for its `prefers-reduced-motion` check — under reduced motion the target value renders immediately, no animation (Design Constitution §10: motion communicates state, it never bypasses reduced-motion).
+- **`StatCard` + `useCountUp`:** `StatCard`'s `value` animates only when it's a plain integer string (`/^\d+$/` — e.g. "23", "3"); pre-formatted values ("$128,430", "11.4mo") render statically. Animating a reformatted currency string mid-flight was judged real added complexity for what the Constitution asks to stay a restrained, legible reveal — not a data-model change.
+- **`staggerSection` (`lib/motion.ts`):** a `Variants` preset for page-level sections (hero, KPI row, chart row, activity row) — same per-child 200ms `transition`/`fadeInUp` token already used by `/design`'s `staggerChildren`, just a larger stagger interval suited to a handful of big chunks instead of many small list items. Wired into `DashboardPage`'s four top-level sections.
+- **jsdom gap fixed:** `useMediaQuery`/`useCountUp` are real, shipped dependencies of `StatCard` now (not a one-off), so `test/setup.ts` gained a permanent `window.matchMedia` stub (jsdom doesn't implement it) — defaults to "no match" (motion not reduced); tests that care about reduced-motion override it themselves.
 
 ## Definition of Done (§4.29)
 

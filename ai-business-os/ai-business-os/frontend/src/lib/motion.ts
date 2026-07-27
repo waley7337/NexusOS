@@ -20,6 +20,16 @@ export const staggerChildren: Variants = {
   visible: { transition: { staggerChildren: 0.03 } },
 };
 
+/** Page-level sections (Part 04, Phase 8): a handful of large chunks (hero,
+ * KPI row, chart row, activity row) read better with a more perceptible
+ * cascade than staggerChildren's list-item interval. Each child's own
+ * enter transition is unchanged (still the 200ms `transition` token via
+ * fadeInUp) — only the delay between sections starting is different. */
+export const staggerSection: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } },
+};
+
 /** Element added/removed in place (rows, chips, toasts). */
 export const scaleIn: Variants = {
   hidden: { opacity: 0, scale: 0.97 },
