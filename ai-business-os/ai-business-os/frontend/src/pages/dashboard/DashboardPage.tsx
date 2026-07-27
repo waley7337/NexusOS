@@ -14,7 +14,8 @@ import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useSystemStatus } from "@/hooks/useSystemStatus";
-import { fadeInUp, staggerSection } from "@/lib/motion";
+import { useSpotlight } from "@/hooks/useSpotlight";
+import { useRevealVariants } from "@/hooks/useRevealVariants";
 import {
   useDashboard,
   ActivityFeed,
@@ -46,6 +47,8 @@ export function DashboardPage() {
   const systemStatus = useSystemStatus();
   const clock = useLiveClock();
   const setCaptureOpen = useUiStore((s) => s.setCaptureOpen);
+  const heroRef = useSpotlight<HTMLDivElement>();
+  const reveal = useRevealVariants();
 
   if (isError) {
     return (
@@ -58,11 +61,24 @@ export function DashboardPage() {
   }
 
   return (
-    <motion.div variants={staggerSection} initial="hidden" animate="visible" className="space-y-6">
-      <motion.div variants={fadeInUp}>
-        <Card className="relative overflow-hidden">
+    <motion.div variants={reveal.container} initial="hidden" animate="visible" className="space-y-6">
+      <motion.div variants={reveal.item}>
+        <Card ref={heroRef} className="spotlight relative overflow-hidden">
           <div className="glow-banner pointer-events-none absolute inset-0" aria-hidden="true" />
           <div className="grid-field pointer-events-none absolute inset-0" aria-hidden="true" />
+          {/* Two very slowly drifting blurred orbs — 14s, ~3% travel. Ambient
+              motion at this amplitude is felt rather than seen; it stops the
+              hero reading as a static image without ever competing with the
+              content. Switched off entirely under prefers-reduced-motion. */}
+          <div
+            className="drift pointer-events-none absolute -left-24 -top-32 h-72 w-72 rounded-full bg-primary/20 blur-[90px]"
+            aria-hidden="true"
+          />
+          <div
+            className="drift pointer-events-none absolute -bottom-40 right-10 h-72 w-72 rounded-full bg-chart-1/15 blur-[90px]"
+            style={{ animationDelay: "-6s" }}
+            aria-hidden="true"
+          />
           {/* items-center, not items-start (Part 04 convergence, Commit B):
               the right column runs ~280px and the left ran ~159px, so
               top-aligning them left a measured 142px of dead space — 44% of
@@ -149,16 +165,16 @@ export function DashboardPage() {
         </Card>
       </motion.div>
 
-      <motion.div variants={fadeInUp}>
+      <motion.div variants={reveal.item}>
         <KpiGrid kpis={data?.kpis} />
       </motion.div>
 
-      <motion.div variants={fadeInUp} className="grid gap-4 lg:grid-cols-3">
+      <motion.div variants={reveal.item} className="grid gap-4 lg:grid-cols-3">
         <RevenueChart data={data?.revenue} />
         <PipelineChart data={data?.pipeline} />
       </motion.div>
 
-      <motion.div variants={fadeInUp} className="grid gap-4 lg:grid-cols-3">
+      <motion.div variants={reveal.item} className="grid gap-4 lg:grid-cols-3">
         <ActivityFeed items={data?.activity} />
         <UpcomingMeetings meetings={data?.meetings} />
         <AiInsights insights={data?.insights} />

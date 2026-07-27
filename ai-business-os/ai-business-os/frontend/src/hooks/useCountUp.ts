@@ -19,9 +19,13 @@ export function useCountUp(target: number): number {
       return;
     }
 
+    // 1.1s on the expo-out curve (Part 04 convergence, Commit E). At 600ms
+    // on the interaction curve the count read as a glitch rather than a
+    // reveal — the number was at its final value before the eye had settled
+    // on the card. Matches --duration-reveal / --ease-out-expo.
     const controls = animate(0, target, {
-      duration: 0.6,
-      ease: [0.2, 0, 0, 1],
+      duration: 1.1,
+      ease: [0.16, 1, 0.3, 1],
       onUpdate: (v) => setValue(v),
     });
 

@@ -1,5 +1,5 @@
 /** Card — soft borders, breathing room. The base surface of every dashboard widget. */
-import { type HTMLAttributes } from "react";
+import { forwardRef, type HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -13,9 +13,12 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
   interactive?: boolean;
 }
 
-export function Card({ className, variant = "solid", interactive = false, ...props }: CardProps) {
-  return (
+// forwardRef so an interactive Card can be handed to useSpotlight, which
+// writes --mx/--my straight to the node on pointermove.
+export const Card = forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant = "solid", interactive = false, ...props }, ref) => (
     <div
+      ref={ref}
       className={cn(
         // .surface carries the whole recipe: ladder fill, translucent
         // hairline, inset top highlight and deep drop shadow. Before this the
@@ -28,8 +31,9 @@ export function Card({ className, variant = "solid", interactive = false, ...pro
       )}
       {...props}
     />
-  );
-}
+  ),
+);
+Card.displayName = "Card";
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("flex items-start justify-between gap-2 p-5 pb-0", className)} {...props} />;

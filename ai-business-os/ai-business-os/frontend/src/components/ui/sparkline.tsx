@@ -61,6 +61,9 @@ export function Sparkline({ data, color = "hsl(var(--primary))", className }: Sp
 
       <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
       <path
+        // data-draw: the prefers-reduced-motion rule in globals.css pins
+        // these to stroke-dashoffset 0 so the line is simply already drawn.
+        data-draw=""
         d={linePath}
         fill="none"
         stroke={color}

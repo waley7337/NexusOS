@@ -112,6 +112,9 @@ export function RadialGauge({ score, scoreLabel, segments, max = 10, size = 220,
           <line
             key={s.label}
             data-spoke="value"
+            // See sparkline.tsx — pinned to a finished stroke under
+            // prefers-reduced-motion.
+            data-draw=""
             x1={s.x1}
             y1={s.y1}
             x2={s.x2}

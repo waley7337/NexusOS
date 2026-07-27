@@ -5,6 +5,7 @@ import { Card, CardContent } from "./card";
 import { Sparkline } from "./sparkline";
 import { cn } from "@/lib/utils";
 import { useCountUp } from "@/hooks/useCountUp";
+import { useSpotlight } from "@/hooks/useSpotlight";
 
 const PLAIN_INTEGER = /^\d+$/;
 
@@ -47,8 +48,12 @@ export function StatCard({
   trendColor,
   className,
 }: StatCardProps) {
+  // A KPI card is the archetypal thing worth pointing at, so it opts into the
+  // hover lift + pointer spotlight (Part 04 convergence, Commit E).
+  const spotlightRef = useSpotlight<HTMLDivElement>();
+
   return (
-    <Card className={className}>
+    <Card ref={spotlightRef} interactive className={className}>
       <CardContent>
         <div className="flex items-start justify-between gap-2">
           {Icon && (

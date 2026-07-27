@@ -31,7 +31,10 @@ describe("useCountUp", () => {
   it("eventually settles at the target when motion is not reduced", async () => {
     mockMatchMedia(false);
     const { result } = renderHook(() => useCountUp(10));
-    await waitFor(() => expect(result.current).toBe(10));
+    // The count-up runs 1.1s (Part 04 convergence, Commit E). waitFor's
+    // default timeout is 1000ms, which sampled the value just short of the
+    // target — give it room past the animation's own duration.
+    await waitFor(() => expect(result.current).toBe(10), { timeout: 2500 });
   });
 
   it("starts below the target when motion is not reduced (it actually animates)", () => {
