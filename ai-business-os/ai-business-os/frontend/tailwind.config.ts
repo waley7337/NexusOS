@@ -101,7 +101,7 @@ export default {
       // §4.6 — 8px system: only these values are sanctioned for layout gaps
       spacing: { 4.5: "1.125rem" },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Inter Variable", "Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       // 11px step for dense shell chrome (eyebrows, status strings, keycaps,

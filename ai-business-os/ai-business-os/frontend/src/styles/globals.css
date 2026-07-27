@@ -1,3 +1,15 @@
+/* Self-hosted webfonts (Part 04 convergence, Commit F). Bundled through Vite
+   rather than fetched from rsms.me and fonts.googleapis.com: two third-party
+   render-blocking dependencies, both of which failed outright on a restricted
+   network (measured ERR_TUNNEL_CONNECTION_FAILED / ERR_CONNECTION_RESET) and
+   silently dropped the whole product to system faces.
+   Inter carries the interface; JetBrains Mono carries every numeric readout,
+   timestamp, ID and status string. */
+@import "@fontsource-variable/inter/index.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -70,7 +82,11 @@
     --card-foreground: 222 47% 11%;     /* #0F172A */
     --foreground: 222 47% 11%;          /* #0F172A text primary */
     --muted: var(--surface-4);
-    --muted-foreground: 215 16% 47%;    /* #64748B text secondary */
+    /* Darkened from 47% in Commit F. At 47% this cleared AA on white (4.63:1)
+       but not on the grey control fill it is most often used against —
+       measured 4.31:1 for badge counts and keycaps on --surface-4. 43% clears
+       both (4.86:1 on --surface-4). */
+    --muted-foreground: 215 16% 43%;    /* #5A6577 text secondary */
     --disabled-foreground: 215 20% 65%; /* #94A3B8 text disabled */
     --secondary: var(--surface-4);
     --secondary-foreground: 222 47% 11%;
@@ -94,14 +110,27 @@
     --primary-foreground: 0 0% 100%;    /* white on #5B51E8 → 5.49:1 AA */
     --primary-dim: rgb(91 81 232 / 0.10); /* translucent accent wash */
 
-    /* --- Semantic state colours (light) — unchanged, already AA-audited. */
-    --success: 142 71% 36%;             /* #16A34A */
+    /* --- Semantic state colours (light).
+       Darkened in Commit F. These tokens do double duty — they are both the
+       fill behind *-foreground text AND the text colour for tinted badges and
+       delta pills (text-success on bg-success/10). They had only ever been
+       audited in the first role. Measured as text on a white card: success
+       was 3.52:1 and warning would have been 2.15:1, both failing AA. Each is
+       now dark enough to pass as text, which also strictly improves the
+       white-on-colour pairing it already had.
+
+       The binding case turned out not to be white but the *tinted* badge
+       background these same colours produce (text-success on bg-success/10):
+       a 10% tint pulls the backdrop off white just far enough to eat the
+       margin — measured 4.27–4.50:1 after the first correction — so each
+       value below is set against that, not against paper. --- */
+    --success: 142 76% 26%;             /* #0F7535 — 4.82:1 on bg-success/10 */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;              /* #F59E0B */
-    --warning-foreground: 24 45% 15%;   /* dark text for AA on amber */
-    --destructive: 0 72% 51%;           /* #DC2626 */
+    --warning: 35 95% 29%;              /* #90570A — 4.79:1 on bg-warning/10 */
+    --warning-foreground: 0 0% 100%;    /* white, now that the amber is deep */
+    --destructive: 0 74% 47%;           /* #D01F1F — 4.98:1 on bg-destructive/10 */
     --destructive-foreground: 0 0% 100%;
-    --info: 198 88% 38%;                /* #0B84B8 */
+    --info: 198 88% 32%;                /* #096699 — 4.86:1 on bg-info/10 */
     --info-foreground: 0 0% 100%;
 
     --ring: var(--primary);             /* focus = accent violet */

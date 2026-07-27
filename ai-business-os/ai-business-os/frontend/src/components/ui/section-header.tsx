@@ -30,8 +30,10 @@ interface SectionHeaderProps {
   subtitle?: ReactNode;
   action?: ReactNode;
   tone?: SectionTone;
-  /** Heading level. Sections inside a page that already owns its h1 should
-   *  stay at h3 (the default) so the document outline reads correctly. */
+  /** Heading level. Defaults to h2: these are the top-level sections of a
+   *  page whose only ancestor heading is the PageHeader h1, so h3 skipped a
+   *  level and produced an outline of 1,3,3,3,3,3 (audited in Commit F).
+   *  Pass h3 for a section genuinely nested inside another section. */
   as?: "h2" | "h3";
   className?: string;
 }
@@ -41,7 +43,7 @@ export function SectionHeader({
   subtitle,
   action,
   tone = "primary",
-  as: Heading = "h3",
+  as: Heading = "h2",
   className,
 }: SectionHeaderProps) {
   return (
