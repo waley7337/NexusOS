@@ -100,7 +100,16 @@ export default {
       },
       // §4.6 — 8px system: only these values are sanctioned for layout gaps
       spacing: { 4.5: "1.125rem" },
-      fontFamily: { sans: ["Inter", "system-ui", "sans-serif"], mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"] },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      // 11px step for dense shell chrome (eyebrows, status strings, keycaps,
+      // tile labels). The scale previously bottomed out at text-xs/12px, which
+      // is why every label competed with body copy for weight.
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.02em" }],
+      },
     },
   },
   plugins: [animate],

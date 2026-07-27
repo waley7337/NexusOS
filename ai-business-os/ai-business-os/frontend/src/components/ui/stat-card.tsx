@@ -65,7 +65,10 @@ export function StatCard({
           {delta !== undefined && <DeltaPill delta={delta} />}
         </div>
 
-        <p className="mt-3 font-mono text-2xl font-semibold tracking-tight">
+        {/* .num — tabular figures. Without it a count-up animation reflows
+            the card on every frame, because proportional digits differ in
+            width (Part 04 convergence, Commit B). */}
+        <p className="num mt-3 font-mono text-2xl font-semibold tracking-tight">
           <AnimatedValue value={value} />
         </p>
         <p className="text-sm text-muted-foreground">{label}</p>
@@ -87,9 +90,11 @@ export function DeltaPill({ delta }: { delta: number }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 text-xs font-medium",
-        delta > 0 && "text-emerald-600 dark:text-emerald-400",
-        delta < 0 && "text-red-600 dark:text-red-400",
+        // Semantic tokens, not raw palette classes — emerald-*/red-* bypassed
+        // the token system and so didn't follow the Commit A retune.
+        "num inline-flex items-center gap-0.5 text-2xs font-medium",
+        delta > 0 && "text-success",
+        delta < 0 && "text-destructive",
         delta === 0 && "text-muted-foreground",
       )}
     >

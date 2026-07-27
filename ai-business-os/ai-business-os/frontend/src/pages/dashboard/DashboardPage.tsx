@@ -62,16 +62,27 @@ export function DashboardPage() {
       <motion.div variants={fadeInUp}>
         <Card className="relative overflow-hidden">
           <div className="glow-banner pointer-events-none absolute inset-0" aria-hidden="true" />
-          <CardContent className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-start">
-            <div className="space-y-5">
-              <div className="flex items-center gap-3">
+          <div className="grid-field pointer-events-none absolute inset-0" aria-hidden="true" />
+          {/* items-center, not items-start (Part 04 convergence, Commit B):
+              the right column runs ~280px and the left ran ~159px, so
+              top-aligning them left a measured 142px of dead space — 44% of
+              the hero's height. Centring plus moving the CTAs below the
+              directive balances the two columns instead. */}
+          <CardContent className="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.45fr_auto] lg:items-center">
+            <div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <StatusPill variant={systemStatus.variant} label={systemStatus.label} />
-                <span className="font-mono text-xs text-muted-foreground">
+                <span className="num font-mono text-2xs text-muted-foreground">
                   {clock.toLocaleTimeString([], { hour12: false })}
                 </span>
               </div>
 
+              <p className="mt-5 text-sm text-muted-foreground">
+                {clock.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+              </p>
+
               <PageHeader
+                className="mt-1"
                 title={`${greeting()}, ${user?.name?.split(" ")[0] ?? "there"} 👋`}
                 description={
                   data && (
@@ -80,49 +91,56 @@ export function DashboardPage() {
                     </>
                   )
                 }
-                actions={
-                  <>
-                    <Button variant="outline" onClick={() => toast.info("Weekly review ships in a later part.")}>
-                      Begin weekly review
-                    </Button>
-                    <Button onClick={() => setCaptureOpen(true)}>
-                      <Plus /> Capture
-                    </Button>
-                  </>
-                }
               />
-              {!data && <Skeleton className="h-5 w-72" />}
+              {!data && <Skeleton className="mt-3 h-5 w-72" />}
 
-              <div className="max-w-md space-y-1.5">
+              <div className="mt-6 max-w-md space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-caption">Quarter progress</p>
+                  <span className="eyebrow">Quarter progress</span>
                   {data && (
-                    <p className="text-xs text-muted-foreground">
+                    <span className="num text-2xs text-muted-foreground">
                       {data.quarterProgress.weekLabel} · {data.quarterProgress.percent}%
-                    </p>
+                    </span>
                   )}
                 </div>
                 {data ? <Progress value={data.quarterProgress.percent} /> : <Skeleton className="h-2 w-full" />}
               </div>
+
+              <div className="mt-7 flex flex-wrap gap-2.5">
+                <Button variant="outline" onClick={() => toast.info("Weekly review ships in a later part.")}>
+                  Begin weekly review
+                </Button>
+                <Button onClick={() => setCaptureOpen(true)}>
+                  <Plus /> Capture
+                </Button>
+              </div>
             </div>
 
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-5">
               {data ? (
                 <RadialGauge score={data.health.score} scoreLabel="Health" segments={data.health.segments} />
               ) : (
                 <Skeleton className="h-[220px] w-[220px] rounded-full" />
               )}
-              <div className="grid grid-cols-3 gap-4 text-center">
-                {(["runway", "capacity", "quarterPlan"] as const).map((key) => (
-                  <div key={key}>
+              <div className="grid w-full max-w-xs grid-cols-3 gap-2">
+                {(
+                  [
+                    ["runway", "Runway"],
+                    ["capacity", "Capacity"],
+                    ["quarterPlan", "Q3 plan"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div
+                    key={key}
+                    className="rounded-xl border px-3 py-2.5 text-center"
+                    style={{ borderColor: "var(--line-soft)", backgroundColor: "hsl(var(--surface-1) / 0.6)" }}
+                  >
                     {data ? (
-                      <p className="font-mono text-lg font-semibold">{data.metrics[key]}</p>
+                      <p className="num font-mono text-lg font-semibold">{data.metrics[key]}</p>
                     ) : (
-                      <Skeleton className="mx-auto h-6 w-12" />
+                      <Skeleton className="mx-auto h-6 w-10" />
                     )}
-                    <p className="text-caption">
-                      {key === "runway" ? "Runway" : key === "capacity" ? "Capacity" : "Q3 plan"}
-                    </p>
+                    <p className="mt-0.5 text-2xs uppercase tracking-wider text-muted-foreground">{label}</p>
                   </div>
                 ))}
               </div>

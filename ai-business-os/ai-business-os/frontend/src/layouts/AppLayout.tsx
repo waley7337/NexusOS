@@ -311,11 +311,14 @@ export function AppLayout() {
 
         <OfflineBanner />
 
-        <main
-          className="flex-1 p-6 md:p-8"
-          tabIndex={-1}
-        >
-          <LazyOutlet />
+        {/* Content is capped and centred (Part 04 convergence, Commit B).
+            Previously <main> had no max-width, so on a wide display the
+            dashboard grid stretched indefinitely and the measured line
+            length ran well past comfortable reading width. */}
+        <main className="flex-1" tabIndex={-1}>
+          <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
+            <LazyOutlet />
+          </div>
         </main>
       </div>
     </div>

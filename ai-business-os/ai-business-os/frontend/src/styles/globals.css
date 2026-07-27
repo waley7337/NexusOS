@@ -304,7 +304,10 @@
   }
 
   * { @apply border-border; }
-  html { font-feature-settings: "cv11", "ss01"; }
+  /* cv02/cv03/cv04 give Inter the single-storey g and open 3/6/9 that make
+     it read as an interface face rather than a text face; cv11 keeps the
+     straight-sided l distinguishable from 1 and I. */
+  html { font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01"; }
 
   /* Ambient page field (LifeOS convergence): two very faint fixed
      radials, 5–6% and 3.5–4%. This is texture, not a colour wash —
@@ -344,7 +347,11 @@
 
 /* --- Type scale (§4.5) — Inter, documented weights & tracking --- */
 @layer components {
-  .text-display { @apply text-4xl font-semibold leading-[1.15] tracking-[-0.02em]; }  /* 36/600 */
+  /* Display steps down from a flat 36px to a responsive 28→34px (LifeOS
+     convergence, Commit B). The old size was larger than the reference's
+     hero heading while carrying less information, which is what made the
+     greeting read as oversized rather than confident. */
+  .text-display { @apply text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] sm:text-[34px]; } /* 28→34/600 */
   .text-h1      { @apply text-2xl font-semibold leading-[1.25] tracking-[-0.015em]; } /* 24/600 */
   .text-h2      { @apply text-xl  font-semibold leading-[1.3]  tracking-[-0.01em]; }  /* 20/600 */
   .text-h3      { @apply text-lg  font-semibold leading-[1.4]; }                      /* 18/600 */
@@ -353,6 +360,29 @@
   .text-body    { @apply text-sm  font-normal  leading-[1.55]; }                      /* 14/400 */
   .text-small   { @apply text-xs  font-normal  leading-[1.5]; }                       /* 12/400 */
   .text-caption { @apply text-xs  font-medium  uppercase tracking-[0.06em] text-muted-foreground; }
+
+  /* Dense chrome label — 11px, heavy tracking. Distinct from .text-caption
+     (12px/+0.06em), which stays the in-content label. This is the shell's
+     own voice: section eyebrows, tile labels, status strings. */
+  .eyebrow {
+    @apply inline-flex items-center gap-1.5 text-2xs font-semibold uppercase text-muted-foreground;
+    letter-spacing: 0.14em;
+  }
+
+  /* Numeric readouts. tabular-nums is the point: without it a ticking
+     clock, a percentage, or a column of currency values reflows on every
+     digit change because proportional figures have different widths. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Keycap. */
+  .kbd {
+    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-md border px-1.5 font-mono text-2xs text-muted-foreground;
+    border-color: var(--line);
+    background-color: hsl(var(--surface-4));
+  }
 
   /* Auth shell backdrop — one soft radial glow + a barely-visible grid,
      both built from existing tokens. Deliberately minimal: texture, not
