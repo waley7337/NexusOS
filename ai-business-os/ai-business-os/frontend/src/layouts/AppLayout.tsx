@@ -2,9 +2,11 @@
  * NexusOS shell — implements the Part 2 navigation wireframe:
  *   sidebar (collapsible) · top bar with global search · content · profile footer.
  */
+import { useState } from "react";
 import {
   Search,
   Bell,
+  Plus,
   PanelLeftClose,
   PanelLeftOpen,
   Moon,
@@ -20,6 +22,7 @@ import { useUiStore } from "@/stores/ui";
 import { useRouteFocus } from "@/hooks/useRouteFocus";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useSystemStatus } from "@/hooks/useSystemStatus";
+import { useCaptureActions } from "@/hooks/useCaptureActions";
 import { useLogout } from "@/features/auth";
 import { ROUTES } from "@/constants/routes";
 import { CommandPalette } from "@/components/command-palette";
@@ -32,6 +35,7 @@ import { LazyOutlet } from "@/routes/LazyOutlet";
 import { Button } from "@/components/ui/button";
 import { SystemStatusBar } from "@/components/ui/system-status-bar";
 import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export function AppLayout() {
@@ -71,6 +75,12 @@ export function AppLayout() {
     ? `Synced ${formatRelativeTime(systemStatus.lastSyncedAt, clock.getTime())}`
     : undefined;
 
+  // Local, not global store: the Capture sheet is a self-contained overlay
+  // with no other consumer, same reasoning as app-navigation's "more
+  // modules" disclosure state.
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const captureActions = useCaptureActions();
+
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
     navigate(ROUTES.login, { replace: true });
@@ -97,6 +107,36 @@ export function AppLayout() {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+      <Dialog open={captureOpen} onOpenChange={setCaptureOpen}>
+        <DialogContent>
+          <DialogHeader title="Capture" description="Quick-create actions from anywhere in NexusOS." />
+          {captureActions.length === 0 ? (
+            <EmptyState
+              icon={Plus}
+              title="No quick actions yet"
+              description="Modules register their create actions here as they ship."
+            />
+          ) : (
+            <div className="space-y-1">
+              {captureActions.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={() => {
+                    setCaptureOpen(false);
+                    action.onSelect();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60"
+                >
+                  <action.icon className="h-4 w-4 text-muted-foreground" />
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <aside
         className={cn(
@@ -245,6 +285,11 @@ export function AppLayout() {
               ⌘K
             </kbd>
           </button>
+
+          <Button type="button" size="sm" onClick={() => setCaptureOpen(true)}>
+            <Plus />
+            <span className="hidden sm:inline">Capture</span>
+          </Button>
 
           <div className="ml-auto flex items-center gap-1">
             <Button
