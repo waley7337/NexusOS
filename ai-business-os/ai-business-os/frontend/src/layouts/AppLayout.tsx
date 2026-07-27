@@ -2,7 +2,6 @@
  * NexusOS shell — implements the Part 2 navigation wireframe:
  *   sidebar (collapsible) · top bar with global search · content · profile footer.
  */
-import { useState } from "react";
 import {
   Search,
   Bell,
@@ -66,6 +65,12 @@ export function AppLayout() {
   const toggleNotificationPanel = useUiStore(
     (state) => state.toggleNotificationPanel,
   );
+  // Store, not local state (Part 04, Phase 7): DashboardPage's hero also
+  // has a Capture trigger and needs to open this same sheet — a sibling
+  // route component can't reach AppLayout's local state, so this moved to
+  // the store, same shape as isNotificationPanelOpen above.
+  const captureOpen = useUiStore((state) => state.isCaptureOpen);
+  const setCaptureOpen = useUiStore((state) => state.setCaptureOpen);
 
   useRouteFocus();
 
@@ -75,10 +80,6 @@ export function AppLayout() {
     ? `Synced ${formatRelativeTime(systemStatus.lastSyncedAt, clock.getTime())}`
     : undefined;
 
-  // Local, not global store: the Capture sheet is a self-contained overlay
-  // with no other consumer, same reasoning as app-navigation's "more
-  // modules" disclosure state.
-  const [captureOpen, setCaptureOpen] = useState(false);
   const captureActions = useCaptureActions();
 
   const handleLogout = async () => {

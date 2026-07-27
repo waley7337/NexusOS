@@ -6,17 +6,28 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar,
 } from "recharts";
-import { ArrowDownRight, ArrowUpRight, Minus, Sparkles, CalendarClock } from "lucide-react";
+import { Sparkles, CalendarClock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { StatCard } from "@/components/ui/stat-card";
 import type {
   ActivityItem, AiInsight, Kpi, Meeting, PipelineStage, RevenuePoint,
 } from "../types";
 
 /* ----------------------------- KPI cards ------------------------------ */
+// Cycles the Phase 1 chart palette across KPI positions so each card's icon
+// chip/sparkline gets a distinct, consistent accent (Part 04, Phase 7).
+const CHART_ACCENTS = [
+  { icon: "bg-chart-1/15 text-chart-1", trend: "hsl(var(--chart-1))" },
+  { icon: "bg-chart-2/15 text-chart-2", trend: "hsl(var(--chart-2))" },
+  { icon: "bg-chart-3/15 text-chart-3", trend: "hsl(var(--chart-3))" },
+  { icon: "bg-chart-4/15 text-chart-4", trend: "hsl(var(--chart-4))" },
+  { icon: "bg-chart-5/15 text-chart-5", trend: "hsl(var(--chart-5))" },
+  { icon: "bg-chart-6/15 text-chart-6", trend: "hsl(var(--chart-6))" },
+];
+
 export function KpiGrid({ kpis }: { kpis?: Kpi[] }) {
   if (!kpis) {
     return (
@@ -29,35 +40,22 @@ export function KpiGrid({ kpis }: { kpis?: Kpi[] }) {
   }
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      {kpis.map((kpi) => (
-        <Card key={kpi.id}>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">{kpi.label}</p>
-            <div className="mt-2 flex items-baseline justify-between gap-2">
-              <p className="text-2xl font-semibold tracking-tight">{kpi.value}</p>
-              <DeltaPill delta={kpi.delta} />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      {kpis.map((kpi, i) => {
+        const accent = CHART_ACCENTS[i % CHART_ACCENTS.length];
+        return (
+          <StatCard
+            key={kpi.id}
+            label={kpi.label}
+            value={kpi.value}
+            delta={kpi.delta}
+            icon={kpi.icon}
+            iconClassName={kpi.icon ? accent.icon : undefined}
+            trend={kpi.trend}
+            trendColor={accent.trend}
+          />
+        );
+      })}
     </div>
-  );
-}
-
-function DeltaPill({ delta }: { delta: number }) {
-  const Icon = delta > 0 ? ArrowUpRight : delta < 0 ? ArrowDownRight : Minus;
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-0.5 text-xs font-medium",
-        delta > 0 && "text-emerald-600 dark:text-emerald-400",
-        delta < 0 && "text-red-600 dark:text-red-400",
-        delta === 0 && "text-muted-foreground",
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {Math.abs(delta)}%
-    </span>
   );
 }
 

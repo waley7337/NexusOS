@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Plus, Users } from "lucide-react";
+import { CheckSquare, Plus, Users, Wallet } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { Alert } from "@/components/ui/alert";
@@ -27,6 +27,8 @@ import { Input, Select, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
+import { RadialGauge } from "@/components/ui/radial-gauge";
+import { StatCard } from "@/components/ui/stat-card";
 import { StatusPill } from "@/components/ui/status-pill";
 import { SystemStatusBar } from "@/components/ui/system-status-bar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -282,6 +284,44 @@ export function DesignSystemPage() {
               <StatusPill variant="offline" label="Offline" />
             </div>
             <SystemStatusBar detail="Synced just now" />
+          </CardContent>
+        </Card>
+      </Section>
+
+      {/* ---------------- Dashboard Framework (Part 04, Phase 7) --------------- */}
+      <Section id="dashboard-framework" title="Dashboard Framework (Part 04, Phase 7)">
+        <p className="text-sm text-muted-foreground">
+          StatCard, Sparkline, and RadialGauge — the primitives behind Dashboard's "Mission
+          Control" hero. RadialGauge carries a screen-reader text-equivalent alongside the SVG.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <StatCard label="Revenue" value="$128,430" delta={18} icon={Wallet} trend={[74, 81, 78, 92, 99, 112, 128]} />
+          <StatCard
+            label="Tasks due today"
+            value="23"
+            delta={-12}
+            icon={CheckSquare}
+            iconClassName="bg-chart-4/15 text-chart-4"
+            trendColor="hsl(var(--chart-4))"
+            trend={[31, 28, 30, 26, 24, 23, 23]}
+          />
+          <StatCard label="Inventory alerts" value="3" />
+        </div>
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-center gap-8">
+            <RadialGauge
+              score={7.4}
+              scoreLabel="Health"
+              size={180}
+              segments={[
+                { label: "Sales", value: 8.2, color: "hsl(var(--chart-1))" },
+                { label: "Finance", value: 7.5, color: "hsl(var(--chart-2))" },
+                { label: "Ops", value: 6.1, color: "hsl(var(--chart-3))" },
+                { label: "Team", value: 7.8, color: "hsl(var(--chart-4))" },
+                { label: "Product", value: 8.6, color: "hsl(var(--chart-5))" },
+                { label: "Support", value: 6.4, color: "hsl(var(--chart-6))" },
+              ]}
+            />
           </CardContent>
         </Card>
       </Section>

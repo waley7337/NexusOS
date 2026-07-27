@@ -101,6 +101,7 @@ The classes above are *what exists*; this table is *which one to reach for*. Eve
 | Toasts | Sonner | **top-right**, auto-dismiss, close button |
 | PageHeader (Part 04, Phase 4) | `page-header.tsx` | eyebrow · Display-scale title · directive (emphasis-capable) · actions · reserved status slot; `as="h2"` only for pages that already own their h1 |
 | StatusPill / SystemStatusBar (Part 04, Phase 5) | `status-pill.tsx` / `system-status-bar.tsx` | dot + label, `online`/`warning`/`offline`; `online` pulses via `.pulse-live` (§Tokens 2.0), respects reduced motion |
+| StatCard / Sparkline / RadialGauge (Part 04, Phase 7) | `stat-card.tsx` / `sparkline.tsx` / `radial-gauge.tsx` | icon chip + delta pill + trend line; hand-drawn SVG sparkline (not Recharts — see §Dashboard Framework); RadialGauge ships a screen-reader text-equivalent alongside its SVG |
 
 ### Application Shell (Part 04, Phase 5)
 
@@ -118,6 +119,17 @@ The classes above are *what exists*; this table is *which one to reach for*. Eve
 - **Surface:** the palette is now `.surface-glass` + `ring-primary/15` (a glow-tinted border), replacing the earlier plain `bg-card` surface — the Surface System's `.surface-glass` (Phase 2) applied to its first non-`Card` consumer.
 - **Selected-item state:** `bg-primary/10 text-primary`, matching the sidebar's active-nav restyle (Phase 5A) so both "you are here" (nav) and "this is selected" (palette) read as the same visual language.
 - **Unchanged:** keyboard shortcuts (⌘K/Ctrl+K), fuzzy search, the `CommandPaletteProvider`/`CommandPaletteItem` contract (`command-palette-types.ts`) — Part 6+ entity-search providers plug into the same, untouched extension point.
+
+### Dashboard Framework (Part 04, Phase 7)
+
+Dashboard's hero (`pages/dashboard/DashboardPage.tsx`) matches the visual language established across Phases 1–6 — glow-banner surface, live `StatusPill`/clock, `PageHeader`, `.chart-1..6` palette — applied to NexusOS's own business content, not copied content:
+
+- **Hero card:** `Card` + an absolutely-positioned `.glow-banner` overlay (same technique as the `/design` Surfaces demo), containing a `StatusPill`+live-clock row, `PageHeader` (greeting title, directive with an emphasized phrase, "Begin weekly review"/"Capture" actions), a quarter-progress `Progress` bar, and a `RadialGauge` (business "Health" score across Sales/Finance/Ops/Team/Product/Support — the six `--chart-1..6` colors) with three compact readouts (Runway/Capacity/Q3 plan) underneath.
+- **KpiGrid:** internals swapped to render `StatCard` (icon chip + delta pill + sparkline) instead of its old plain markup — external prop shape (`kpis?: Kpi[]`) unchanged, so `DashboardPage`'s call site didn't change. Icon/sparkline colors cycle the `--chart-1..6` palette by card position.
+- **Capture, unified:** the hero's own "+Capture" button opens the *same* sheet as the topbar's — `isCaptureOpen` moved from `AppLayout`'s local state into `stores/ui.ts` (Phase 5's `isNotificationPanelOpen` shape) so a sibling route component can open it too.
+- **Loading state:** every dynamic piece of the hero (directive, progress bar, gauge, metrics) renders its own skeleton while `useDashboard()` is pending — same "no spinners" contract every other widget already follows. `StatusPill` even shows a real `"Syncing"` state during load, since `useSystemStatus()` reads the same query's live cache state, not a hardcoded label.
+- **Sparkline is plain SVG, not Recharts:** at the small size used here (embedded in a grid cell), Recharts' `ResponsiveContainer` relies on `ResizeObserver` timing that doesn't reliably fire on first paint inside a CSS grid and rendered nothing in real-browser testing — a hand-drawn path with `viewBox` scaling has no such dependency.
+- **Unchanged:** `RevenueChart`, `PipelineChart`, `ActivityFeed`, `UpcomingMeetings`, `AiInsights` — every existing chart/list widget below the hero, and the `useDashboard()` query key/shape Part 6+ will eventually swap for a real endpoint.
 
 ## Definition of Done (§4.29)
 

@@ -6,6 +6,10 @@ interface UiState {
   isCommandPaletteOpen: boolean;
   /** Part 04, Phase 5 — trigger + empty shell only; panel content ships in Phase 9. */
   isNotificationPanelOpen: boolean;
+  /** Part 04, Phase 5 (local state) — lifted to the store in Phase 7 so both
+   * AppLayout's topbar trigger and DashboardPage's hero trigger open the
+   * same sheet instead of each owning an independent copy. */
+  isCaptureOpen: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebarCollapsed: () => void;
   setMobileSidebarOpen: (open: boolean) => void;
@@ -14,6 +18,8 @@ interface UiState {
   toggleCommandPalette: () => void;
   setNotificationPanelOpen: (open: boolean) => void;
   toggleNotificationPanel: () => void;
+  setCaptureOpen: (open: boolean) => void;
+  toggleCapture: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -21,6 +27,7 @@ export const useUiStore = create<UiState>((set) => ({
   isMobileSidebarOpen: false,
   isCommandPaletteOpen: false,
   isNotificationPanelOpen: false,
+  isCaptureOpen: false,
   setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
   toggleSidebarCollapsed: () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
   setMobileSidebarOpen: (open) => set({ isMobileSidebarOpen: open }),
@@ -29,4 +36,6 @@ export const useUiStore = create<UiState>((set) => ({
   toggleCommandPalette: () => set((s) => ({ isCommandPaletteOpen: !s.isCommandPaletteOpen })),
   setNotificationPanelOpen: (open) => set({ isNotificationPanelOpen: open }),
   toggleNotificationPanel: () => set((s) => ({ isNotificationPanelOpen: !s.isNotificationPanelOpen })),
+  setCaptureOpen: (open) => set({ isCaptureOpen: open }),
+  toggleCapture: () => set((s) => ({ isCaptureOpen: !s.isCaptureOpen })),
 }));
