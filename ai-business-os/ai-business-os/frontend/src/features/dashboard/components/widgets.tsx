@@ -4,13 +4,13 @@
  */
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
-  BarChart, Bar,
+  BarChart, Bar, Cell,
 } from "recharts";
-import { Sparkles, CalendarClock } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SectionHeader } from "@/components/ui/section-header";
 import { StatCard } from "@/components/ui/stat-card";
 import type {
   ActivityItem, AiInsight, Kpi, Meeting, PipelineStage, RevenuePoint,
@@ -59,37 +59,112 @@ export function KpiGrid({ kpis }: { kpis?: Kpi[] }) {
   );
 }
 
+/* --------------------------- Chart chrome ----------------------------- */
+// Shared Recharts styling (Part 04 convergence, Commit D). The charts
+// previously shipped near-default library styling: 12px sans ticks, a
+// dashed grid at full --border strength on both axes' worth of lines, and
+// an 8px-radius tooltip on a flat card. Pulling the chrome into constants
+// keeps every chart on one visual system and makes it obvious when one
+// deviates.
+const AXIS_TICK = {
+  fontSize: 11,
+  fontFamily: "JetBrains Mono, ui-monospace, monospace",
+  fill: "hsl(var(--muted-foreground))",
+} as const;
+
+const GRID_STROKE = "hsl(var(--foreground) / 0.06)";
+
+const TOOLTIP_STYLE = {
+  background: "hsl(var(--surface-3))",
+  border: "1px solid var(--line)",
+  borderRadius: 12,
+  boxShadow: "var(--shadow-dropdown)",
+  fontSize: 12,
+  padding: "8px 12px",
+} as const;
+
+const TOOLTIP_LABEL_STYLE = {
+  color: "hsl(var(--muted-foreground))",
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  marginBottom: 4,
+} as const;
+
+const TOOLTIP_ITEM_STYLE = {
+  color: "hsl(var(--foreground))",
+  fontFamily: "JetBrains Mono, ui-monospace, monospace",
+  fontVariantNumeric: "tabular-nums",
+} as const;
+
+/** dataKey → human label, so tooltips name their series. */
+const SERIES_LABELS: Record<string, string> = {
+  revenue: "Revenue",
+  expenses: "Expenses",
+};
+
 /* --------------------------- Revenue chart ---------------------------- */
 export function RevenueChart({ data }: { data?: RevenuePoint[] }) {
   return (
     <Card className="lg:col-span-2">
-      <CardHeader><CardTitle>Revenue vs expenses</CardTitle><Badge variant="success">+18% YTD</Badge></CardHeader>
-      <CardContent className="h-64">
+      <CardHeader className="pb-4">
+        <SectionHeader title="Revenue vs expenses" subtitle="Trailing 7 months" tone="info" />
+        <Badge variant="success">+18% YTD</Badge>
+      </CardHeader>
+      <CardContent className="h-64 pt-0">
         {!data ? (
           <Skeleton className="h-full w-full" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ left: -16, right: 4, top: 4 }}>
+            {/* No negative left margin: pulling the plot area left clipped the
+                first glyph of every Y tick ("$140k" lost its "$"). */}
+            <AreaChart data={data} margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
               <defs>
                 <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}k`} />
+              {/* Horizontal rules only, at 6% — a full grid competes with the
+                  series it is meant to support. */}
+              <CartesianGrid strokeDasharray="2 6" stroke={GRID_STROKE} vertical={false} />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} tick={AXIS_TICK} dy={4} />
+              <YAxis tickLine={false} axisLine={false} tick={AXIS_TICK} tickFormatter={(v) => `$${v}k`} width={46} />
               <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(v: number) => [`$${v}k`]}
+                cursor={{ stroke: "hsl(var(--foreground) / 0.15)", strokeWidth: 1 }}
+                contentStyle={TOOLTIP_STYLE}
+                labelStyle={TOOLTIP_LABEL_STYLE}
+                itemStyle={TOOLTIP_ITEM_STYLE}
+                // Returning a single-element array drops the series name, so
+                // the tooltip read as two bare figures with no way to tell
+                // revenue from expenses. Name the series and capitalise it.
+                formatter={(v: number, name: string) => [`$${v}k`, SERIES_LABELS[name] ?? name]}
               />
-              <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#rev)" />
-              <Area type="monotone" dataKey="expenses" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
+              {/* Revenue on chart-1 (sky), expenses as a muted dashed
+                  reference — the two used to be primary + muted, which put the
+                  brand colour on a data series. */}
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="hsl(var(--chart-1))"
+                strokeWidth={2}
+                fill="url(#rev)"
+                animationDuration={900}
+                animationEasing="ease-out"
+                activeDot={{ r: 3.5, strokeWidth: 0, fill: "hsl(var(--chart-1))" }}
+              />
+              <Area
+                type="monotone"
+                dataKey="expenses"
+                stroke="hsl(var(--muted-foreground) / 0.7)"
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                fill="transparent"
+                animationDuration={900}
+                animationEasing="ease-out"
+                activeDot={{ r: 3, strokeWidth: 0, fill: "hsl(var(--muted-foreground))" }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -102,26 +177,37 @@ export function RevenueChart({ data }: { data?: RevenuePoint[] }) {
 export function PipelineChart({ data }: { data?: PipelineStage[] }) {
   return (
     <Card>
-      <CardHeader><CardTitle>Sales pipeline</CardTitle></CardHeader>
-      <CardContent className="h-64">
+      <CardHeader className="pb-4">
+        <SectionHeader title="Sales pipeline" subtitle="By stage" tone="primary" />
+      </CardHeader>
+      <CardContent className="h-64 pt-0">
         {!data ? (
           <Skeleton className="h-full w-full" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical" margin={{ left: 8, right: 8 }}>
               <XAxis type="number" hide />
-              <YAxis type="category" dataKey="stage" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} width={82} />
+              <YAxis type="category" dataKey="stage" tickLine={false} axisLine={false} tick={AXIS_TICK} width={82} />
               <Tooltip
-                cursor={{ fill: "hsl(var(--secondary))" }}
-                contentStyle={{
-                  background: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
+                cursor={{ fill: "hsl(var(--foreground) / 0.04)" }}
+                contentStyle={TOOLTIP_STYLE}
+                labelStyle={TOOLTIP_LABEL_STYLE}
+                itemStyle={TOOLTIP_ITEM_STYLE}
                 formatter={(v: number, _n, item) => [`${item.payload.count} deals · $${v}k`]}
               />
-              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={18} />
+              {/* A funnel is one measure across ordered stages, so it reads as
+                  a single sequence rather than six categories: one hue,
+                  stepping down in opacity as the stage narrows. Uniform
+                  full-strength primary bars made every stage look equal. */}
+              <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={16} animationDuration={800} animationEasing="ease-out">
+                {data.map((stage, i) => (
+                  <Cell
+                    key={stage.stage}
+                    fill="hsl(var(--primary))"
+                    fillOpacity={1 - i * (0.55 / Math.max(1, data.length - 1))}
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -134,8 +220,10 @@ export function PipelineChart({ data }: { data?: PipelineStage[] }) {
 export function ActivityFeed({ items }: { items?: ActivityItem[] }) {
   return (
     <Card>
-      <CardHeader><CardTitle>Recent activity</CardTitle></CardHeader>
-      <CardContent className="space-y-4">
+      <CardHeader className="pb-4">
+        <SectionHeader title="Recent activity" subtitle="Across every module" tone="success" />
+      </CardHeader>
+      <CardContent className="space-y-4 pt-0">
         {!items
           ? Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3">
@@ -166,13 +254,16 @@ export function AiInsights({ insights }: { insights?: AiInsight[] }) {
   const variant = { info: "info", warning: "warning", success: "success" } as const;
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" /> AI insights
-        </CardTitle>
-        <Button variant="outline" size="sm">Review</Button>
+      <CardHeader className="pb-4">
+        <SectionHeader
+          title="AI insights"
+          subtitle="Generated from this week's activity"
+          tone="primary"
+          action={<Button variant="outline" size="sm">Review</Button>}
+          className="flex-1"
+        />
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 pt-0">
         {!insights
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-5 w-full" />)
           : insights.map((ins) => (
@@ -190,12 +281,10 @@ export function AiInsights({ insights }: { insights?: AiInsight[] }) {
 export function UpcomingMeetings({ meetings }: { meetings?: Meeting[] }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarClock className="h-4 w-4 text-muted-foreground" /> Upcoming meetings
-        </CardTitle>
+      <CardHeader className="pb-4">
+        <SectionHeader title="Upcoming meetings" subtitle="Next three" tone="warning" />
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 pt-0">
         {!meetings
           ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)
           : meetings.map((m) => (

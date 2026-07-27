@@ -23,9 +23,32 @@ describe("RadialGauge", () => {
     expect(srText).toHaveTextContent("Ops 6.1");
   });
 
-  it("renders one spoke per segment", () => {
+  // Each segment now draws two lines: an unfilled track showing the segment's
+  // full range, and the value spoke on top (Part 04 convergence, Commit D).
+  // Asserting on data-spoke rather than a raw <line> count keeps the test
+  // about intent instead of about how many elements happen to be drawn.
+  it("renders one value spoke per segment", () => {
     const { container } = render(<RadialGauge score={7.4} scoreLabel="Health" segments={SEGMENTS} />);
-    expect(container.querySelectorAll("line")).toHaveLength(SEGMENTS.length);
+    expect(container.querySelectorAll('line[data-spoke="value"]')).toHaveLength(SEGMENTS.length);
+  });
+
+  it("renders a full-range track behind every value spoke", () => {
+    const { container } = render(<RadialGauge score={7.4} scoreLabel="Health" segments={SEGMENTS} />);
+    expect(container.querySelectorAll('line[data-spoke="track"]')).toHaveLength(SEGMENTS.length);
+  });
+
+  it("keeps a value spoke shorter than its track when the segment is below max", () => {
+    const { container } = render(
+      <RadialGauge score={5} scoreLabel="Health" segments={[{ label: "Ops", value: 5, color: "hsl(var(--chart-1))" }]} />,
+    );
+    const value = container.querySelector('line[data-spoke="value"]')!;
+    const track = container.querySelector('line[data-spoke="track"]')!;
+    const len = (el: Element) =>
+      Math.hypot(
+        Number(el.getAttribute("x2")) - Number(el.getAttribute("x1")),
+        Number(el.getAttribute("y2")) - Number(el.getAttribute("y1")),
+      );
+    expect(len(value)).toBeLessThan(len(track));
   });
 
   it("respects a custom max for the aria-label", () => {
