@@ -7,9 +7,11 @@ adding a blanket CSP to a JSON API is decorative, not protective. What *is*
 this layer's job: headers that protect the API response itself regardless of
 who serves the frontend.
 
-`Strict-Transport-Security` is intentionally only sent when the request
-scheme resolves to `https` (a real TLS-terminated connection, or a *trusted*
-proxy's `X-Forwarded-Proto` — see `app/core/client_ip.py`).
+`Strict-Transport-Security` is sent when either:
+  - `settings.HSTS_ENABLED` is true (explicit operator enablement for
+    TLS-terminated edges that keep `TRUSTED_PROXY_MODE=none`), or
+  - the request scheme resolves to `https` (a real TLS connection, or a
+    *trusted* proxy's `X-Forwarded-Proto` — see `app/core/client_ip.py`).
 
 Part 3.1 remediation (SEC-003): this previously trusted `X-Forwarded-Proto`
 unconditionally, from any caller — inconsistent with `rate_limit.py`, which
@@ -17,7 +19,9 @@ has always correctly refused to trust `X-Forwarded-For` without a defined
 trust boundary. Both now go through the same centralized
 `resolve_client_identity()`, so an untrusted direct caller can no longer
 influence the HSTS decision merely by sending the header; only a request
-whose immediate peer is a configured, trusted proxy can.
+whose immediate peer is a configured, trusted proxy can. Explicit
+`HSTS_ENABLED` is the separate, intentional escape hatch for operators who
+know the public surface is HTTPS but choose not to trust proxy CIDRs yet.
 
 Part 3.1 remediation (OBS-001 follow-on): `apply_baseline_security_headers`
 is factored out so `app/main.py`'s catch-all `Exception` handler can call it
@@ -32,6 +36,9 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.core.client_ip import resolve_client_identity
+from app.core.config import settings
+
+_HSTS_VALUE = "max-age=63072000; includeSubDomains"
 
 
 def apply_baseline_security_headers(response: Response, request: Request) -> None:
@@ -41,10 +48,8 @@ def apply_baseline_security_headers(response: Response, request: Request) -> Non
     response.headers.setdefault("Cache-Control", "no-store")
 
     identity = resolve_client_identity(request)
-    if identity.scheme == "https":
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=63072000; includeSubDomains"
-        )
+    if settings.HSTS_ENABLED or identity.scheme == "https":
+        response.headers["Strict-Transport-Security"] = _HSTS_VALUE
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
