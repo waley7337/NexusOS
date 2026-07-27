@@ -63,6 +63,34 @@
     --z-overlay: 40;
     --z-modal: 50;
     --z-toast: 60;
+
+    /* --- Glow (Part 04 — Core Platform, Phase 1): Design Constitution §9 —
+       marks the one dominant focal point per screen. Tied to the semantic
+       color roles so glow always matches meaning; translucency is applied
+       by consumers (e.g. .glow-banner), not baked into the token itself. */
+    --glow-primary: var(--primary);
+    --glow-success: var(--success);
+    --glow-warning: var(--warning);
+
+    /* --- Surface: glass (Part 04, Phase 1): Design Constitution §9 — for
+       floating/elevated surfaces only (hero headers, command palette,
+       notification panel), never for dense content (tables, forms). Shares
+       the solid surfaces' tonal family on purpose — translucency + blur
+       (applied in .surface-glass) is what reads as "elevated," not a
+       different color. */
+    --surface-glass: var(--card);
+    --surface-glass-border: var(--border);
+
+    /* --- Chart palette (Part 04, Phase 1): qualitative series for
+       multi-segment charts/gauges (e.g. the Phase 7 RadialGauge).
+       Deliberately distinct hues from the semantic state colors above, so a
+       chart segment is never mistaken for a status. */
+    --chart-1: 221 83% 53%; /* #2563EB blue   */
+    --chart-2: 173 80% 30%; /* #0D9488 teal   */
+    --chart-3: 262 83% 58%; /* #7C3AED violet */
+    --chart-4: 21 90% 48%;  /* #EA580C orange */
+    --chart-5: 333 74% 47%; /* #DB2777 pink   */
+    --chart-6: 243 75% 59%; /* #4F46E5 indigo */
   }
 
   .dark {
@@ -100,6 +128,18 @@
     --shadow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.5);
     --shadow-dropdown: 0 8px 30px -4px rgb(0 0 0 / 0.6);
     --shadow-modal: 0 24px 64px -12px rgb(0 0 0 / 0.7);
+
+    /* --- Chart palette (dark) — brightened for AA legibility on near-black
+       surfaces, same hue family as light mode (Part 04, Phase 1). --glow-*
+       and --surface-glass* need no dark override: they reference --primary/
+       --success/--warning/--card/--border via var(), which already resolve
+       to this block's values through normal CSS custom-property cascading. */
+    --chart-1: 217 91% 60%; /* #3B82F6 blue   */
+    --chart-2: 172 66% 52%; /* #2DD4BF teal   */
+    --chart-3: 255 92% 76%; /* #A78BFA violet */
+    --chart-4: 27 96% 61%;  /* #FB923C orange */
+    --chart-5: 330 86% 70%; /* #F472B6 pink   */
+    --chart-6: 234 89% 74%; /* #818CF8 indigo */
   }
 
   /* ------------------------------------------------------------
@@ -170,6 +210,31 @@
     -webkit-mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
   }
   .auth-glow { background: radial-gradient(680px circle at 50% -10%, hsl(var(--primary) / 0.18), transparent 60%); }
+
+  /* Glass surface (Part 04, Phase 1) — floating/elevated surfaces only; see
+     Design Constitution §9. Opt-in (Card variant="glass" lands in Phase 2;
+     shell chrome consumers in Phases 5/6/9) — never applied to data-dense
+     surfaces like tables or forms. */
+  .surface-glass {
+    @apply rounded-card border shadow-lg backdrop-blur-xl;
+    background: hsl(var(--surface-glass) / 0.72);
+    border-color: hsl(var(--surface-glass-border) / 0.6);
+  }
+
+  /* Glow banner (Part 04, Phase 1) — generalized from .auth-glow for use
+     outside the auth shell (Phase 7 Dashboard hero). Constitution principle
+     2: one dominant focal point per screen — do not stack multiple glows. */
+  .glow-banner { background: radial-gradient(680px circle at 50% -10%, hsl(var(--glow-primary) / 0.18), transparent 60%); }
+
+  /* Live-status pulse (Part 04, Phase 1) — for a live/online status dot
+     (Phase 5 StatusPill). Collapses to a static dot under the global
+     prefers-reduced-motion rule below — no separate override needed here. */
+  .pulse-live { animation: pulse-live 2s var(--ease) infinite; }
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
 }
 
 /* Accessibility: respect reduced motion globally. */

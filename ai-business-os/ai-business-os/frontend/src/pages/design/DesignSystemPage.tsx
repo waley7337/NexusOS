@@ -52,6 +52,22 @@ function Swatch({ name, varName, hex }: { name: string; varName: string; hex: st
   );
 }
 
+/** Radial-glow demo tile — same recipe as .glow-banner, one var per state. */
+function GlowTile({ name, varName }: { name: string; varName: string }) {
+  return (
+    <div className="space-y-1.5">
+      <div
+        className="h-20 rounded-card border bg-background"
+        style={{
+          background: `radial-gradient(220px circle at 50% -10%, hsl(var(${varName}) / 0.35), transparent 65%)`,
+        }}
+      />
+      <p className="text-sm font-medium">{name}</p>
+      <p className="font-mono text-xs text-muted-foreground">{varName}</p>
+    </div>
+  );
+}
+
 /* --------------------------- table demo data --------------------------- */
 interface DemoCustomer {
   name: string;
@@ -131,6 +147,48 @@ export function DesignSystemPage() {
           <Swatch name="Border" varName="--border" hex="#E2E8F0" />
           <Swatch name="Muted" varName="--muted" hex="#F1F5F9" />
           <Swatch name="Text" varName="--foreground" hex="#0F172A" />
+        </div>
+      </Section>
+
+      {/* ------------------------ Tokens 2.0 (Part 04) ----------------------- */}
+      <Section id="tokens-2" title="Tokens 2.0 — Core Platform (Part 04, Phase 1)">
+        <p className="text-sm text-muted-foreground">
+          Additive tokens for the Core Platform's depth system. No component consumes these yet —
+          this section exists so they're reviewable before Phase 2 (Surface System) wires them in.
+        </p>
+
+        <p className="text-caption">Glow — marks the one dominant focal point per screen</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <GlowTile name="Glow · primary" varName="--glow-primary" />
+          <GlowTile name="Glow · success" varName="--glow-success" />
+          <GlowTile name="Glow · warning" varName="--glow-warning" />
+        </div>
+
+        <p className="text-caption">Glass surface — floating/elevated only, never dense content</p>
+        <div
+          className="relative overflow-hidden rounded-card border p-8"
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(var(--primary) / 0.22), hsl(var(--chart-3) / 0.22), hsl(var(--chart-5) / 0.22))",
+          }}
+        >
+          <div className="surface-glass max-w-xs p-4">
+            <p className="text-sm font-medium">.surface-glass</p>
+            <p className="text-xs text-muted-foreground">
+              --surface-glass + --surface-glass-border, blurred over a busy backdrop so the effect
+              is visible.
+            </p>
+          </div>
+        </div>
+
+        <p className="text-caption">Chart palette — qualitative series, distinct from semantic state colors</p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <Swatch name="Chart 1" varName="--chart-1" hex="#2563EB" />
+          <Swatch name="Chart 2" varName="--chart-2" hex="#0D9488" />
+          <Swatch name="Chart 3" varName="--chart-3" hex="#7C3AED" />
+          <Swatch name="Chart 4" varName="--chart-4" hex="#EA580C" />
+          <Swatch name="Chart 5" varName="--chart-5" hex="#DB2777" />
+          <Swatch name="Chart 6" varName="--chart-6" hex="#4F46E5" />
         </div>
       </Section>
 

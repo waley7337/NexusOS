@@ -21,6 +21,25 @@ The rule that makes the system work: **no component uses a value that isn't a to
 | `--muted-foreground` | `#64748B` | `#94A3B8` | Text secondary |
 | `--disabled-foreground` | `#94A3B8` | `#64748B` | Text disabled |
 
+## Tokens 2.0 — Core Platform (Part 04, Phase 1 draft)
+
+Additive tokens for the Core Platform's depth system (glow, glass, chart palette), governed by the NexusOS Design Constitution §9 (Depth System). No existing token above was renamed, removed, or changed in value. Reviewable at `/design` → "Tokens 2.0". This subsection is a running draft, consolidated into the rest of this document in Part 04 Phase 15.
+
+| Token | Light | Dark | Used for |
+|---|---|---|---|
+| `--glow-primary` | = `--primary` | = `--primary` | Radial glow marking the one dominant focal point on a screen (Constitution principle 2) |
+| `--glow-success` | = `--success` | = `--success` | Glow emphasis for success/positive-state callouts |
+| `--glow-warning` | = `--warning` | = `--warning` | Glow emphasis for warning/attention-state callouts |
+| `--surface-glass` | = `--card` | = `--card` | Background for floating/elevated surfaces only (`.surface-glass`), never data-dense content |
+| `--surface-glass-border` | = `--border` | = `--border` | Hairline border for glass surfaces |
+| `--chart-1` … `--chart-6` | `#2563EB` `#0D9488` `#7C3AED` `#EA580C` `#DB2777` `#4F46E5` | `#3B82F6` `#2DD4BF` `#A78BFA` `#FB923C` `#F472B6` `#818CF8` | Qualitative multi-series palette for charts/gauges (e.g. the Phase 7 RadialGauge) — deliberately distinct from the semantic state colors above |
+
+New utility classes (`globals.css` `@layer components`):
+
+- `.surface-glass` — `--surface-glass` background (72% opacity) + `--surface-glass-border` (60% opacity) + backdrop blur + `shadow-lg`. Opt-in only; solid `--card` remains the default for every existing surface.
+- `.glow-banner` — the `.auth-glow` radial-gradient recipe generalized for use outside the auth shell, bound to `--glow-primary`.
+- `.pulse-live` — subtle opacity/scale pulse for a live-status indicator; collapses under the existing global `prefers-reduced-motion` rule.
+
 ## Typography — Inter, fallback system-ui
 
 | Class | Size / weight | Line height | Tracking |
