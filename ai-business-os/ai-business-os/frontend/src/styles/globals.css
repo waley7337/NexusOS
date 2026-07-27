@@ -377,6 +377,14 @@
     letter-spacing: -0.01em;
   }
 
+  /* Shared focus treatment for chrome controls that aren't Buttons.
+     focus-visible only, so a pointer click never paints a ring but a
+     keyboard user always gets one. */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    --tw-ring-offset-color: hsl(var(--surface-0));
+  }
+
   /* Keycap. */
   .kbd {
     @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-md border px-1.5 font-mono text-2xs text-muted-foreground;

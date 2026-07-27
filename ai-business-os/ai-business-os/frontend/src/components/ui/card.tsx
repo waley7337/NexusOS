@@ -7,13 +7,23 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
    * forms, lists. "glass" is opt-in, for floating/elevated surfaces only
    * (hero headers, palettes, panels) — see Design Constitution §9. */
   variant?: "solid" | "glass";
+  /** Opt into the restrained hover elevation + pointer spotlight. For cards
+   * that are genuinely interactive or that headline a section; a dense grid of
+   * every-card-lifts reads as noise (Part 04 convergence, Commit C). */
+  interactive?: boolean;
 }
 
-export function Card({ className, variant = "solid", ...props }: CardProps) {
+export function Card({ className, variant = "solid", interactive = false, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        variant === "glass" ? "text-card-foreground surface-glass" : "rounded-xl border bg-card text-card-foreground",
+        // .surface carries the whole recipe: ladder fill, translucent
+        // hairline, inset top highlight and deep drop shadow. Before this the
+        // Card was `rounded-xl border bg-card` and measured boxShadow: none —
+        // no card in the product cast a shadow, which is the single biggest
+        // reason the UI read as flat.
+        variant === "glass" ? "text-card-foreground surface-glass" : "surface text-card-foreground",
+        interactive && "card-lift spotlight",
         className,
       )}
       {...props}

@@ -38,18 +38,33 @@ function NavLinkItem({
       onFocus={() => prefetchRoute(to)}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          "focus-ring group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-fast",
           collapsed && "justify-center px-0",
-          // Glow-tinted active state (Part 04, Phase 5) — Design Constitution
-          // principle 15: color communicates state, restrained everywhere else.
+          // Neutral raised fill, not a colour wash (Part 04 convergence,
+          // Commit C). The active row previously used bg-primary/10 +
+          // text-primary, which put the brand colour on the single most
+          // persistent element on screen and was a large part of why the
+          // accent read as a page-wide cast. Elevation now says "you are
+          // here"; the accent survives only on the icon and the trailing dot,
+          // where it marks position without tinting the label.
           isActive
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+            ? "bg-surface-3 font-medium text-foreground"
+            : "text-muted-foreground hover:bg-surface-3 hover:text-foreground",
         )
       }
     >
-      <Icon className="h-4 w-4 shrink-0" />
-      {!collapsed && label}
+      {({ isActive }) => (
+        <>
+          <Icon
+            className={cn(
+              "h-4 w-4 shrink-0 transition-colors duration-fast",
+              isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+            )}
+          />
+          {!collapsed && <span className="flex-1 truncate">{label}</span>}
+          {!collapsed && isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+        </>
+      )}
     </NavLink>
   );
 }
@@ -83,9 +98,9 @@ function NavItems({ collapsed = false, onNavigate }: AppNavigationProps) {
             type="button"
             onClick={() => setMoreOpen((v) => !v)}
             aria-expanded={moreOpen}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+            className="focus-ring flex w-full items-center gap-2 rounded-lg px-3 py-2 text-2xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground"
           >
-            <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", !moreOpen && "-rotate-90")} />
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-fast", !moreOpen && "-rotate-90")} />
             <span className="flex-1 text-left">More modules</span>
             <Badge>{MORE_ITEMS.length}</Badge>
           </button>

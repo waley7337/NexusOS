@@ -14,12 +14,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/70",
-        outline: "border bg-card hover:bg-secondary/60",
-        ghost: "hover:bg-secondary/60",
-        danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
-        success: "bg-success text-success-foreground hover:bg-success/90 shadow-sm",
+        // primary uses --primary-fill (#5B51E8), not --primary. The accent
+        // violet is tuned for legibility AS text on near-black; white on it is
+        // only 3.62:1. The deep fill carries a white label at 5.49:1.
+        // shadow-inset is the top "lip" highlight that makes a filled control
+        // read as a physical key rather than a flat rectangle.
+        primary: "bg-primary-fill text-white hover:bg-primary-fill/90 shadow-inset",
+        secondary: "bg-surface-4 text-foreground hover:bg-surface-5 border shadow-inset",
+        outline: "border bg-transparent hover:bg-surface-4",
+        ghost: "hover:bg-surface-4",
+        danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-inset",
+        success: "bg-success text-success-foreground hover:bg-success/90 shadow-inset",
       },
       size: {
         sm: "h-8 px-3 text-xs",
