@@ -8,16 +8,22 @@
    ============================================================ */
 @layer base {
   :root {
-    /* --- Neutral palette (light) --- */
-    --background: 210 40% 98%;          /* #F8FAFC app background */
+    /* --- Neutral palette (light) — visual correction, Part 04 post-Phase-6:
+       true neutral gray canvas (0% saturation), not the earlier blue-tinted
+       slate. Text colors (foreground/muted-foreground/disabled-foreground)
+       are unchanged — this correction is scoped to background/card/surface
+       tokens only, per Design Constitution §8 (color restrained on neutral
+       surfaces, reserved for state/accent). --primary and every semantic
+       color are untouched. --- */
+    --background: 0 0% 98%;             /* #FAFAFA app background */
     --card: 0 0% 100%;                  /* #FFFFFF surface */
     --card-foreground: 222 47% 11%;     /* #0F172A */
     --foreground: 222 47% 11%;          /* #0F172A text primary */
-    --muted: 210 40% 96%;               /* #F1F5F9 */
+    --muted: 0 0% 96%;                  /* #F5F5F5 */
     --muted-foreground: 215 16% 47%;    /* #64748B text secondary */
     --disabled-foreground: 215 20% 65%; /* #94A3B8 text disabled */
-    --border: 214 32% 91%;              /* #E2E8F0 */
-    --input: 214 32% 91%;               /* #E2E8F0 */
+    --border: 0 0% 90%;                 /* #E6E6E6 */
+    --input: 0 0% 90%;                  /* #E6E6E6 */
 
     /* --- Brand & semantic --- */
     --primary: 221 83% 53%;             /* #2563EB Primary Blue */
@@ -31,9 +37,9 @@
     --info: 192 91% 36%;                /* #0891B2 */
     --info-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;           /* #F1F5F9 */
+    --secondary: 0 0% 96%;              /* #F5F5F5 */
     --secondary-foreground: 222 47% 11%;
-    --accent: 210 40% 96%;
+    --accent: 0 0% 96%;                 /* #F5F5F5 */
     --accent-foreground: 222 47% 11%;
     --ring: 221 83% 53%;                /* focus = primary */
 
@@ -94,31 +100,42 @@
   }
 
   .dark {
-    /* --- Neutral palette (dark) — full parity, AA maintained --- */
-    --background: 222 49% 8%;           /* #0B1220 */
-    --card: 218 39% 11%;                /* #111927 surface */
+    /* --- Neutral palette (dark) — visual correction, Part 04 post-Phase-6:
+       true near-black neutral (0% saturation) replacing the earlier
+       blue-tinted navy slate, matching the near-black language the auth
+       shell (.dark.auth-shell, below) already used. Text colors
+       (foreground/muted-foreground/disabled-foreground) are unchanged —
+       this correction is scoped to background/card/surface tokens, per
+       Design Constitution §8 (color restrained on neutral surfaces,
+       reserved for state/accent) and §9 (darkness creates depth). --primary
+       and every semantic color keep their exact hue — blue stays an
+       accent, not a cast. AA maintained: darkening background/card only
+       increases contrast against the unchanged, already-audited text
+       colors. */
+    --background: 0 0% 6%;              /* #0F0F0F */
+    --card: 0 0% 10%;                   /* #1A1A1A surface */
     --card-foreground: 214 32% 91%;     /* #E2E8F0 */
     --foreground: 214 32% 91%;          /* #E2E8F0 */
-    --muted: 217 33% 15%;               /* #1B2537 */
+    --muted: 0 0% 13%;                  /* #212121 */
     --muted-foreground: 215 20% 65%;    /* #94A3B8 */
     --disabled-foreground: 215 16% 47%; /* #64748B */
-    --border: 217 33% 17%;              /* #1E293B */
-    --input: 217 33% 17%;
+    --border: 0 0% 16%;                 /* #292929 */
+    --input: 0 0% 16%;                  /* #292929 */
 
     --primary: 217 91% 60%;             /* #3B82F6 (AA on dark) */
-    --primary-foreground: 222 49% 8%;
+    --primary-foreground: 0 0% 6%;      /* #0F0F0F — matches new background */
     --success: 142 69% 45%;             /* #22C55E-adjacent */
-    --success-foreground: 222 49% 8%;
+    --success-foreground: 0 0% 6%;      /* #0F0F0F — matches new background */
     --warning: 38 92% 50%;
     --warning-foreground: 24 45% 10%;
     --destructive: 0 72% 57%;
     --destructive-foreground: 0 0% 100%;
     --info: 190 90% 44%;
-    --info-foreground: 222 49% 8%;
+    --info-foreground: 0 0% 6%;         /* #0F0F0F — matches new background */
 
-    --secondary: 217 33% 15%;
+    --secondary: 0 0% 13%;              /* #212121 */
     --secondary-foreground: 214 32% 91%;
-    --accent: 217 33% 15%;
+    --accent: 0 0% 13%;                 /* #212121 */
     --accent-foreground: 214 32% 91%;
     --ring: 217 91% 60%;
 
