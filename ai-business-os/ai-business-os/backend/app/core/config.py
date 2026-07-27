@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
+    # Explicit HSTS enablement for TLS-terminated deployments (e.g. Railway)
+    # where the app sees plain HTTP from the edge and TRUSTED_PROXY_MODE=none
+    # correctly ignores X-Forwarded-Proto. Default false so local/dev/test
+    # never emit HSTS; enable only after confirming the public URL is HTTPS.
+    HSTS_ENABLED: bool = False
+
     # Temporary Railway proxy-path diagnostic endpoint (disabled by default).
     # Never enable in production without a strong one-time token; remove after
     # Part 3.2 edge verification. See `app.api.v1.internal`.
