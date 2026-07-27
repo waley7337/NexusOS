@@ -31,6 +31,8 @@ import { OfflineBanner } from "@/components/offline-banner";
 import { LazyOutlet } from "@/routes/LazyOutlet";
 import { Button } from "@/components/ui/button";
 import { SystemStatusBar } from "@/components/ui/system-status-bar";
+import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui/drawer";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -50,6 +52,15 @@ export function AppLayout() {
   );
   const toggleCommandPalette = useUiStore(
     (state) => state.toggleCommandPalette,
+  );
+  const notificationPanelOpen = useUiStore(
+    (state) => state.isNotificationPanelOpen,
+  );
+  const setNotificationPanelOpen = useUiStore(
+    (state) => state.setNotificationPanelOpen,
+  );
+  const toggleNotificationPanel = useUiStore(
+    (state) => state.toggleNotificationPanel,
   );
 
   useRouteFocus();
@@ -73,6 +84,19 @@ export function AppLayout() {
     <div className="flex min-h-screen">
       <CommandPalette />
       <MobileSidebar />
+
+      <Drawer open={notificationPanelOpen} onOpenChange={setNotificationPanelOpen}>
+        <DrawerContent>
+          <DrawerHeader title="Notifications" />
+          <DrawerBody>
+            <EmptyState
+              icon={Bell}
+              title="No notifications yet"
+              description="You'll see mentions, overdue items, and updates from your team here."
+            />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
 
       <aside
         className={cn(
@@ -144,6 +168,7 @@ export function AppLayout() {
               aria-label="Notifications"
               title="Notifications"
               className="relative shrink-0"
+              onClick={toggleNotificationPanel}
             >
               <Bell />
 
