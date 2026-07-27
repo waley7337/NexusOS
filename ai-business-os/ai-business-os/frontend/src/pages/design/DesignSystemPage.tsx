@@ -27,6 +27,8 @@ import { Input, Select, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
+import { StatusPill } from "@/components/ui/status-pill";
+import { SystemStatusBar } from "@/components/ui/system-status-bar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -261,6 +263,25 @@ export function DesignSystemPage() {
                 </>
               }
             />
+          </CardContent>
+        </Card>
+      </Section>
+
+      {/* ------------------------ Shell (Part 04, Phase 5) --------------------- */}
+      <Section id="shell" title="Shell — status &amp; nav (Part 04, Phase 5)">
+        <p className="text-sm text-muted-foreground">
+          Live-status chrome for the sidebar footer, plus the nav grouping and active-state
+          restyle now used in <code className="font-mono text-xs">AppLayout</code>. See the
+          real thing in the sidebar on the left.
+        </p>
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-6">
+              <StatusPill variant="online" label="Online" />
+              <StatusPill variant="warning" label="Syncing" />
+              <StatusPill variant="offline" label="Offline" />
+            </div>
+            <SystemStatusBar detail="Synced just now" />
           </CardContent>
         </Card>
       </Section>

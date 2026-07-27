@@ -100,6 +100,17 @@ The classes above are *what exists*; this table is *which one to reach for*. Eve
 | Skeleton · EmptyState · ErrorState | — | the only sanctioned loading/empty/error patterns |
 | Toasts | Sonner | **top-right**, auto-dismiss, close button |
 | PageHeader (Part 04, Phase 4) | `page-header.tsx` | eyebrow · Display-scale title · directive (emphasis-capable) · actions · reserved status slot; `as="h2"` only for pages that already own their h1 |
+| StatusPill / SystemStatusBar (Part 04, Phase 5) | `status-pill.tsx` / `system-status-bar.tsx` | dot + label, `online`/`warning`/`offline`; `online` pulses via `.pulse-live` (§Tokens 2.0), respects reduced motion |
+
+### Application Shell (Part 04, Phase 5)
+
+`AppLayout` sidebar/topbar evolved additively — no restructuring, no routing change:
+
+- **Nav grouping:** `NAV_ITEMS` (`constants/routes.ts`) carries an optional `group: "primary" | "more"`. Primary items render inline; `"more"` items collapse under a "More modules" disclosure with a count badge. Icon-only (collapsed) sidebar renders everything flat. `PALETTE_PAGES` (⌘K) is unaffected — it stays a flat list.
+- **Active nav state:** `bg-primary/10 text-primary`, replacing the earlier flat `bg-secondary` treatment (Design Constitution principle 15 — color communicates state).
+- **SystemStatusBar:** mounted in the sidebar footer, sourced by `useSystemStatus()` (reads the dashboard query's existing cache — no new network call) and `useLiveClock()`.
+- **Notification trigger:** the Bell button opens a real `Drawer` with an `EmptyState` — panel content ships in Phase 9.
+- **Capture:** a "+Capture" button opens a `Dialog` listing `useCaptureActions()` — an empty registry today, populated by Part 6+ modules without further `AppLayout` changes.
 
 ## Definition of Done (§4.29)
 
