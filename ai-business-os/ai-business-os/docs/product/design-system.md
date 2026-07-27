@@ -55,6 +55,26 @@ New utility classes (`globals.css` `@layer components`):
 | `.text-caption` | 12 / 500 uppercase | 1.5 | +0.06em |
 | `font-mono` | — | — | IDs, SKUs, money |
 
+### Type roles — Core Platform (Part 04, Phase 3)
+
+The classes above are *what exists*; this table is *which one to reach for*. Every text role used by Phase 4's `PageHeader` and later phases traces to a row here — no ad hoc sizes.
+
+| Role | Class | Used by |
+|---|---|---|
+| Eyebrow / overline | `.text-caption` | Small label above a title (Phase 4 `PageHeader` eyebrow slot) |
+| Page title | `.text-display` | The one-per-page primary focal point (Design Constitution principle 2) — `PageHeader` title slot |
+| Directive / subtitle | `.text-body-lg` | The line under a page title that gives it context — `PageHeader` directive slot |
+| Section title | `.text-h2` | Sub-groupings within a page (e.g. `/design`'s `Section` headings) |
+| Sub-section title | `.text-h3` | Smaller groupings, dialog/drawer headers |
+| Standalone small heading | `.text-h4` | Headings outside a card context |
+| Card title | `CardTitle` (`text-sm font-semibold tracking-tight`) | Its own established convention, intentionally smaller than `.text-h4` — cards are dense and quiet by design (Constitution §5 card hierarchy), not a token violation since it's still built from Tailwind's scale |
+| Body copy | `.text-body-lg` / `.text-body` | Lead paragraphs vs. default interface/table/form text |
+| Metadata / timestamps | `.text-small` | Secondary, recessive information (Constitution §4 "supporting information") |
+| Numeric emphasis | `font-mono` | Money, counts, IDs, SKUs — see note below |
+| Stat / KPI value | `.text-h1`-scale size + `font-mono` | Large numeric readouts (Phase 7 `StatCard`) — heading-scale size for visual weight, mono for tabular digit alignment |
+
+**Numeric-emphasis audit:** money and counts already render through `font-mono` everywhere in the app (swatch hex values, `DataTable`'s value column). A true monospace family gives every glyph — including digits — identical width by definition, so columns of numbers already align without a separate `tabular-nums` utility. No CSS was added for this; one would be redundant given the existing `font-mono` convention.
+
 ## Spacing · Radius · Elevation · Motion · Z-index
 
 - **Spacing (§4.6):** 8px system — sanctioned values `4 8 12 16 24 32 40 48 64` (Tailwind `1 2 3 4 6 8 10 12 16`). Never invent gaps.
