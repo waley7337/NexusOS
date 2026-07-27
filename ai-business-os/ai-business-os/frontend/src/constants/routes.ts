@@ -31,6 +31,10 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** Sidebar grouping (Part 04, Phase 5). Absent/"primary" renders inline;
+   * "more" collapses under the "More modules" disclosure. Does not affect
+   * PALETTE_PAGES, which stays a flat list for ⌘K search. */
+  group?: "primary" | "more";
 }
 
 /** Sidebar navigation items. */
@@ -39,13 +43,13 @@ export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.crm, label: "CRM", icon: Users },
   { to: ROUTES.projects, label: "Projects", icon: FolderKanban },
   { to: ROUTES.tasks, label: "Tasks", icon: CheckSquare },
-  { to: ROUTES.hr, label: "HR", icon: UserRound },
   { to: ROUTES.finance, label: "Finance", icon: Wallet },
-  { to: ROUTES.inventory, label: "Inventory", icon: Boxes },
-  { to: ROUTES.documents, label: "Documents", icon: FileText },
-  { to: ROUTES.reports, label: "Reports", icon: BarChart3 },
-  { to: ROUTES.assistant, label: "AI Assistant", icon: Sparkles },
-  { to: ROUTES.settings, label: "Settings", icon: Settings },
+  { to: ROUTES.hr, label: "HR", icon: UserRound, group: "more" },
+  { to: ROUTES.inventory, label: "Inventory", icon: Boxes, group: "more" },
+  { to: ROUTES.documents, label: "Documents", icon: FileText, group: "more" },
+  { to: ROUTES.reports, label: "Reports", icon: BarChart3, group: "more" },
+  { to: ROUTES.assistant, label: "AI Assistant", icon: Sparkles, group: "more" },
+  { to: ROUTES.settings, label: "Settings", icon: Settings, group: "more" },
 ];
 
 /** Command palette pages — sidebar items plus design system. */
