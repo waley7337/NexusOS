@@ -110,7 +110,14 @@ The classes above are *what exists*; this table is *which one to reach for*. Eve
 - **Active nav state:** `bg-primary/10 text-primary`, replacing the earlier flat `bg-secondary` treatment (Design Constitution principle 15 — color communicates state).
 - **SystemStatusBar:** mounted in the sidebar footer, sourced by `useSystemStatus()` (reads the dashboard query's existing cache — no new network call) and `useLiveClock()`.
 - **Notification trigger:** the Bell button opens a real `Drawer` with an `EmptyState` — panel content ships in Phase 9.
-- **Capture:** a "+Capture" button opens a `Dialog` listing `useCaptureActions()` — an empty registry today, populated by Part 6+ modules without further `AppLayout` changes.
+- **Capture:** a "+Capture" button opens a `Dialog` listing `useCaptureActions()` (real entries as of Phase 6 — see below), scrollable past ~6 items.
+
+### Command Palette & quick actions (Part 04, Phase 6)
+
+- **Registry:** `useCaptureActions()` (`hooks/useCaptureActions.ts`) is now the single source of truth for two generic actions — "Toggle theme" and one "go to X" entry per `PALETTE_PAGES` page — read by both the Capture dialog and the command palette's "Go to"/"Actions" groups. "New customer" remains a palette-only stub (not a generic action, so it isn't in the shared registry).
+- **Surface:** the palette is now `.surface-glass` + `ring-primary/15` (a glow-tinted border), replacing the earlier plain `bg-card` surface — the Surface System's `.surface-glass` (Phase 2) applied to its first non-`Card` consumer.
+- **Selected-item state:** `bg-primary/10 text-primary`, matching the sidebar's active-nav restyle (Phase 5A) so both "you are here" (nav) and "this is selected" (palette) read as the same visual language.
+- **Unchanged:** keyboard shortcuts (⌘K/Ctrl+K), fuzzy search, the `CommandPaletteProvider`/`CommandPaletteItem` contract (`command-palette-types.ts`) — Part 6+ entity-search providers plug into the same, untouched extension point.
 
 ## Definition of Done (§4.29)
 

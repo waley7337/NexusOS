@@ -118,7 +118,7 @@ export function AppLayout() {
               description="Modules register their create actions here as they ship."
             />
           ) : (
-            <div className="space-y-1">
+            <div className="max-h-80 space-y-1 overflow-y-auto">
               {captureActions.map((action) => (
                 <button
                   key={action.id}
