@@ -2,9 +2,11 @@
  * NexusOS shell — implements the Part 2 navigation wireframe:
  *   sidebar (collapsible) · top bar with global search · content · profile footer.
  */
+import { useState } from "react";
 import {
   Search,
   Bell,
+  Plus,
   PanelLeftClose,
   PanelLeftOpen,
   Moon,
@@ -13,11 +15,14 @@ import {
   LogOut,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn, formatRelativeTime } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/providers/theme-provider";
 import { useUiStore } from "@/stores/ui";
 import { useRouteFocus } from "@/hooks/useRouteFocus";
+import { useLiveClock } from "@/hooks/useLiveClock";
+import { useSystemStatus } from "@/hooks/useSystemStatus";
+import { useCaptureActions } from "@/hooks/useCaptureActions";
 import { useLogout } from "@/features/auth";
 import { ROUTES } from "@/constants/routes";
 import { CommandPalette } from "@/components/command-palette";
@@ -28,6 +33,10 @@ import {
 import { OfflineBanner } from "@/components/offline-banner";
 import { LazyOutlet } from "@/routes/LazyOutlet";
 import { Button } from "@/components/ui/button";
+import { SystemStatusBar } from "@/components/ui/system-status-bar";
+import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -48,8 +57,29 @@ export function AppLayout() {
   const toggleCommandPalette = useUiStore(
     (state) => state.toggleCommandPalette,
   );
+  const notificationPanelOpen = useUiStore(
+    (state) => state.isNotificationPanelOpen,
+  );
+  const setNotificationPanelOpen = useUiStore(
+    (state) => state.setNotificationPanelOpen,
+  );
+  const toggleNotificationPanel = useUiStore(
+    (state) => state.toggleNotificationPanel,
+  );
 
   useRouteFocus();
+
+  const systemStatus = useSystemStatus();
+  const clock = useLiveClock();
+  const syncedDetail = systemStatus.lastSyncedAt
+    ? `Synced ${formatRelativeTime(systemStatus.lastSyncedAt, clock.getTime())}`
+    : undefined;
+
+  // Local, not global store: the Capture sheet is a self-contained overlay
+  // with no other consumer, same reasoning as app-navigation's "more
+  // modules" disclosure state.
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const captureActions = useCaptureActions();
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
@@ -64,6 +94,49 @@ export function AppLayout() {
     <div className="flex min-h-screen">
       <CommandPalette />
       <MobileSidebar />
+
+      <Drawer open={notificationPanelOpen} onOpenChange={setNotificationPanelOpen}>
+        <DrawerContent>
+          <DrawerHeader title="Notifications" />
+          <DrawerBody>
+            <EmptyState
+              icon={Bell}
+              title="No notifications yet"
+              description="You'll see mentions, overdue items, and updates from your team here."
+            />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
+
+      <Dialog open={captureOpen} onOpenChange={setCaptureOpen}>
+        <DialogContent>
+          <DialogHeader title="Capture" description="Quick-create actions from anywhere in NexusOS." />
+          {captureActions.length === 0 ? (
+            <EmptyState
+              icon={Plus}
+              title="No quick actions yet"
+              description="Modules register their create actions here as they ship."
+            />
+          ) : (
+            <div className="max-h-80 space-y-1 overflow-y-auto">
+              {captureActions.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={() => {
+                    setCaptureOpen(false);
+                    action.onSelect();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60"
+                >
+                  <action.icon className="h-4 w-4 text-muted-foreground" />
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <aside
         className={cn(
@@ -91,9 +164,18 @@ export function AppLayout() {
         <div
           className={cn(
             "mt-auto border-t p-3",
-            collapsed && "flex justify-center",
+            collapsed && "flex flex-col items-center",
           )}
         >
+          {!collapsed && (
+            <SystemStatusBar
+              variant={systemStatus.variant}
+              label={systemStatus.label}
+              detail={syncedDetail}
+              className="mb-3"
+            />
+          )}
+
           <div
             className={cn(
               "flex items-center gap-3",
@@ -126,6 +208,7 @@ export function AppLayout() {
               aria-label="Notifications"
               title="Notifications"
               className="relative shrink-0"
+              onClick={toggleNotificationPanel}
             >
               <Bell />
 
@@ -202,6 +285,11 @@ export function AppLayout() {
               ⌘K
             </kbd>
           </button>
+
+          <Button type="button" size="sm" onClick={() => setCaptureOpen(true)}>
+            <Plus />
+            <span className="hidden sm:inline">Capture</span>
+          </Button>
 
           <div className="ml-auto flex items-center gap-1">
             <Button

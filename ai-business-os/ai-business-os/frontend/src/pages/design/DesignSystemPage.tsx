@@ -25,7 +25,10 @@ import { ErrorState } from "@/components/ui/error-state";
 import { Field, FieldRow } from "@/components/ui/field";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
+import { StatusPill } from "@/components/ui/status-pill";
+import { SystemStatusBar } from "@/components/ui/system-status-bar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -48,6 +51,22 @@ function Swatch({ name, varName, hex }: { name: string; varName: string; hex: st
       <div className="h-14 rounded-card border shadow-sm" style={{ background: `hsl(var(${varName}))` }} />
       <p className="text-sm font-medium">{name}</p>
       <p className="font-mono text-xs text-muted-foreground">{hex}</p>
+    </div>
+  );
+}
+
+/** Radial-glow demo tile — same recipe as .glow-banner, one var per state. */
+function GlowTile({ name, varName }: { name: string; varName: string }) {
+  return (
+    <div className="space-y-1.5">
+      <div
+        className="h-20 rounded-card border bg-background"
+        style={{
+          background: `radial-gradient(220px circle at 50% -10%, hsl(var(${varName}) / 0.35), transparent 65%)`,
+        }}
+      />
+      <p className="text-sm font-medium">{name}</p>
+      <p className="font-mono text-xs text-muted-foreground">{varName}</p>
     </div>
   );
 }
@@ -132,6 +151,139 @@ export function DesignSystemPage() {
           <Swatch name="Muted" varName="--muted" hex="#F1F5F9" />
           <Swatch name="Text" varName="--foreground" hex="#0F172A" />
         </div>
+      </Section>
+
+      {/* ------------------------ Tokens 2.0 (Part 04) ----------------------- */}
+      <Section id="tokens-2" title="Tokens 2.0 — Core Platform (Part 04, Phase 1)">
+        <p className="text-sm text-muted-foreground">
+          Additive tokens for the Core Platform's depth system. No component consumes these yet —
+          this section exists so they're reviewable before Phase 2 (Surface System) wires them in.
+        </p>
+
+        <p className="text-caption">Glow — marks the one dominant focal point per screen</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <GlowTile name="Glow · primary" varName="--glow-primary" />
+          <GlowTile name="Glow · success" varName="--glow-success" />
+          <GlowTile name="Glow · warning" varName="--glow-warning" />
+        </div>
+
+        <p className="text-caption">Glass surface — floating/elevated only, never dense content</p>
+        <div
+          className="relative overflow-hidden rounded-card border p-8"
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(var(--primary) / 0.22), hsl(var(--chart-3) / 0.22), hsl(var(--chart-5) / 0.22))",
+          }}
+        >
+          <div className="surface-glass max-w-xs p-4">
+            <p className="text-sm font-medium">.surface-glass</p>
+            <p className="text-xs text-muted-foreground">
+              --surface-glass + --surface-glass-border, blurred over a busy backdrop so the effect
+              is visible.
+            </p>
+          </div>
+        </div>
+
+        <p className="text-caption">Chart palette — qualitative series, distinct from semantic state colors</p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <Swatch name="Chart 1" varName="--chart-1" hex="#2563EB" />
+          <Swatch name="Chart 2" varName="--chart-2" hex="#0D9488" />
+          <Swatch name="Chart 3" varName="--chart-3" hex="#7C3AED" />
+          <Swatch name="Chart 4" varName="--chart-4" hex="#EA580C" />
+          <Swatch name="Chart 5" varName="--chart-5" hex="#DB2777" />
+          <Swatch name="Chart 6" varName="--chart-6" hex="#4F46E5" />
+        </div>
+      </Section>
+
+      {/* ------------------------ Surfaces (Part 04, Phase 2) ----------------- */}
+      <Section id="surfaces" title="Surfaces — solid vs. glass vs. glow (Part 04, Phase 2)">
+        <p className="text-sm text-muted-foreground">
+          Solid is the default, working surface for every dense/data screen. Glass is opt-in and
+          reserved for floating/elevated surfaces only — never tables, forms, or lists (Design
+          Constitution §9). Glow marks the one dominant focal point on a screen, used at most once.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardContent>
+              <p className="text-sm font-medium">variant="solid" (default)</p>
+              <p className="text-xs text-muted-foreground">bg-card · border · shadow-sm</p>
+            </CardContent>
+          </Card>
+
+          <div
+            className="rounded-card p-3"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(var(--primary) / 0.22), hsl(var(--chart-3) / 0.22), hsl(var(--chart-5) / 0.22))",
+            }}
+          >
+            <Card variant="glass">
+              <CardContent>
+                <p className="text-sm font-medium">variant="glass"</p>
+                <p className="text-xs text-muted-foreground">--surface-glass · blur · never dense content</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="glow-banner rounded-card border p-5">
+            <p className="text-sm font-medium">.glow-banner</p>
+            <p className="text-xs text-muted-foreground">One per screen, marks the dominant focal point</p>
+          </div>
+        </div>
+      </Section>
+
+      {/* ------------------------ Layout (Part 04, Phase 4) -------------------- */}
+      <Section id="layout" title="Layout — PageHeader (Part 04, Phase 4)">
+        <p className="text-sm text-muted-foreground">
+          The shared top-of-page block every module inherits: eyebrow, Display-scale title,
+          directive with an optional emphasized segment, actions, and a slot reserved for Phase
+          5's live-status pill. Page root spacing is <code className="font-mono text-xs">space-y-6</code>;
+          grids inside a page use <code className="font-mono text-xs">gap-4</code> — the same rhythm
+          <code className="mx-1 font-mono text-xs">DashboardPage</code> and every module placeholder
+          already use.
+        </p>
+        <Card>
+          <CardContent>
+            <PageHeader
+              as="h2"
+              eyebrow="Mission control"
+              title="Good morning, Waley"
+              description={
+                <>
+                  This week's directive —{" "}
+                  <span className="font-medium text-primary">protect the deep work, repair the base layer</span>.
+                </>
+              }
+              actions={
+                <>
+                  <Button variant="outline">Begin weekly review</Button>
+                  <Button>
+                    <Plus /> Capture
+                  </Button>
+                </>
+              }
+            />
+          </CardContent>
+        </Card>
+      </Section>
+
+      {/* ------------------------ Shell (Part 04, Phase 5) --------------------- */}
+      <Section id="shell" title="Shell — status &amp; nav (Part 04, Phase 5)">
+        <p className="text-sm text-muted-foreground">
+          Live-status chrome for the sidebar footer, plus the nav grouping and active-state
+          restyle now used in <code className="font-mono text-xs">AppLayout</code>. See the
+          real thing in the sidebar on the left.
+        </p>
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-6">
+              <StatusPill variant="online" label="Online" />
+              <StatusPill variant="warning" label="Syncing" />
+              <StatusPill variant="offline" label="Offline" />
+            </div>
+            <SystemStatusBar detail="Synced just now" />
+          </CardContent>
+        </Card>
       </Section>
 
       {/* ---------------------------- Typography --------------------------- */}

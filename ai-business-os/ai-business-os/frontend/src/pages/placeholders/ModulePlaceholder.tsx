@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 
 interface ModulePlaceholderProps {
   title: string;
@@ -12,7 +13,7 @@ interface ModulePlaceholderProps {
 export function ModulePlaceholder({ title, icon, description, action }: ModulePlaceholderProps) {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <PageHeader title={title} />
       <EmptyState
         icon={icon}
         title={`No ${title.toLowerCase()} yet`}

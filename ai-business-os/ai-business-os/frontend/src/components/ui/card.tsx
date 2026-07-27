@@ -2,8 +2,23 @@
 import { type HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-xl border bg-card text-card-foreground", className)} {...props} />;
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  /** "solid" (default) is the working surface for dense/data content — tables,
+   * forms, lists. "glass" is opt-in, for floating/elevated surfaces only
+   * (hero headers, palettes, panels) — see Design Constitution §9. */
+  variant?: "solid" | "glass";
+}
+
+export function Card({ className, variant = "solid", ...props }: CardProps) {
+  return (
+    <div
+      className={cn(
+        variant === "glass" ? "text-card-foreground surface-glass" : "rounded-xl border bg-card text-card-foreground",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {

@@ -23,6 +23,22 @@ export default {
         accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
         disabled: { foreground: "hsl(var(--disabled-foreground))" },
+        // Part 04 — Core Platform, Phase 1 (Design Tokens 2.0): additive only.
+        glow: {
+          primary: "hsl(var(--glow-primary))",
+          success: "hsl(var(--glow-success))",
+          warning: "hsl(var(--glow-warning))",
+        },
+        "surface-glass": "hsl(var(--surface-glass))",
+        "surface-glass-border": "hsl(var(--surface-glass-border))",
+        chart: {
+          1: "hsl(var(--chart-1))",
+          2: "hsl(var(--chart-2))",
+          3: "hsl(var(--chart-3))",
+          4: "hsl(var(--chart-4))",
+          5: "hsl(var(--chart-5))",
+          6: "hsl(var(--chart-6))",
+        },
       },
       borderRadius: {
         btn: "var(--radius-btn)",       // 10px — buttons
