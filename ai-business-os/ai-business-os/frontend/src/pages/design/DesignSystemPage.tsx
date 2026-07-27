@@ -192,6 +192,43 @@ export function DesignSystemPage() {
         </div>
       </Section>
 
+      {/* ------------------------ Surfaces (Part 04, Phase 2) ----------------- */}
+      <Section id="surfaces" title="Surfaces — solid vs. glass vs. glow (Part 04, Phase 2)">
+        <p className="text-sm text-muted-foreground">
+          Solid is the default, working surface for every dense/data screen. Glass is opt-in and
+          reserved for floating/elevated surfaces only — never tables, forms, or lists (Design
+          Constitution §9). Glow marks the one dominant focal point on a screen, used at most once.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardContent>
+              <p className="text-sm font-medium">variant="solid" (default)</p>
+              <p className="text-xs text-muted-foreground">bg-card · border · shadow-sm</p>
+            </CardContent>
+          </Card>
+
+          <div
+            className="rounded-card p-3"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(var(--primary) / 0.22), hsl(var(--chart-3) / 0.22), hsl(var(--chart-5) / 0.22))",
+            }}
+          >
+            <Card variant="glass">
+              <CardContent>
+                <p className="text-sm font-medium">variant="glass"</p>
+                <p className="text-xs text-muted-foreground">--surface-glass · blur · never dense content</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="glow-banner rounded-card border p-5">
+            <p className="text-sm font-medium">.glow-banner</p>
+            <p className="text-xs text-muted-foreground">One per screen, marks the dominant focal point</p>
+          </div>
+        </div>
+      </Section>
+
       {/* ---------------------------- Typography --------------------------- */}
       <Section id="type" title="Typography">
         <Card>
