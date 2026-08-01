@@ -1,8 +1,13 @@
+import type { LucideIcon } from "lucide-react";
+
 export interface Kpi {
   id: string;
   label: string;
   value: string;
   delta: number; // % vs last period
+  icon?: LucideIcon;
+  /** Trend points for an inline sparkline (Part 04, Phase 7). */
+  trend?: number[];
 }
 
 export interface RevenuePoint {
@@ -38,6 +43,13 @@ export interface Meeting {
   attendees: number;
 }
 
+/** One spoke of the Dashboard hero's RadialGauge (Part 04, Phase 7). */
+export interface HealthSegment {
+  label: string;
+  value: number;
+  color: string;
+}
+
 export interface DashboardData {
   kpis: Kpi[];
   revenue: RevenuePoint[];
@@ -45,4 +57,11 @@ export interface DashboardData {
   activity: ActivityItem[];
   insights: AiInsight[];
   meetings: Meeting[];
+  /** Composite business-health score + breakdown, drives the hero's RadialGauge. */
+  health: { score: number; segments: HealthSegment[] };
+  /** Compact readouts under the gauge. */
+  metrics: { runway: string; capacity: string; quarterPlan: string };
+  quarterProgress: { weekLabel: string; percent: number };
+  /** The emphasized phrase in the hero's directive line. */
+  directive: string;
 }

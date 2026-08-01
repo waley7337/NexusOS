@@ -1,3 +1,15 @@
+/* Self-hosted webfonts (Part 04 convergence, Commit F). Bundled through Vite
+   rather than fetched from rsms.me and fonts.googleapis.com: two third-party
+   render-blocking dependencies, both of which failed outright on a restricted
+   network (measured ERR_TUNNEL_CONNECTION_FAILED / ERR_CONNECTION_RESET) and
+   silently dropped the whole product to system faces.
+   Inter carries the interface; JetBrains Mono carries every numeric readout,
+   timestamp, ID and status string. */
+@import "@fontsource-variable/inter/index.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,57 +17,156 @@
 /* ============================================================
    NexusOS Design Tokens — Part 4, single source of truth.
    Source hex values are documented next to each token.
+
+   LifeOS Visual Convergence, Commit A (colour + surface tokens).
+   Three structural changes land here, all at token level so every
+   existing consumer inherits them through var() with no code edits:
+
+   1. SURFACE LADDER. Previously the product had one surface: page
+      #0F0F0F and literally everything else #1A1A1A (measured — the
+      sidebar, the hero, and all 12 dashboard cards were the same
+      colour). Depth was impossible to express. There is now a six-step
+      ladder, --surface-0..5, and the shadcn-style aliases
+      (--background/--card/--muted/--secondary/--accent) are defined as
+      var() references INTO that ladder, so the ladder is the single
+      source of truth and the aliases stay backward-compatible.
+
+   2. TRANSLUCENT LINES. --line/--line-soft/--line-strong are complete
+      rgb() values carrying alpha, so a border reads as a lit edge over
+      whatever surface sits beneath it rather than a fixed grey. The
+      legacy --border/--input stay HSL triplets (unchanged mechanism,
+      set to the composited equivalent) because seven call sites still
+      use hsl(var(--border)); those migrate in Commits C/D.
+
+   3. TWO-STEP VIOLET. --primary carries the accent violet, which is
+      mode-aware because the contrast requirements invert: on near-black
+      the accent must be LIGHT to be legible as text (#7C74FF = 5.80:1),
+      on white it must be DARK (#5B51E8 = 5.49:1). --primary-foreground
+      is likewise mode-aware so `bg-primary text-primary-foreground`
+      passes AA in BOTH themes with no component change. --primary-fill
+      is the deep violet reserved for filled controls carrying white
+      labels; Button adopts it in Commit C.
+
+   Deliberate deviation from the LifeOS reference: LifeOS's ink scale
+   carries a ~1.2% cool tint (rgb(11,11,14) — blue channel +3). The
+   ladder below is 0% saturation, genuinely neutral, per the explicit
+   "true black and neutral near-black" requirement. Depth comes from the
+   shadow/inset/border system, not from hue. Re-tinting is a one-line
+   change to the ladder if that reads too clinical.
    ============================================================ */
 @layer base {
   :root {
-    /* --- Neutral palette (light) --- */
-    --background: 210 40% 98%;          /* #F8FAFC app background */
-    --card: 0 0% 100%;                  /* #FFFFFF surface */
+    /* --- Surface ladder (light) — the single source of truth for every
+       neutral fill. Light mode inverts the logic of dark: the page is
+       slightly grey and surfaces rise toward white, with elevation above
+       card level expressed by shadow rather than by a lighter fill
+       (there is nothing lighter than #FFF to rise into). --- */
+    --surface-0: 0 0% 97%;    /* #F7F7F7 page canvas */
+    --surface-1: 0 0% 100%;   /* #FFFFFF shell chrome (sidebar, topbar) */
+    --surface-2: 0 0% 100%;   /* #FFFFFF card / panel */
+    --surface-3: 0 0% 100%;   /* #FFFFFF raised — differentiated by shadow */
+    --surface-4: 0 0% 96%;    /* #F5F5F5 control fill */
+    --surface-5: 0 0% 92.5%;  /* #ECECEC control hover */
+
+    /* --- Hairlines (light): near-black at low alpha, so a border reads
+       as a shadow-edge over whatever surface is beneath it. --- */
+    --line: rgb(15 23 42 / 0.10);
+    --line-soft: rgb(15 23 42 / 0.06);
+    --line-strong: rgb(15 23 42 / 0.16);
+
+    /* --- Neutral aliases → ladder. Kept so every existing consumer of
+       bg-background / bg-card / bg-muted / bg-secondary / bg-accent
+       inherits the ladder without a single class change. --- */
+    --background: var(--surface-0);
+    --card: var(--surface-2);
     --card-foreground: 222 47% 11%;     /* #0F172A */
     --foreground: 222 47% 11%;          /* #0F172A text primary */
-    --muted: 210 40% 96%;               /* #F1F5F9 */
-    --muted-foreground: 215 16% 47%;    /* #64748B text secondary */
+    --muted: var(--surface-4);
+    /* Darkened from 47% in Commit F. At 47% this cleared AA on white (4.63:1)
+       but not on the grey control fill it is most often used against —
+       measured 4.31:1 for badge counts and keycaps on --surface-4. 43% clears
+       both (4.86:1 on --surface-4). */
+    --muted-foreground: 215 16% 43%;    /* #5A6577 text secondary */
     --disabled-foreground: 215 20% 65%; /* #94A3B8 text disabled */
-    --border: 214 32% 91%;              /* #E2E8F0 */
-    --input: 214 32% 91%;               /* #E2E8F0 */
+    --secondary: var(--surface-4);
+    --secondary-foreground: 222 47% 11%;
+    --accent: var(--surface-5);
+    --accent-foreground: 222 47% 11%;
 
-    /* --- Brand & semantic --- */
-    --primary: 221 83% 53%;             /* #2563EB Primary Blue */
-    --primary-foreground: 0 0% 100%;
-    --success: 142 71% 36%;             /* #16A34A */
+    /* Legacy opaque hairline — composited equivalent of --line over
+       --surface-2, for the seven remaining hsl(var(--border)) call
+       sites (radial-gauge, recharts config). Migrates in Commits C/D. */
+    --border: 0 0% 90%;                 /* #E6E6E6 */
+    --input: 0 0% 90%;                  /* #E6E6E6 */
+
+    /* --- Brand: two-step violet (LifeOS convergence).
+       Light mode needs the DEEP violet for --primary because the accent
+       is read against white: #5B51E8 on #FFF = 5.49:1 (AA). White on
+       #5B51E8 is also 5.49:1, so here the accent and the fill are the
+       same value and `bg-primary text-primary-foreground` is safe. --- */
+    --primary: 244 77% 61%;             /* #5B51E8 accent + fill */
+    --primary-fill: 244 77% 61%;        /* #5B51E8 filled controls */
+    --primary-soft: 244 62% 50%;        /* #3D30CF emphasis / hover */
+    --primary-foreground: 0 0% 100%;    /* white on #5B51E8 → 5.49:1 AA */
+    --primary-dim: rgb(91 81 232 / 0.10); /* translucent accent wash */
+
+    /* --- Semantic state colours (light).
+       Darkened in Commit F. These tokens do double duty — they are both the
+       fill behind *-foreground text AND the text colour for tinted badges and
+       delta pills (text-success on bg-success/10). They had only ever been
+       audited in the first role. Measured as text on a white card: success
+       was 3.52:1 and warning would have been 2.15:1, both failing AA. Each is
+       now dark enough to pass as text, which also strictly improves the
+       white-on-colour pairing it already had.
+
+       The binding case turned out not to be white but the *tinted* badge
+       background these same colours produce (text-success on bg-success/10):
+       a 10% tint pulls the backdrop off white just far enough to eat the
+       margin — measured 4.27–4.50:1 after the first correction — so each
+       value below is set against that, not against paper. --- */
+    --success: 142 76% 26%;             /* #0F7535 — 4.82:1 on bg-success/10 */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;              /* #F59E0B */
-    --warning-foreground: 24 45% 15%;   /* dark text for AA on amber */
-    --destructive: 0 72% 51%;           /* #DC2626 */
+    --warning: 35 95% 29%;              /* #90570A — 4.79:1 on bg-warning/10 */
+    --warning-foreground: 0 0% 100%;    /* white, now that the amber is deep */
+    --destructive: 0 74% 47%;           /* #D01F1F — 4.98:1 on bg-destructive/10 */
     --destructive-foreground: 0 0% 100%;
-    --info: 192 91% 36%;                /* #0891B2 */
+    --info: 198 88% 32%;                /* #096699 — 4.86:1 on bg-info/10 */
     --info-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;           /* #F1F5F9 */
-    --secondary-foreground: 222 47% 11%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --ring: 221 83% 53%;                /* focus = primary */
+    --ring: var(--primary);             /* focus = accent violet */
 
     /* --- Radius (§4.7) --- */
     --radius-btn: 10px;
     --radius-input: 10px;
     --radius-card: 12px;
     --radius-dialog: 16px;
+    --radius-surface: 18px;             /* LifeOS convergence: elevated panels */
 
-    /* --- Shadows (§4.8) --- */
+    /* --- Shadows (§4.8). --surface-inset is the top "lip" highlight
+       that makes an elevated panel read as catching light from above;
+       --shadow-surface and --shadow-lift compose it with the drop
+       shadow so .surface / .card-lift are one-token recipes. --- */
+    --surface-inset: 0 1px 0 0 rgb(255 255 255 / 0.9) inset;
+    --surface-inset-strong: 0 1px 0 0 rgb(255 255 255 / 1) inset;
     --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
     --shadow-md: 0 2px 8px -2px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
     --shadow-lg: 0 8px 24px -6px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.05);
     --shadow-hover: 0 4px 12px -2px rgb(15 23 42 / 0.10);
     --shadow-dropdown: 0 8px 30px -4px rgb(15 23 42 / 0.16);
     --shadow-modal: 0 24px 64px -12px rgb(15 23 42 / 0.28);
+    --shadow-surface: var(--surface-inset), 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 8px 24px -14px rgb(15 23 42 / 0.14);
+    --shadow-lift: var(--surface-inset-strong), 0 12px 32px -12px rgb(15 23 42 / 0.18), 0 0 32px -20px hsl(var(--primary) / 0.35);
 
-    /* --- Motion (§4.23): communicate state, 150–250ms --- */
+    /* --- Motion (§4.23): communicate state, 150–250ms.
+       --ease-out-expo is the LifeOS entrance curve; --duration-reveal is
+       its section-reveal length. Both are defined here so Commit E has a
+       token to consume rather than inventing timings inline. --- */
     --duration-fast: 150ms;
     --duration-base: 200ms;
     --duration-slow: 250ms;
+    --duration-reveal: 700ms;
     --ease: cubic-bezier(0.2, 0, 0, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
     /* --- Z-index scale (§4.27) --- */
     --z-sticky: 20;
@@ -64,82 +175,126 @@
     --z-modal: 50;
     --z-toast: 60;
 
-    /* --- Glow (Part 04 — Core Platform, Phase 1): Design Constitution §9 —
-       marks the one dominant focal point per screen. Tied to the semantic
-       color roles so glow always matches meaning; translucency is applied
-       by consumers (e.g. .glow-banner), not baked into the token itself. */
+    /* --- Glow (Design Constitution §9) — marks the one dominant focal
+       point per screen. Tied to the semantic roles so glow always
+       matches meaning. --glow-ambient-* are the page-wide radials
+       (deliberately near-invisible: 5% / 3.5%, i.e. texture rather than
+       a colour cast — the previous single hero glow ran at 18%). */
     --glow-primary: var(--primary);
     --glow-success: var(--success);
     --glow-warning: var(--warning);
+    --glow-ambient-1: rgb(91 81 232 / 0.05);
+    --glow-ambient-2: rgb(11 132 184 / 0.035);
 
-    /* --- Surface: glass (Part 04, Phase 1): Design Constitution §9 — for
-       floating/elevated surfaces only (hero headers, command palette,
-       notification panel), never for dense content (tables, forms). Shares
-       the solid surfaces' tonal family on purpose — translucency + blur
-       (applied in .surface-glass) is what reads as "elevated," not a
-       different color. */
-    --surface-glass: var(--card);
+    /* --- Surface: glass (Part 04, Phase 1) — floating/elevated surfaces
+       only (hero headers, command palette, notification panel), never
+       dense content. Translucency + blur is what reads as "elevated". */
+    --surface-glass: var(--surface-2);
     --surface-glass-border: var(--border);
 
-    /* --- Chart palette (Part 04, Phase 1): qualitative series for
-       multi-segment charts/gauges (e.g. the Phase 7 RadialGauge).
-       Deliberately distinct hues from the semantic state colors above, so a
-       chart segment is never mistaken for a status. */
-    --chart-1: 221 83% 53%; /* #2563EB blue   */
-    --chart-2: 173 80% 30%; /* #0D9488 teal   */
-    --chart-3: 262 83% 58%; /* #7C3AED violet */
-    --chart-4: 21 90% 48%;  /* #EA580C orange */
-    --chart-5: 333 74% 47%; /* #DB2777 pink   */
-    --chart-6: 243 75% 59%; /* #4F46E5 indigo */
+    /* --- Chart palette: qualitative series for multi-segment
+       charts/gauges. Re-tuned in Commit A so no series collides with the
+       new violet primary (hue 244) — previously --chart-1 was byte-for-
+       byte identical to --primary, which is a large part of why the UI
+       read as monochrome blue. Hues now span 207/172/27/329/83/292. */
+    --chart-1: 207 76% 42%; /* sky     */
+    --chart-2: 172 72% 32%; /* teal    */
+    --chart-3: 27 84% 44%;  /* orange  */
+    --chart-4: 329 72% 47%; /* pink    */
+    --chart-5: 83 60% 33%;  /* lime    */
+    --chart-6: 292 68% 50%; /* fuchsia */
   }
 
   .dark {
-    /* --- Neutral palette (dark) — full parity, AA maintained --- */
-    --background: 222 49% 8%;           /* #0B1220 */
-    --card: 218 39% 11%;                /* #111927 surface */
-    --card-foreground: 214 32% 91%;     /* #E2E8F0 */
-    --foreground: 214 32% 91%;          /* #E2E8F0 */
-    --muted: 217 33% 15%;               /* #1B2537 */
-    --muted-foreground: 215 20% 65%;    /* #94A3B8 */
-    --disabled-foreground: 215 16% 47%; /* #64748B */
-    --border: 217 33% 17%;              /* #1E293B */
-    --input: 217 33% 17%;
+    /* --- Surface ladder (dark) — true black canvas rising through five
+       near-black steps. 0% saturation throughout: genuinely neutral, no
+       blue cast at any level. --- */
+    --surface-0: 0 0% 0%;     /* #000000 page canvas — true black */
+    --surface-1: 0 0% 3%;     /* #080808 shell chrome (sidebar, topbar) */
+    --surface-2: 0 0% 5%;     /* #0D0D0D card / panel */
+    --surface-3: 0 0% 7%;     /* #121212 raised / hover */
+    --surface-4: 0 0% 9%;     /* #171717 control fill */
+    --surface-5: 0 0% 11%;    /* #1C1C1C control hover */
 
-    --primary: 217 91% 60%;             /* #3B82F6 (AA on dark) */
-    --primary-foreground: 222 49% 8%;
-    --success: 142 69% 45%;             /* #22C55E-adjacent */
-    --success-foreground: 222 49% 8%;
-    --warning: 38 92% 50%;
+    /* --- Hairlines (dark): white at low alpha, so every border is a lit
+       edge whose apparent brightness tracks the surface under it. --- */
+    --line: rgb(255 255 255 / 0.09);
+    --line-soft: rgb(255 255 255 / 0.055);
+    --line-strong: rgb(255 255 255 / 0.14);
+
+    --background: var(--surface-0);
+    --card: var(--surface-2);
+    --card-foreground: 0 0% 93%;        /* #EDEDED */
+    --foreground: 0 0% 93%;             /* #EDEDED */
+    --muted: var(--surface-4);
+    --muted-foreground: 0 0% 64%;       /* #A3A3A3 */
+    --disabled-foreground: 0 0% 42%;    /* #6B6B6B */
+    --secondary: var(--surface-4);
+    --secondary-foreground: 0 0% 93%;
+    --accent: var(--surface-5);
+    --accent-foreground: 0 0% 93%;
+
+    /* Composited equivalent of --line over --surface-2, for the
+       remaining hsl(var(--border)) call sites. Migrates in Commits C/D. */
+    --border: 0 0% 13%;                 /* #212121 */
+    --input: 0 0% 13%;                  /* #212121 */
+
+    /* --- Brand: two-step violet (LifeOS convergence).
+       Dark mode needs the LIGHT violet for --primary, because here the
+       accent is read as text/icon against near-black: #7C74FF on #0D0D0D
+       = 5.63:1 (AA). White on #7C74FF would be only 3.62:1 — the exact
+       contrast defect the LifeOS reference ships — so --primary-foreground
+       is near-black instead (5.47:1), keeping every existing
+       `bg-primary text-primary-foreground` pair AA-compliant with no
+       component edit. Filled controls that specifically want white
+       labels use --primary-fill (#5B51E8, white → 5.49:1); Button
+       adopts that in Commit C. */
+    --primary: 244 100% 73%;            /* #7C74FF accent: text/icon/border/glow */
+    --primary-fill: 244 77% 61%;        /* #5B51E8 filled controls, white label */
+    --primary-soft: 244 100% 80%;       /* #A29BFF emphasis / hover */
+    --primary-foreground: 0 0% 4%;      /* #0A0A0A on #7C74FF → 5.47:1 AA */
+    --primary-dim: rgb(124 116 255 / 0.14);
+
+    /* --- Semantic state colours (dark) — retuned to the LifeOS values,
+       which are calibrated for near-black. All pass AA as text on
+       --surface-2: success 9.9:1, warning 11.0:1, destructive 6.7:1,
+       info 7.5:1. --- */
+    --success: 153 60% 53%;             /* #3ECF8E */
+    --success-foreground: 0 0% 4%;
+    --warning: 38 89% 63%;              /* #F5B84B */
     --warning-foreground: 24 45% 10%;
-    --destructive: 0 72% 57%;
-    --destructive-foreground: 0 0% 100%;
-    --info: 190 90% 44%;
-    --info-foreground: 222 49% 8%;
+    --destructive: 0 84% 69%;           /* #F26D6D */
+    --destructive-foreground: 0 0% 4%;
+    --info: 198 93% 60%;                /* #38BDF8 */
+    --info-foreground: 0 0% 4%;
 
-    --secondary: 217 33% 15%;
-    --secondary-foreground: 214 32% 91%;
-    --accent: 217 33% 15%;
-    --accent-foreground: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --ring: var(--primary);
 
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
-    --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.5);
-    --shadow-lg: 0 8px 24px -6px rgb(0 0 0 / 0.55);
-    --shadow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.5);
-    --shadow-dropdown: 0 8px 30px -4px rgb(0 0 0 / 0.6);
-    --shadow-modal: 0 24px 64px -12px rgb(0 0 0 / 0.7);
+    --surface-inset: 0 1px 0 0 rgb(255 255 255 / 0.03) inset;
+    --surface-inset-strong: 0 1px 0 0 rgb(255 255 255 / 0.05) inset;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.6);
+    --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.7);
+    --shadow-lg: 0 8px 30px -12px rgb(0 0 0 / 0.7);
+    --shadow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.6);
+    --shadow-dropdown: 0 12px 40px -8px rgb(0 0 0 / 0.8);
+    --shadow-modal: 0 24px 64px -12px rgb(0 0 0 / 0.85);
+    --shadow-surface: var(--surface-inset), 0 8px 30px -12px rgb(0 0 0 / 0.7);
+    --shadow-lift: var(--surface-inset-strong), 0 22px 50px -22px rgb(0 0 0 / 0.9), 0 0 40px -20px hsl(var(--primary) / 0.4);
 
-    /* --- Chart palette (dark) — brightened for AA legibility on near-black
-       surfaces, same hue family as light mode (Part 04, Phase 1). --glow-*
-       and --surface-glass* need no dark override: they reference --primary/
-       --success/--warning/--card/--border via var(), which already resolve
-       to this block's values through normal CSS custom-property cascading. */
-    --chart-1: 217 91% 60%; /* #3B82F6 blue   */
-    --chart-2: 172 66% 52%; /* #2DD4BF teal   */
-    --chart-3: 255 92% 76%; /* #A78BFA violet */
-    --chart-4: 27 96% 61%;  /* #FB923C orange */
-    --chart-5: 330 86% 70%; /* #F472B6 pink   */
-    --chart-6: 234 89% 74%; /* #818CF8 indigo */
+    --glow-ambient-1: rgb(124 116 255 / 0.06);
+    --glow-ambient-2: rgb(56 189 248 / 0.04);
+
+    /* --- Chart palette (dark) — brightened for AA legibility on
+       near-black, same hue family as light mode. --glow-*, --ring and
+       --surface-glass* need no dark override: they reference --primary /
+       --card / --border via var(), which already resolve to this block's
+       values through normal custom-property cascading. */
+    --chart-1: 207 89% 66%; /* #5BB0F5 sky     */
+    --chart-2: 172 66% 50%; /* #2DD4BF teal    */
+    --chart-3: 27 96% 61%;  /* #FB923C orange  */
+    --chart-4: 329 86% 70%; /* #F472B6 pink    */
+    --chart-5: 83 78% 55%;  /* #A3E635 lime    */
+    --chart-6: 292 91% 73%; /* #E879F9 fuchsia */
   }
 
   /* ------------------------------------------------------------
@@ -148,29 +303,26 @@
      surface, independent of the viewer's light/dark preference
      elsewhere in the product (the same pattern Linear, Vercel and
      Stripe use for their sign-in shells). Applied by adding both
-     `dark` and `auth-shell` to the layout root, so:
-       - `.dark`'s already AA-audited semantic tokens (primary,
-         destructive, success, warning, info, ring) are inherited
-         as-is — brand meaning stays identical to the rest of the app.
-       - Only the neutral scale + shadows go deeper here, toward the
-         requested #050505–#090909 range.
-     No component needs to know this scope exists: Button, Input,
-     Field, Card, etc. all read the same CSS variables everywhere. */
+     `dark` and `auth-shell` to the layout root.
+
+     Post-convergence this is now only a *slight* deepening of the
+     regular dark ladder rather than a separate colour world — the app
+     itself is true-black now, so the auth shell mostly inherits and
+     just tightens the mid-steps. */
   .dark.auth-shell {
-    --background: 0 0% 2%;           /* #050505 page */
-    --card: 0 0% 5.5%;               /* #0E0E0E card surface */
+    --surface-0: 0 0% 0%;            /* #000000 page */
+    --surface-1: 0 0% 2.5%;          /* #060606 */
+    --surface-2: 0 0% 4.5%;          /* #0B0B0B card surface */
+    --surface-3: 0 0% 6%;            /* #0F0F0F */
+    --surface-4: 0 0% 8%;            /* #141414 subtle fills */
+    --surface-5: 0 0% 10.5%;         /* #1B1B1B */
+
     --card-foreground: 0 0% 96%;     /* #F5F5F5 */
     --foreground: 0 0% 96%;          /* #F5F5F5 text primary */
-    --muted: 0 0% 9%;                /* #171717 subtle fills */
     --muted-foreground: 0 0% 60%;    /* #999999 text secondary */
     --disabled-foreground: 0 0% 40%; /* #666666 text disabled */
     --border: 0 0% 15%;              /* #262626 hairline */
     --input: 0 0% 15%;
-    --secondary: 0 0% 9%;            /* #171717 */
-    --secondary-foreground: 0 0% 96%;
-    --accent: 0 0% 11%;              /* #1C1C1C */
-    --accent-foreground: 0 0% 96%;
-    --ring: 217 91% 63%;             /* brighter focus ring for AA on near-black */
 
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.6);
     --shadow-md: 0 2px 10px -2px rgb(0 0 0 / 0.7);
@@ -181,13 +333,54 @@
   }
 
   * { @apply border-border; }
-  html { font-feature-settings: "cv11", "ss01"; }
-  body { @apply bg-background text-foreground antialiased; }
+  /* cv02/cv03/cv04 give Inter the single-storey g and open 3/6/9 that make
+     it read as an interface face rather than a text face; cv11 keeps the
+     straight-sided l distinguishable from 1 and I. */
+  html { font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01"; }
+
+  /* Ambient page field (LifeOS convergence): two very faint fixed
+     radials, 5–6% and 3.5–4%. This is texture, not a colour wash —
+     deliberately an order of magnitude fainter than a gradient you can
+     consciously see. Painted on body's own background so there is no
+     stacking-context interaction with the app root. */
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(900px 500px at 12% -8%, var(--glow-ambient-1), transparent 60%),
+      radial-gradient(1100px 600px at 100% 0%, var(--glow-ambient-2), transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  /* Scrollbars styled to the surface ladder — the browser default light
+     scrollbar was one of the few remaining places the shell broke
+     character on a true-black canvas. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--line-strong);
+    background-clip: padding-box;
+    opacity: 1;
+  }
 }
 
 /* --- Type scale (§4.5) — Inter, documented weights & tracking --- */
 @layer components {
-  .text-display { @apply text-4xl font-semibold leading-[1.15] tracking-[-0.02em]; }  /* 36/600 */
+  /* Display steps down from a flat 36px to a responsive 28→34px (LifeOS
+     convergence, Commit B). The old size was larger than the reference's
+     hero heading while carrying less information, which is what made the
+     greeting read as oversized rather than confident. */
+  .text-display { @apply text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] sm:text-[34px]; } /* 28→34/600 */
   .text-h1      { @apply text-2xl font-semibold leading-[1.25] tracking-[-0.015em]; } /* 24/600 */
   .text-h2      { @apply text-xl  font-semibold leading-[1.3]  tracking-[-0.01em]; }  /* 20/600 */
   .text-h3      { @apply text-lg  font-semibold leading-[1.4]; }                      /* 18/600 */
@@ -197,9 +390,40 @@
   .text-small   { @apply text-xs  font-normal  leading-[1.5]; }                       /* 12/400 */
   .text-caption { @apply text-xs  font-medium  uppercase tracking-[0.06em] text-muted-foreground; }
 
+  /* Dense chrome label — 11px, heavy tracking. Distinct from .text-caption
+     (12px/+0.06em), which stays the in-content label. This is the shell's
+     own voice: section eyebrows, tile labels, status strings. */
+  .eyebrow {
+    @apply inline-flex items-center gap-1.5 text-2xs font-semibold uppercase text-muted-foreground;
+    letter-spacing: 0.14em;
+  }
+
+  /* Numeric readouts. tabular-nums is the point: without it a ticking
+     clock, a percentage, or a column of currency values reflows on every
+     digit change because proportional figures have different widths. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Shared focus treatment for chrome controls that aren't Buttons.
+     focus-visible only, so a pointer click never paints a ring but a
+     keyboard user always gets one. */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    --tw-ring-offset-color: hsl(var(--surface-0));
+  }
+
+  /* Keycap. */
+  .kbd {
+    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-md border px-1.5 font-mono text-2xs text-muted-foreground;
+    border-color: var(--line);
+    background-color: hsl(var(--surface-4));
+  }
+
   /* Auth shell backdrop — one soft radial glow + a barely-visible grid,
-     both built from existing tokens (primary / foreground). Deliberately
-     minimal: this is texture, not decoration. */
+     both built from existing tokens. Deliberately minimal: texture, not
+     decoration. */
   .auth-page { @apply relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-16; }
   .auth-grid {
     background-image:
@@ -209,27 +433,98 @@
     mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
     -webkit-mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
   }
-  .auth-glow { background: radial-gradient(680px circle at 50% -10%, hsl(var(--primary) / 0.18), transparent 60%); }
+  .auth-glow { background: radial-gradient(680px circle at 50% -10%, hsl(var(--primary) / 0.16), transparent 60%); }
 
-  /* Glass surface (Part 04, Phase 1) — floating/elevated surfaces only; see
-     Design Constitution §9. Opt-in (Card variant="glass" lands in Phase 2;
-     shell chrome consumers in Phases 5/6/9) — never applied to data-dense
-     surfaces like tables or forms. */
+  /* ----------------------------------------------------------------
+     Surface System (LifeOS convergence, Commit A).
+     .surface is the elevated-panel recipe: ladder fill + translucent
+     hairline + the inset top highlight and deep drop shadow that make a
+     panel read as a physical layer. Card adopts it in Commit C; it is
+     defined here so the recipe lives with the tokens it composes.
+     ---------------------------------------------------------------- */
+  .surface {
+    border-radius: var(--radius-surface);
+    border: 1px solid var(--line);
+    background-color: hsl(var(--surface-2));
+    box-shadow: var(--shadow-surface);
+  }
+
+  /* Raised variant — one step up the ladder, for surfaces that sit on
+     top of another surface (nested panels, popovers over cards). */
+  .surface-raised {
+    border-radius: var(--radius-surface);
+    border: 1px solid var(--line);
+    background-color: hsl(var(--surface-3));
+    box-shadow: var(--shadow-surface);
+  }
+
+  /* Glass surface — floating/elevated surfaces only; see Design
+     Constitution §9. Never applied to data-dense surfaces. */
   .surface-glass {
     @apply rounded-card border shadow-lg backdrop-blur-xl;
     background: hsl(var(--surface-glass) / 0.72);
     border-color: hsl(var(--surface-glass-border) / 0.6);
   }
 
-  /* Glow banner (Part 04, Phase 1) — generalized from .auth-glow for use
-     outside the auth shell (Phase 7 Dashboard hero). Constitution principle
-     2: one dominant focal point per screen — do not stack multiple glows. */
-  .glow-banner { background: radial-gradient(680px circle at 50% -10%, hsl(var(--glow-primary) / 0.18), transparent 60%); }
+  /* Restrained hover elevation. 2px is deliberate — enough to read as
+     interactive, small enough that a grid of cards doesn't jitter. */
+  .card-lift {
+    transition:
+      transform var(--duration-slow) var(--ease-out-expo),
+      border-color var(--duration-slow) var(--ease-out-expo),
+      box-shadow var(--duration-slow) var(--ease-out-expo);
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-lift);
+  }
 
-  /* Live-status pulse (Part 04, Phase 1) — for a live/online status dot
-     (Phase 5 StatusPill). Collapses to a static dot under the global
-     prefers-reduced-motion rule below — no separate override needed here. */
+  /* Pointer-tracked highlight. --mx/--my are written by useSpotlight
+     (Commit E); with no hook attached the gradient simply sits at its
+     50%/0% default, so the class is safe to apply before then. */
+  .spotlight { position: relative; }
+  .spotlight::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 400ms ease;
+    background: radial-gradient(
+      340px 340px at var(--mx, 50%) var(--my, 0%),
+      hsl(var(--primary) / 0.10),
+      transparent 70%
+    );
+  }
+  .spotlight:hover::before { opacity: 1; }
+
+  /* Glow banner — one dominant focal point per screen (Constitution
+     principle 2). Dialled from 0.18 to 0.10: with the ambient page
+     field now carrying the atmosphere, the hero glow only needs to
+     mark focus, not supply the mood. */
+  .glow-banner { background: radial-gradient(680px circle at 50% -10%, hsl(var(--glow-primary) / 0.10), transparent 60%); }
+
+  /* Faint structural grid for hero/branded panels. */
+  .grid-field {
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.022) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.022) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(120% 120% at 50% 0%, #000 30%, transparent 78%);
+    -webkit-mask-image: radial-gradient(120% 120% at 50% 0%, #000 30%, transparent 78%);
+  }
+
+  /* Live-status pulse — for a live/online status dot (StatusPill).
+     Collapses to a static dot under the reduced-motion rule below. */
   .pulse-live { animation: pulse-live 2s var(--ease) infinite; }
+
+  /* Ambient drift for the hero's blurred backdrop orbs. 14s and ~3% travel:
+     slow and small enough to be felt rather than watched. The @keyframes
+     landed in Commit A but this class did not, so the orbs were static —
+     measured animation-name: none. Switched off under reduced motion. */
+  .drift { animation: drift 14s ease-in-out infinite; }
 }
 
 @keyframes pulse-live {
@@ -237,12 +532,74 @@
   50% { opacity: 0.55; transform: scale(0.85); }
 }
 
-/* Accessibility: respect reduced motion globally. */
+/* Entrance keyframes (LifeOS convergence). Defined in Commit A alongside
+   the tokens they use; consumed by the motion system in Commit E. */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(3%, -4%, 0) scale(1.08); }
+}
+
+/* ------------------------------------------------------------------
+   Accessibility: prefers-reduced-motion (Part 04 convergence, Commit E).
+
+   This used to be a single blanket rule capping every animation and
+   transition to 0.01ms. That is safe but blunt in both directions: it
+   relies on animation-fill-mode landing the correct end state for
+   anything that starts hidden, and it also flattens transitions that
+   carry no motion at all (a hover colour change communicates state and
+   is not what WCAG 2.3.3 is about).
+
+   So: effects that MOVE are switched off and pinned to their finished
+   state explicitly — which cannot fail the way a 0.01ms replay can —
+   while colour/opacity feedback keeps working. The blanket cap is kept
+   at the end as a backstop for anything not enumerated here.
+
+   Framer Motion is handled separately, in JS, by MotionConfig
+   reducedMotion="user" in App.tsx: it animates via inline styles and
+   this media query cannot reach it.
+   ------------------------------------------------------------------ */
 @media (prefers-reduced-motion: reduce) {
+  /* Entrances: land on the finished state rather than replaying fast. */
+  .reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  /* SVG stroke drawing. The animation is set inline by Sparkline and
+     RadialGauge, so overriding it needs !important. */
+  [data-draw] {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  /* Continuous ambient motion carries no information — stop it entirely
+     rather than running it once very fast. */
+  .drift,
+  .pulse-live,
+  .animate-ping {
+    animation: none;
+  }
+
+  /* Hover elevation is movement; keep the border/shadow response, drop
+     the travel. */
+  .card-lift,
+  .card-lift:hover {
+    transform: none;
+  }
+
+  /* Backstop for anything not named above. */
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

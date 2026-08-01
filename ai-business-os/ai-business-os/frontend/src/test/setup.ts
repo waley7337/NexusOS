@@ -25,3 +25,28 @@ if (typeof localStorage === "undefined" || typeof localStorage.setItem !== "func
     configurable: true,
   });
 }
+
+/**
+ * jsdom doesn't implement `matchMedia`. `useMediaQuery` (and, via it,
+ * `useCountUp`) is now genuinely used by shipped components (StatCard,
+ * Part 04 Phase 8), not a one-off — so this is permanent test
+ * infrastructure, not a stub to remove later. Defaults to "no match"
+ * (motion not reduced); tests that care about prefers-reduced-motion
+ * override `window.matchMedia` themselves (see useCountUp.test.ts).
+ */
+if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}

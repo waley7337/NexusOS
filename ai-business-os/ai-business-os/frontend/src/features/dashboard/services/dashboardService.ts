@@ -1,13 +1,14 @@
+import { Boxes, CheckSquare, FolderKanban, Receipt, Users, Wallet } from "lucide-react";
 import type { DashboardData } from "../types";
 
 const MOCK: DashboardData = {
   kpis: [
-    { id: "revenue", label: "Revenue", value: "$128,430", delta: 18 },
-    { id: "projects", label: "Active projects", value: "14", delta: 2 },
-    { id: "customers", label: "Customers", value: "312", delta: 6 },
-    { id: "tasks", label: "Tasks due today", value: "23", delta: -12 },
-    { id: "invoices", label: "Outstanding invoices", value: "$9,120", delta: -8 },
-    { id: "inventory", label: "Inventory alerts", value: "3", delta: 0 },
+    { id: "revenue", label: "Revenue", value: "$128,430", delta: 18, icon: Wallet, trend: [74, 81, 78, 92, 99, 112, 128] },
+    { id: "projects", label: "Active projects", value: "14", delta: 2, icon: FolderKanban, trend: [9, 10, 11, 12, 13, 13, 14] },
+    { id: "customers", label: "Customers", value: "312", delta: 6, icon: Users, trend: [270, 280, 288, 295, 300, 305, 312] },
+    { id: "tasks", label: "Tasks due today", value: "23", delta: -12, icon: CheckSquare, trend: [31, 28, 30, 26, 24, 23, 23] },
+    { id: "invoices", label: "Outstanding invoices", value: "$9,120", delta: -8, icon: Receipt, trend: [12400, 11800, 10900, 10200, 9800, 9400, 9120] },
+    { id: "inventory", label: "Inventory alerts", value: "3", delta: 0, icon: Boxes, trend: [5, 4, 4, 3, 3, 4, 3] },
   ],
   revenue: [
     { month: "Jan", revenue: 74, expenses: 52 },
@@ -44,6 +45,20 @@ const MOCK: DashboardData = {
     { id: "2", title: "Acme Ltd. onboarding call", time: "Today · 16:30", attendees: 3 },
     { id: "3", title: "Sprint planning", time: "Tomorrow · 09:30", attendees: 8 },
   ],
+  health: {
+    score: 7.4,
+    segments: [
+      { label: "Sales", value: 8.2, color: "hsl(var(--chart-1))" },
+      { label: "Finance", value: 7.5, color: "hsl(var(--chart-2))" },
+      { label: "Ops", value: 6.1, color: "hsl(var(--chart-3))" },
+      { label: "Team", value: 7.8, color: "hsl(var(--chart-4))" },
+      { label: "Product", value: 8.6, color: "hsl(var(--chart-5))" },
+      { label: "Support", value: 6.4, color: "hsl(var(--chart-6))" },
+    ],
+  },
+  metrics: { runway: "11.4mo", capacity: "82%", quarterPlan: "68%" },
+  quarterProgress: { weekLabel: "Week 8 of 13", percent: 68 },
+  directive: "close the Q3 pipeline, protect deep work",
 };
 
 /** Dashboard aggregate — Part 6+ replaces body with request<DashboardData>(). */

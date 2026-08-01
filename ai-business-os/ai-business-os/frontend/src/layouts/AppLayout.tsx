@@ -2,7 +2,6 @@
  * NexusOS shell — implements the Part 2 navigation wireframe:
  *   sidebar (collapsible) · top bar with global search · content · profile footer.
  */
-import { useState } from "react";
 import {
   Search,
   Bell,
@@ -15,7 +14,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/providers/theme-provider";
 import { useUiStore } from "@/stores/ui";
@@ -33,7 +32,7 @@ import {
 import { OfflineBanner } from "@/components/offline-banner";
 import { LazyOutlet } from "@/routes/LazyOutlet";
 import { Button } from "@/components/ui/button";
-import { SystemStatusBar } from "@/components/ui/system-status-bar";
+import { ShellStatusBar } from "@/components/ui/shell-status-bar";
 import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -66,19 +65,19 @@ export function AppLayout() {
   const toggleNotificationPanel = useUiStore(
     (state) => state.toggleNotificationPanel,
   );
+  // Store, not local state (Part 04, Phase 7): DashboardPage's hero also
+  // has a Capture trigger and needs to open this same sheet — a sibling
+  // route component can't reach AppLayout's local state, so this moved to
+  // the store, same shape as isNotificationPanelOpen above.
+  const captureOpen = useUiStore((state) => state.isCaptureOpen);
+  const setCaptureOpen = useUiStore((state) => state.setCaptureOpen);
 
   useRouteFocus();
 
+  // Both feed ShellStatusBar, which now owns the "Synced N ago" formatting.
   const systemStatus = useSystemStatus();
   const clock = useLiveClock();
-  const syncedDetail = systemStatus.lastSyncedAt
-    ? `Synced ${formatRelativeTime(systemStatus.lastSyncedAt, clock.getTime())}`
-    : undefined;
 
-  // Local, not global store: the Capture sheet is a self-contained overlay
-  // with no other consumer, same reasoning as app-navigation's "more
-  // modules" disclosure state.
-  const [captureOpen, setCaptureOpen] = useState(false);
   const captureActions = useCaptureActions();
 
   const handleLogout = async () => {
@@ -91,7 +90,12 @@ export function AppLayout() {
     .toUpperCase();
 
   return (
-    <div className="flex min-h-screen">
+    // h-dvh + overflow-hidden makes the shell a fixed frame with its own
+    // internal scroll (Part 04 convergence, Commit C). This is what lets the
+    // status bar sit permanently at the foot of the shell instead of scrolling
+    // away with the document. dvh rather than vh so mobile browser chrome
+    // collapsing doesn't leave the bar off-screen.
+    <div className="flex h-dvh overflow-hidden">
       <CommandPalette />
       <MobileSidebar />
 
@@ -138,44 +142,44 @@ export function AppLayout() {
         </DialogContent>
       </Dialog>
 
+      {/* surface-1 (one step below the card level) + blur: the sidebar now
+          reads as chrome sitting behind the content rather than as another
+          card. Previously it was bg-card, byte-identical to every panel. */}
       <aside
         className={cn(
-          "hidden shrink-0 flex-col border-r bg-card transition-[width] duration-200 md:flex",
-          collapsed ? "w-16" : "w-60",
+          "hidden shrink-0 flex-col border-r bg-surface-1/95 backdrop-blur-xl transition-[width] duration-200 md:flex",
+          collapsed ? "w-16" : "w-[270px]",
         )}
       >
         <div
           className={cn(
-            "flex h-14 items-center border-b",
-            collapsed ? "justify-center" : "gap-2 px-5",
+            "flex h-14 shrink-0 items-center",
+            collapsed ? "justify-center" : "gap-2.5 px-4",
           )}
         >
-          <div className="h-6 w-6 shrink-0 rounded-md bg-primary" />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-fill">
+            <span className="font-mono text-xs font-bold text-white">N</span>
+          </div>
 
           {!collapsed && (
-            <span className="truncate text-sm font-semibold tracking-tight">
-              NexusOS
-            </span>
+            <div className="min-w-0 leading-tight">
+              <div className="truncate text-sm font-semibold tracking-tight">NexusOS</div>
+              <div className="truncate text-2xs text-muted-foreground">Business Operating System</div>
+            </div>
           )}
         </div>
 
         <AppNavigation collapsed={collapsed} />
 
+        {/* The system status that used to live here has moved to the shell's
+            bottom bar (ShellStatusBar) — deliberately rendered in exactly one
+            place, so the two can never disagree. */}
         <div
           className={cn(
-            "mt-auto border-t p-3",
+            "mt-auto shrink-0 border-t p-3",
             collapsed && "flex flex-col items-center",
           )}
         >
-          {!collapsed && (
-            <SystemStatusBar
-              variant={systemStatus.variant}
-              label={systemStatus.label}
-              detail={syncedDetail}
-              className="mb-3"
-            />
-          )}
-
           <div
             className={cn(
               "flex items-center gap-3",
@@ -183,7 +187,7 @@ export function AppLayout() {
             )}
           >
             <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-4 text-xs font-semibold"
               aria-hidden="true"
             >
               {userInitial}
@@ -239,7 +243,7 @@ export function AppLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center gap-3 border-b px-4 md:px-6">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-surface-1/80 px-4 backdrop-blur-xl md:px-6">
           <Button
             type="button"
             variant="ghost"
@@ -273,17 +277,18 @@ export function AppLayout() {
           <button
             type="button"
             onClick={toggleCommandPalette}
-            className="flex h-9 flex-1 items-center gap-2 rounded-md border bg-background px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary/50 md:max-w-md"
+            className="focus-ring flex h-9 flex-1 items-center gap-2 rounded-lg border bg-surface-2 px-3 text-sm text-muted-foreground transition-colors duration-fast hover:border-line-strong hover:text-foreground md:max-w-md"
           >
-            <Search className="h-4 w-4" />
+            <Search className="h-4 w-4 shrink-0" />
 
             <span className="flex-1 text-left">
               Search anything…
             </span>
 
-            <kbd className="hidden rounded border bg-muted px-1.5 py-0.5 text-xs sm:inline">
-              ⌘K
-            </kbd>
+            <span className="ml-2 hidden items-center gap-0.5 sm:flex">
+              <kbd className="kbd">⌘</kbd>
+              <kbd className="kbd">K</kbd>
+            </span>
           </button>
 
           <Button type="button" size="sm" onClick={() => setCaptureOpen(true)}>
@@ -310,12 +315,25 @@ export function AppLayout() {
 
         <OfflineBanner />
 
-        <main
-          className="flex-1 p-6 md:p-8"
-          tabIndex={-1}
-        >
-          <LazyOutlet />
+        {/* Content is capped and centred (Commit B), and owns the shell's
+            scroll (Commit C) so the status bar below stays put.
+            focus:outline-none suppresses the platform ring that
+            useRouteFocus's fallback would otherwise paint around the whole
+            content region — see the note in that hook. tabIndex={-1} means
+            this is not Tab-reachable, so no keyboard affordance is lost. */}
+        <main className="flex-1 overflow-y-auto focus:outline-none" tabIndex={-1}>
+          <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
+            <LazyOutlet />
+          </div>
         </main>
+
+        <ShellStatusBar
+          variant={systemStatus.variant}
+          label={systemStatus.label}
+          lastSyncedAt={systemStatus.lastSyncedAt}
+          now={clock}
+          onCommandPalette={toggleCommandPalette}
+        />
       </div>
     </div>
   );

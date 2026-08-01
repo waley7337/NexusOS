@@ -4,8 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Business OS</title>
-    <link rel="preconnect" href="https://rsms.me/" />
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <meta name="theme-color" content="#000000" />
+    <!-- Fonts are self-hosted via @fontsource and imported in globals.css.
+         They were previously fetched from two separate third-party CDNs
+         (rsms.me for Inter, fonts.googleapis.com for JetBrains Mono); both
+         are a render-blocking external dependency, a privacy leak, and a
+         console error on any restrictive network — measured here as
+         ERR_TUNNEL_CONNECTION_FAILED and ERR_CONNECTION_RESET, with the UI
+         silently falling back to system faces. -->
   </head>
   <body>
     <div id="root"></div>
