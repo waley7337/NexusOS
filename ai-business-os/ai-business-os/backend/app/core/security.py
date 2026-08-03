@@ -4,6 +4,7 @@ Access tokens are short-lived and carry identity + tenant claims.
 Refresh tokens are long-lived, rotated on use, and revocable (jti stored
 server-side — implemented with the sessions table in Part 2).
 """
+
 import hashlib
 import secrets
 import uuid
@@ -18,6 +19,10 @@ from app.core.config import settings
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 TokenType = Literal["access", "refresh"]
+
+# JWT metadata
+JWT_ISSUER = "nexusos"
+JWT_AUDIENCE = "nexusos-api"
 
 
 def hash_password(password: str) -> str:
@@ -39,8 +44,11 @@ def generate_opaque_token() -> str:
 
 
 def hash_opaque_token(token: str) -> str:
-    """SHA-256 hex digest. Fast lookup hash, not a password hash — the token
-    is already high-entropy random data, so no salt/slow-hash is needed."""
+    """SHA-256 hex digest.
+
+    Fast lookup hash, not a password hash — the token is already
+    high-entropy random data, so no salt/slow hash is needed.
+    """
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
@@ -52,25 +60,43 @@ def _create_token(
     extra_claims: dict[str, Any] | None = None,
 ) -> str:
     now = datetime.now(timezone.utc)
+
     payload: dict[str, Any] = {
         "sub": subject,
         "type": token_type,
         "iat": now,
         "exp": now + expires_delta,
         "jti": str(uuid.uuid4()),
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
     }
+
     if extra_claims:
         payload.update(extra_claims)
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+    return jwt.encode(
+        payload,
+        settings.SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )
 
 
-def create_access_token(user_id: str, company_id: str, role: str) -> str:
-    """Access token carries tenant context — every request is tenant-scoped."""
+def create_access_token(
+    user_id: str,
+    company_id: str,
+    role: str,
+) -> str:
+    """Access token carries tenant context."""
     return _create_token(
         subject=user_id,
         token_type="access",
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
-        extra_claims={"company_id": company_id, "role": role},
+        expires_delta=timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
+        extra_claims={
+            "company_id": company_id,
+            "role": role,
+        },
     )
 
 
@@ -78,15 +104,32 @@ def create_refresh_token(user_id: str) -> str:
     return _create_token(
         subject=user_id,
         token_type="refresh",
-        expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_delta=timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        ),
     )
 
 
-def decode_token(token: str, expected_type: TokenType) -> dict[str, Any]:
-    """Decode and validate a JWT. Raises jwt.PyJWTError on any failure."""
+def decode_token(
+    token: str,
+    expected_type: TokenType,
+) -> dict[str, Any]:
+    """Decode and validate a JWT.
+
+    Raises jwt.PyJWTError on any validation failure.
+    """
+
     payload = jwt.decode(
-        token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+        token,
+        settings.SECRET_KEY,
+        algorithms=[settings.JWT_ALGORITHM],
+        issuer=JWT_ISSUER,
+        audience=JWT_AUDIENCE,
     )
+
     if payload.get("type") != expected_type:
-        raise jwt.InvalidTokenError(f"Expected {expected_type} token")
+        raise jwt.InvalidTokenError(
+            f"Expected {expected_type} token."
+        )
+
     return payload
