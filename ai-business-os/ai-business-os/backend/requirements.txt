@@ -11,7 +11,8 @@ alembic==1.14.*
 
 # --- Auth & security ---
 pyjwt==2.10.*
-passlib[argon2]==1.7.*
+passlib[argon2]==1.7.4
+argon2-cffi==25.1.0
 email-validator==2.*
 
 # --- Infra ---
