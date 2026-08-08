@@ -2,6 +2,7 @@
  * NexusOS shell — implements the Part 2 navigation wireframe:
  *   sidebar (collapsible) · top bar with global search · content · profile footer.
  */
+import { useState } from "react";
 import {
   Search,
   Bell,
@@ -12,6 +13,8 @@ import {
   Sun,
   Menu,
   LogOut,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -41,6 +44,9 @@ export function AppLayout() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const logoutMutation = useLogout();
+
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [companySlugCopied, setCompanySlugCopied] = useState(false);
 
   const { theme, setTheme } = useTheme();
 
@@ -83,6 +89,29 @@ export function AppLayout() {
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
     navigate(ROUTES.login, { replace: true });
+  };
+
+  const handleCopyCompanySlug = async () => {
+    if (!user?.companySlug) return;
+
+    try {
+      await navigator.clipboard.writeText(user.companySlug);
+      setCompanySlugCopied(true);
+
+      window.setTimeout(() => {
+        setCompanySlugCopied(false);
+      }, 2000);
+    } catch {
+      setCompanySlugCopied(false);
+    }
+  };
+
+  const handleAccountOpenChange = (open: boolean) => {
+    setAccountOpen(open);
+
+    if (!open) {
+      setCompanySlugCopied(false);
+    }
   };
 
   const userInitial = (user?.name ?? "G")
@@ -142,6 +171,114 @@ export function AppLayout() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={accountOpen} onOpenChange={handleAccountOpenChange}>
+        <DialogContent>
+          <DialogHeader
+            title="Account"
+            description="Your personal and company information."
+          />
+
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-4 text-sm font-semibold"
+                aria-hidden="true"
+              >
+                {userInitial}
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold">
+                  {user?.name ?? "Guest"}
+                </p>
+                <p className="truncate text-sm capitalize text-muted-foreground">
+                  {user?.role ?? "No role"}
+                </p>
+              </div>
+            </div>
+
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Personal information
+              </h3>
+
+              <div className="divide-y rounded-lg border bg-surface-1">
+                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 px-4 py-3">
+                  <span className="text-sm text-muted-foreground">
+                    Name
+                  </span>
+                  <span className="min-w-0 break-words text-sm font-medium">
+                    {user?.name ?? "—"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 px-4 py-3">
+                  <span className="text-sm text-muted-foreground">
+                    Email
+                  </span>
+                  <span className="min-w-0 break-all text-sm font-medium">
+                    {user?.email ?? "—"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 px-4 py-3">
+                  <span className="text-sm text-muted-foreground">
+                    Email status
+                  </span>
+                  <span className="text-sm font-medium">
+                    {user?.emailVerified ? "Verified" : "Not verified"}
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Company
+              </h3>
+
+              <div className="divide-y rounded-lg border bg-surface-1">
+                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 px-4 py-3">
+                  <span className="text-sm text-muted-foreground">
+                    Company
+                  </span>
+                  <span className="min-w-0 break-words text-sm font-medium">
+                    {user?.companyName ?? "—"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-[110px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
+                  <span className="text-sm text-muted-foreground">
+                    Company URL
+                  </span>
+
+                  <code className="min-w-0 break-all text-sm text-foreground">
+                    {user?.companySlug ?? "—"}
+                  </code>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={!user?.companySlug}
+                    onClick={() => void handleCopyCompanySlug()}
+                    aria-label="Copy Company URL"
+                  >
+                    {companySlugCopied ? <Check /> : <Copy />}
+                    {companySlugCopied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Use this Company URL together with your email and password
+                when signing in to NexusOS.
+              </p>
+            </section>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* surface-1 (one step below the card level) + blur: the sidebar now
           reads as chrome sitting behind the content rather than as another
           card. Previously it was bg-card, byte-identical to every panel. */}
@@ -186,29 +323,37 @@ export function AppLayout() {
               collapsed && "flex-col gap-2",
             )}
           >
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-4 text-xs font-semibold"
-              aria-hidden="true"
+            <button
+              type="button"
+              onClick={() => setAccountOpen(true)}
+              aria-label="Open account"
+              title="Account"
+              className={cn(
+                "focus-ring flex min-w-0 items-center rounded-lg text-left transition-colors hover:bg-secondary/60",
+                collapsed
+                  ? "h-9 w-9 justify-center"
+                  : "flex-1 gap-3 px-2 py-1.5",
+              )}
             >
-              {userInitial}
-            </div>
-
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {user?.name ?? "Guest"}
-                </p>
-
-                <p className="truncate text-xs text-muted-foreground">
-                  {user?.companyName ?? "No company"}
-                </p>
-                {user?.companySlug && (
-                  <p className="truncate font-mono text-2xs text-muted-foreground" title={`Company URL: ${user.companySlug}`}>
-                    Company URL: {user.companySlug}
-                  </p>
-                )}
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-4 text-xs font-semibold"
+                aria-hidden="true"
+              >
+                {userInitial}
               </div>
-            )}
+
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {user?.name ?? "Guest"}
+                  </p>
+
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user?.companyName ?? "No company"}
+                  </p>
+                </div>
+              )}
+            </button>
 
             <Button
               type="button"
