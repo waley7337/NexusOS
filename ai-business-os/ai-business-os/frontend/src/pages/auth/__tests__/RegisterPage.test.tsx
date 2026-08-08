@@ -7,12 +7,14 @@ import { RegisterPage } from "../RegisterPage";
 import { useAuthStore } from "@/stores/auth";
 
 const mockRegister = vi.fn();
+
 vi.mock("@/features/auth/services/authService", () => ({
   register: (...args: unknown[]) => mockRegister(...args),
 }));
 
 const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
+
 vi.mock("sonner", () => ({
   toast: {
     error: (...args: unknown[]) => mockToastError(...args),
@@ -21,7 +23,10 @@ vi.mock("sonner", () => ({
 }));
 
 function renderRegisterPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={["/register"]}>
@@ -53,14 +58,21 @@ describe("RegisterPage", () => {
     renderRegisterPage();
     await fillValidFormExceptPasswords();
     await userEvent.type(screen.getByLabelText("Password"), "Secret123");
-    await userEvent.type(screen.getByLabelText("Confirm password"), "Different123");
-    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    await userEvent.type(
+      screen.getByLabelText("Confirm password"),
+      "Different123",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create account" }),
+    );
 
-    expect(await screen.findByText("Passwords do not match")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Passwords do not match"),
+    ).toBeInTheDocument();
     expect(mockRegister).not.toHaveBeenCalled();
   });
 
-  it("registers, stores the session, and redirects home", async () => {
+  it("registers, stores the session, shows the company URL, and only redirects after confirmation", async () => {
     mockRegister.mockResolvedValue({
       accessToken: "access-1",
       refreshToken: "refresh-1",
@@ -73,6 +85,7 @@ describe("RegisterPage", () => {
         role: "owner",
         companyId: "c1",
         companyName: "Acme Inc.",
+        companySlug: "acme-inc",
         emailVerified: false,
       },
     });
@@ -80,10 +93,22 @@ describe("RegisterPage", () => {
     renderRegisterPage();
     await fillValidFormExceptPasswords();
     await userEvent.type(screen.getByLabelText("Password"), "Secret123");
-    await userEvent.type(screen.getByLabelText("Confirm password"), "Secret123");
-    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    await userEvent.type(
+      screen.getByLabelText("Confirm password"),
+      "Secret123",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create account" }),
+    );
 
-    await waitFor(() => expect(screen.getByText("Dashboard home")).toBeInTheDocument());
+    expect(
+      await screen.findByText("Save your Company URL"),
+    ).toBeInTheDocument();
+
+    expect(screen.getByText("acme-inc")).toBeInTheDocument();
+
+    expect(screen.queryByText("Dashboard home")).not.toBeInTheDocument();
+
     expect(mockRegister).toHaveBeenCalledWith(
       expect.objectContaining({
         companyName: "Acme Inc.",
@@ -93,23 +118,48 @@ describe("RegisterPage", () => {
         password: "Secret123",
       }),
     );
+
     expect(useAuthStore.getState().accessToken).toBe("access-1");
-    expect(mockToastSuccess).toHaveBeenCalledWith("Account created. Welcome to NexusOS.");
+    expect(useAuthStore.getState().user?.companySlug).toBe("acme-inc");
+
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Account created. Welcome to NexusOS.",
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Continue to dashboard" }),
+    );
+
+    expect(await screen.findByText("Dashboard home")).toBeInTheDocument();
   });
 
   it("shows an error toast when the email is already taken", async () => {
     const { ApiRequestError } = await import("@/api/client");
-    mockRegister.mockRejectedValue(new ApiRequestError("An account with this email already exists.", []));
+
+    mockRegister.mockRejectedValue(
+      new ApiRequestError(
+        "An account with this email already exists.",
+        [],
+      ),
+    );
 
     renderRegisterPage();
     await fillValidFormExceptPasswords();
     await userEvent.type(screen.getByLabelText("Password"), "Secret123");
-    await userEvent.type(screen.getByLabelText("Confirm password"), "Secret123");
-    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    await userEvent.type(
+      screen.getByLabelText("Confirm password"),
+      "Secret123",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create account" }),
+    );
 
     await waitFor(() =>
-      expect(mockToastError).toHaveBeenCalledWith("An account with this email already exists."),
+      expect(mockToastError).toHaveBeenCalledWith(
+        "An account with this email already exists.",
+      ),
     );
+
     expect(useAuthStore.getState().accessToken).toBeNull();
   });
 });

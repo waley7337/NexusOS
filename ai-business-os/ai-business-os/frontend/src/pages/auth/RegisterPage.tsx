@@ -7,13 +7,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Building2, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { Building2, Check, Copy, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { useRegister, registerSchema, type RegisterFormValues } from "@/features/auth";
 import { ApiRequestError } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+} from "@/components/ui/dialog";
 
 export function RegisterPage() {
   const {
@@ -23,6 +29,8 @@ export function RegisterPage() {
   } = useForm<RegisterFormValues>({ resolver: zodResolver(registerSchema) });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [companySlug, setCompanySlug] = useState<string | null>(null);
+  const [slugCopied, setSlugCopied] = useState(false);
   const navigate = useNavigate();
   const registerMutation = useRegister();
 
@@ -35,17 +43,34 @@ export function RegisterPage() {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
-      await registerMutation.mutateAsync(values);
+      const result = await registerMutation.mutateAsync(values);
       toast.success("Account created. Welcome to NexusOS.");
-      navigate(ROUTES.home, { replace: true });
+      setCompanySlug(result.user.companySlug);
     } catch (err) {
       const message = err instanceof ApiRequestError ? err.message : "Something went wrong. Try again.";
       toast.error(message);
     }
   };
 
+  const copyCompanySlug = async () => {
+    if (!companySlug) return;
+
+    try {
+      await navigator.clipboard.writeText(companySlug);
+      setSlugCopied(true);
+      toast.success("Company URL copied.");
+    } catch {
+      toast.error("Could not copy automatically. Select and copy the Company URL manually.");
+    }
+  };
+
+  const continueToDashboard = () => {
+    navigate(ROUTES.home, { replace: true });
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+    <>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
       <div className="space-y-1.5">
         <h1 className="text-h2 text-foreground">Create your account</h1>
         <p className="text-body text-muted-foreground">Set up your company workspace in NexusOS.</p>
@@ -229,6 +254,37 @@ export function RegisterPage() {
           Sign in
         </Link>
       </p>
-    </form>
+      </form>
+
+      <Dialog open={companySlug !== null} onOpenChange={() => undefined}>
+        <DialogContent
+          showClose={false}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => event.preventDefault()}
+        >
+          <DialogHeader
+            title="Save your Company URL"
+            description="You will need this Company URL every time you sign in. Copy it and store it somewhere safe."
+          />
+
+          <div className="rounded-input border bg-background p-4">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Company URL
+            </p>
+            <code className="break-all text-sm font-semibold text-foreground">{companySlug}</code>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => void copyCompanySlug()}>
+              {slugCopied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+              {slugCopied ? "Copied" : "Copy Company URL"}
+            </Button>
+            <Button type="button" variant="primary" onClick={continueToDashboard}>
+              Continue to dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
