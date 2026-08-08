@@ -187,6 +187,22 @@ async def test_same_email_may_register_two_separate_companies(db):
 
 
 @pytest.mark.asyncio
+async def test_login_rejects_credentials_matching_multiple_companies(db):
+    """Ambiguous credentials must never select an arbitrary tenant."""
+    email = "ambiguous-login@example.com"
+    password = "Secret123x"
+
+    await _register(db, email=email, company="Company A", password=password)
+    await _register(db, email=email, company="Company B", password=password)
+
+    with pytest.raises(UnauthorizedError, match="Incorrect email or password"):
+        await auth_service.login(
+            db,
+            LoginRequest(email=email, password=password),
+        )
+
+
+@pytest.mark.asyncio
 async def test_refresh_rotates_and_rejects_reuse(db):
     session = await _register(db, email="refresh@example.com")
 

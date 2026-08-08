@@ -18,6 +18,7 @@ pytestmark = pytest.mark.skipif(
 
 from app.main import app  # noqa: E402
 
+TEST_DB = os.environ.get("TEST_DATABASE_URL", os.environ["DATABASE_URL"])
 _EMAIL_DOMAIN = "authapitest.example.com"
 
 
@@ -36,41 +37,49 @@ def _unique_email(tag: str) -> str:
 
 @pytest.fixture(scope="module", autouse=True)
 def _cleanup_module_data():
-    """These tests go through the real app engine (unlike
-    `test_auth_service.py`'s throwaway NullPool session) and therefore
-    commit for real — sweep everything tagged with `_EMAIL_DOMAIN`."""
+    """Sweep rows committed through the real HTTP application.
+
+    Cleanup runs in its own event loop, so it must use a fresh NullPool
+    engine rather than the application's global pooled AsyncSessionLocal.
+    """
     yield
     import asyncio
 
     from sqlalchemy import delete, select
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import NullPool
 
-    from app.db.session import AsyncSessionLocal
     from app.models import AuthToken, Company, Role, Session, User, role_permissions, user_roles
 
     async def _sweep():
-        async with AsyncSessionLocal() as db:
-            user_ids = (
-                await db.execute(select(User.id).where(User.email.like(f"%@{_EMAIL_DOMAIN}")))
-            ).scalars().all()
-            company_ids = (
-                await db.execute(select(User.company_id).where(User.id.in_(user_ids)))
-            ).scalars().all()
-            role_ids = (
-                await db.execute(select(Role.id).where(Role.company_id.in_(company_ids)))
-            ).scalars().all()
+        cleanup_engine = create_async_engine(TEST_DB, poolclass=NullPool)
+        session_factory = async_sessionmaker(cleanup_engine, expire_on_commit=False)
+        try:
+            async with session_factory() as db:
+                user_ids = (
+                    await db.execute(select(User.id).where(User.email.like(f"%@{_EMAIL_DOMAIN}")))
+                ).scalars().all()
+                company_ids = (
+                    await db.execute(select(User.company_id).where(User.id.in_(user_ids)))
+                ).scalars().all()
+                role_ids = (
+                    await db.execute(select(Role.id).where(Role.company_id.in_(company_ids)))
+                ).scalars().all()
 
-            if user_ids:
-                await db.execute(delete(Session).where(Session.user_id.in_(user_ids)))
-                await db.execute(delete(AuthToken).where(AuthToken.user_id.in_(user_ids)))
-                await db.execute(user_roles.delete().where(user_roles.c.user_id.in_(user_ids)))
-            if role_ids:
-                await db.execute(role_permissions.delete().where(role_permissions.c.role_id.in_(role_ids)))
-                await db.execute(delete(Role).where(Role.id.in_(role_ids)))
-            if user_ids:
-                await db.execute(delete(User).where(User.id.in_(user_ids)))
-            if company_ids:
-                await db.execute(delete(Company).where(Company.id.in_(company_ids)))
-            await db.commit()
+                if user_ids:
+                    await db.execute(delete(Session).where(Session.user_id.in_(user_ids)))
+                    await db.execute(delete(AuthToken).where(AuthToken.user_id.in_(user_ids)))
+                    await db.execute(user_roles.delete().where(user_roles.c.user_id.in_(user_ids)))
+                if role_ids:
+                    await db.execute(role_permissions.delete().where(role_permissions.c.role_id.in_(role_ids)))
+                    await db.execute(delete(Role).where(Role.id.in_(role_ids)))
+                if user_ids:
+                    await db.execute(delete(User).where(User.id.in_(user_ids)))
+                if company_ids:
+                    await db.execute(delete(Company).where(Company.id.in_(company_ids)))
+                await db.commit()
+        finally:
+            await cleanup_engine.dispose()
 
     asyncio.run(_sweep())
 
@@ -159,7 +168,10 @@ def test_login_wrong_password_is_unauthorized(client):
 
 
 def test_forgot_password_always_returns_success_envelope(client):
-    res = client.post("/api/v1/auth/forgot-password", json={"email": "definitely-nobody@example.com"})
+    res = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "definitely-nobody@example.com"},
+    )
     assert res.status_code == 200
     assert res.json()["success"] is True
 

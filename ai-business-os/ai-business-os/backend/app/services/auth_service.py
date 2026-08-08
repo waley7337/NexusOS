@@ -256,12 +256,16 @@ async def login(
     )
     candidates = (await db.execute(stmt)).scalars().all()
 
-    user = next(
-        (u for u in candidates if u.password_hash and verify_password(data.password, u.password_hash)),
-        None,
-    )
-    if user is None:
+    matching_users = [
+        candidate
+        for candidate in candidates
+        if candidate.password_hash
+        and verify_password(data.password, candidate.password_hash)
+    ]
+    if len(matching_users) != 1:
         raise UnauthorizedError("Incorrect email or password.")
+
+    user = matching_users[0]
     if user.status == UserStatus.SUSPENDED:
         raise UnauthorizedError("This account has been suspended.")
 
