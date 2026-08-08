@@ -202,6 +202,11 @@ export function AppLayout() {
                 <p className="truncate text-xs text-muted-foreground">
                   {user?.companyName ?? "No company"}
                 </p>
+                {user?.companySlug && (
+                  <p className="truncate font-mono text-2xs text-muted-foreground" title={`Company URL: ${user.companySlug}`}>
+                    Company URL: {user.companySlug}
+                  </p>
+                )}
               </div>
             )}
 
