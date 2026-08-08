@@ -5,18 +5,29 @@ import { forgotPasswordSchema } from "../schemas/forgotPasswordSchema";
 import { resetPasswordSchema } from "../schemas/resetPasswordSchema";
 
 describe("loginSchema", () => {
-  it("accepts a valid email + non-empty password", () => {
-    const result = loginSchema.safeParse({ email: "jane@acme.com", password: "anything" });
+  const validLogin = {
+    companySlug: "acme",
+    email: "jane@acme.com",
+    password: "anything",
+  };
+
+  it("accepts a valid company URL, email, and non-empty password", () => {
+    const result = loginSchema.safeParse(validLogin);
     expect(result.success).toBe(true);
   });
 
   it("rejects an invalid email", () => {
-    const result = loginSchema.safeParse({ email: "not-an-email", password: "anything" });
+    const result = loginSchema.safeParse({ ...validLogin, email: "not-an-email" });
     expect(result.success).toBe(false);
   });
 
   it("rejects an empty password", () => {
-    const result = loginSchema.safeParse({ email: "jane@acme.com", password: "" });
+    const result = loginSchema.safeParse({ ...validLogin, password: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a malformed company URL", () => {
+    const result = loginSchema.safeParse({ ...validLogin, companySlug: "Acme Company" });
     expect(result.success).toBe(false);
   });
 });

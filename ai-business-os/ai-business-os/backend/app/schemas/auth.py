@@ -4,6 +4,7 @@ Field names are snake_case in Python, camelCase on the wire (mirrors
 `PageMeta` in `schemas/response.py`), matching the frontend's `ApiResponse<T>`
 consumers without either side compromising its own naming convention.
 """
+
 import uuid
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -22,12 +23,25 @@ def _password_strength(password: str) -> str:
     return password
 
 
-# --- Requests ------------------------------------------------------------ #
+# --- Requests ------------------------------------------------------------
+
 
 class RegisterRequest(CamelModel):
-    company_name: str = Field(alias="companyName", min_length=2, max_length=200)
-    first_name: str = Field(alias="firstName", min_length=1, max_length=100)
-    last_name: str = Field(alias="lastName", min_length=1, max_length=100)
+    company_name: str = Field(
+        alias="companyName",
+        min_length=2,
+        max_length=200,
+    )
+    first_name: str = Field(
+        alias="firstName",
+        min_length=1,
+        max_length=100,
+    )
+    last_name: str = Field(
+        alias="lastName",
+        min_length=1,
+        max_length=100,
+    )
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
 
@@ -35,6 +49,12 @@ class RegisterRequest(CamelModel):
 
 
 class LoginRequest(CamelModel):
+    company_slug: str = Field(
+        alias="companySlug",
+        min_length=1,
+        max_length=80,
+        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    )
     email: EmailStr
     password: str = Field(min_length=1)
 
@@ -62,7 +82,8 @@ class VerifyEmailRequest(CamelModel):
     token: str
 
 
-# --- Responses ------------------------------------------------------------ #
+# --- Responses ------------------------------------------------------------
+
 
 class UserResponse(CamelModel):
     id: uuid.UUID
@@ -73,6 +94,7 @@ class UserResponse(CamelModel):
     role: str
     company_id: uuid.UUID = Field(alias="companyId")
     company_name: str = Field(alias="companyName")
+    company_slug: str = Field(alias="companySlug")
     email_verified: bool = Field(alias="emailVerified")
 
 

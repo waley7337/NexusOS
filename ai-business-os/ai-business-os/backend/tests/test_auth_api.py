@@ -2,6 +2,7 @@
 HTTP envelope, status codes, and header behavior `test_auth_service.py`
 doesn't cover (it calls the service layer directly).
 """
+
 import os
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-must-be-32-chars-long!!")
@@ -71,7 +72,9 @@ def _cleanup_module_data():
                     await db.execute(delete(AuthToken).where(AuthToken.user_id.in_(user_ids)))
                     await db.execute(user_roles.delete().where(user_roles.c.user_id.in_(user_ids)))
                 if role_ids:
-                    await db.execute(role_permissions.delete().where(role_permissions.c.role_id.in_(role_ids)))
+                    await db.execute(
+                        role_permissions.delete().where(role_permissions.c.role_id.in_(role_ids))
+                    )
                     await db.execute(delete(Role).where(Role.id.in_(role_ids)))
                 if user_ids:
                     await db.execute(delete(User).where(User.id.in_(user_ids)))
@@ -102,6 +105,7 @@ def test_register_returns_standard_envelope_with_tokens(client):
     assert body["data"]["accessToken"] and body["data"]["refreshToken"]
     assert body["data"]["user"]["email"] == email
     assert body["data"]["user"]["role"] == "owner"
+    assert body["data"]["user"]["companySlug"]
 
 
 def test_register_validation_error_shape(client):
@@ -123,7 +127,7 @@ def test_register_validation_error_shape(client):
 
 def test_login_then_me_round_trip(client):
     email = _unique_email("api-login")
-    client.post(
+    register_res = client.post(
         "/api/v1/auth/register",
         json={
             "companyName": "Login Co",
@@ -133,15 +137,28 @@ def test_login_then_me_round_trip(client):
             "password": "ApiTest1234",
         },
     )
+    assert register_res.status_code == 201
+    company_slug = register_res.json()["data"]["user"]["companySlug"]
 
-    login_res = client.post("/api/v1/auth/login", json={"email": email, "password": "ApiTest1234"})
+    login_res = client.post(
+        "/api/v1/auth/login",
+        json={
+            "companySlug": company_slug,
+            "email": email,
+            "password": "ApiTest1234",
+        },
+    )
     assert login_res.status_code == 200
     access_token = login_res.json()["data"]["accessToken"]
 
-    me_res = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {access_token}"})
+    me_res = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
     assert me_res.status_code == 200
     me_body = me_res.json()
     assert me_body["data"]["user"]["email"] == email
+    assert me_body["data"]["user"]["companySlug"] == company_slug
     assert "customers.read" in me_body["data"]["permissions"]
 
 
@@ -153,7 +170,7 @@ def test_me_without_token_is_unauthorized(client):
 
 def test_login_wrong_password_is_unauthorized(client):
     email = _unique_email("api-wrongpass")
-    client.post(
+    register_res = client.post(
         "/api/v1/auth/register",
         json={
             "companyName": "Wrong Pass Co",
@@ -163,7 +180,17 @@ def test_login_wrong_password_is_unauthorized(client):
             "password": "ApiTest1234",
         },
     )
-    res = client.post("/api/v1/auth/login", json={"email": email, "password": "WrongOne123"})
+    assert register_res.status_code == 201
+    company_slug = register_res.json()["data"]["user"]["companySlug"]
+
+    res = client.post(
+        "/api/v1/auth/login",
+        json={
+            "companySlug": company_slug,
+            "email": email,
+            "password": "WrongOne123",
+        },
+    )
     assert res.status_code == 401
 
 

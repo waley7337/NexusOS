@@ -10,6 +10,7 @@ export interface AuthUserDto {
   role: string;
   companyId: string;
   companyName: string;
+  companySlug: string;
   emailVerified: boolean;
 }
 
@@ -36,6 +37,7 @@ export interface RegisterPayload {
 }
 
 export interface LoginPayload {
+  companySlug: string;
   email: string;
   password: string;
 }
@@ -53,8 +55,10 @@ export interface VerifyEmailPayload {
   token: string;
 }
 
-/** Maps the wire DTO to the auth store's shape — shared by `useLogin` and
- * `useRegister`, which both persist the session's user the same way. */
+/**
+ * Maps the wire DTO to the auth store's shape — shared by `useLogin` and
+ * `useRegister`, which both persist the session's user the same way.
+ */
 export function toAuthUser(dto: AuthUserDto): AuthUser {
   return {
     id: dto.id,
@@ -63,6 +67,7 @@ export function toAuthUser(dto: AuthUserDto): AuthUser {
     role: dto.role,
     companyId: dto.companyId,
     companyName: dto.companyName,
+    companySlug: dto.companySlug,
     emailVerified: dto.emailVerified,
   };
 }

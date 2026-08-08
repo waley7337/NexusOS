@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Building2, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { useLogin, loginSchema, type LoginFormValues } from "@/features/auth";
 import { ApiRequestError } from "@/api/client";
@@ -32,8 +32,10 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const login = useLogin();
 
+  const companySlugId = useId();
   const emailId = useId();
   const passwordId = useId();
+  const companySlugErrorId = `${companySlugId}-error`;
   const emailErrorId = `${emailId}-error`;
   const passwordErrorId = `${passwordId}-error`;
 
@@ -63,6 +65,31 @@ export function LoginPage() {
       </div>
 
       <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor={companySlugId}>Company URL</Label>
+          <div className="relative">
+            <Building2
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              id={companySlugId}
+              type="text"
+              autoComplete="organization"
+              placeholder="acme"
+              aria-invalid={errors.companySlug ? true : undefined}
+              aria-describedby={errors.companySlug ? companySlugErrorId : undefined}
+              className="h-11 bg-background pl-10"
+              {...register("companySlug")}
+            />
+          </div>
+          {errors.companySlug && (
+            <p id={companySlugErrorId} role="alert" className="text-xs text-destructive">
+              {errors.companySlug.message}
+            </p>
+          )}
+        </div>
+
         <div className="space-y-1.5">
           <Label htmlFor={emailId}>Email</Label>
           <div className="relative">

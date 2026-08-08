@@ -14,6 +14,7 @@ export interface AuthUser {
   role: string;
   companyId: string;
   companyName: string;
+  companySlug: string;
   emailVerified?: boolean;
 }
 
@@ -34,9 +35,11 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       isAuthenticated: () => Boolean(get().accessToken),
-      setTokens: (access, refresh) => set({ accessToken: access, refreshToken: refresh }),
+      setTokens: (access, refresh) =>
+        set({ accessToken: access, refreshToken: refresh }),
       setUser: (user) => set({ user }),
-      clear: () => set({ accessToken: null, refreshToken: null, user: null }),
+      clear: () =>
+        set({ accessToken: null, refreshToken: null, user: null }),
     }),
     { name: STORAGE_KEYS.auth },
   ),

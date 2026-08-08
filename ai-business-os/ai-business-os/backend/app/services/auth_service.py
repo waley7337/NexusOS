@@ -64,6 +64,7 @@ logger = structlog.get_logger("app.auth")
 
 EMAIL_VERIFICATION_TTL = timedelta(hours=24)
 PASSWORD_RESET_TTL = timedelta(hours=1)
+COMPANY_SLUG_MAX_LENGTH = 80
 
 # Generic message on every forgot-password call — never confirms whether an
 # account exists (enumeration protection).
@@ -76,6 +77,7 @@ FORGOT_PASSWORD_ACK = "If an account exists for that email, a reset link has bee
 
 def _slugify(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    slug = slug[:COMPANY_SLUG_MAX_LENGTH].rstrip("-")
     return slug or "company"
 
 
@@ -83,9 +85,13 @@ async def _unique_slug(db: AsyncSession, base_name: str) -> str:
     base = _slugify(base_name)
     slug = base
     suffix = 0
+
     while (await db.execute(select(Company.id).where(Company.slug == slug))).scalar_one_or_none():
         suffix += 1
-        slug = f"{base}-{suffix}"
+        suffix_text = f"-{suffix}"
+        prefix = base[: COMPANY_SLUG_MAX_LENGTH - len(suffix_text)].rstrip("-")
+        slug = f"{prefix}{suffix_text}"
+
     return slug
 
 
@@ -132,6 +138,7 @@ def _to_user_response(user: User, company: Company) -> UserResponse:
         role=_primary_role_name(user),
         companyId=user.company_id,
         companyName=company.name,
+        companySlug=company.slug,
         emailVerified=user.email_verified,
     )
 
@@ -247,25 +254,31 @@ async def login(
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> AuthSessionResponse:
-    # No tenant context yet — deliberately queries across companies (the one
-    # legitimate exception to BaseRepository's fail-closed tenant scoping).
+    # The globally unique company slug supplies the tenant context that email
+    # alone cannot provide: the same email may legitimately exist in multiple
+    # companies. Invalid tenant and invalid credentials intentionally share
+    # the same generic response to avoid account/tenant enumeration.
     stmt = (
         select(User)
-        .where(User.email == str(data.email), User.deleted_at.is_(None), User.is_active.is_(True))
+        .join(Company, User.company_id == Company.id)
+        .where(
+            Company.slug == data.company_slug,
+            Company.deleted_at.is_(None),
+            Company.is_active.is_(True),
+            User.email == str(data.email),
+            User.deleted_at.is_(None),
+            User.is_active.is_(True),
+        )
         .options(selectinload(User.roles), selectinload(User.company))
     )
-    candidates = (await db.execute(stmt)).scalars().all()
+    user = (await db.execute(stmt)).scalar_one_or_none()
 
-    matching_users = [
-        candidate
-        for candidate in candidates
-        if candidate.password_hash
-        and verify_password(data.password, candidate.password_hash)
-    ]
-    if len(matching_users) != 1:
+    if (
+        user is None
+        or not user.password_hash
+        or not verify_password(data.password, user.password_hash)
+    ):
         raise UnauthorizedError("Incorrect email or password.")
-
-    user = matching_users[0]
     if user.status == UserStatus.SUSPENDED:
         raise UnauthorizedError("This account has been suspended.")
 

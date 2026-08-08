@@ -17,9 +17,20 @@ import {
 
 describe("authService", () => {
   it("login posts to /auth/login with the payload", () => {
-    login({ email: "jane@acme.com", password: "secret" });
+    const payload = {
+      companySlug: "acme",
+      email: "jane@acme.com",
+      password: "secret",
+    };
+
+    login(payload);
+
     expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: "/auth/login", data: { email: "jane@acme.com", password: "secret" } }),
+      expect.objectContaining({
+        method: "POST",
+        url: "/auth/login",
+        data: payload,
+      }),
     );
   });
 
@@ -31,14 +42,21 @@ describe("authService", () => {
       email: "jane@acme.com",
       password: "Secret123",
     };
+
     register(payload);
+
     expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: "/auth/register", data: payload }),
+      expect.objectContaining({
+        method: "POST",
+        url: "/auth/register",
+        data: payload,
+      }),
     );
   });
 
   it("logout posts the refresh token to /auth/logout", () => {
     logout("refresh-token-value");
+
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
         method: "POST",
@@ -50,23 +68,41 @@ describe("authService", () => {
 
   it("getMe issues a GET to /auth/me", () => {
     getMe();
-    expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: "GET", url: "/auth/me" }));
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "GET",
+        url: "/auth/me",
+      }),
+    );
   });
 
   it("forgotPassword, resetPassword, and verifyEmail hit the right endpoints", () => {
     forgotPassword({ email: "jane@acme.com" });
+
     expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: "/auth/forgot-password" }),
+      expect.objectContaining({
+        method: "POST",
+        url: "/auth/forgot-password",
+      }),
     );
 
     resetPassword({ token: "abc", password: "Secret123" });
+
     expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: "/auth/reset-password" }),
+      expect.objectContaining({
+        method: "POST",
+        url: "/auth/reset-password",
+      }),
     );
 
     verifyEmail({ token: "abc" });
+
     expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", url: "/auth/verify-email" }),
+      expect.objectContaining({
+        method: "POST",
+        url: "/auth/verify-email",
+      }),
     );
   });
 });

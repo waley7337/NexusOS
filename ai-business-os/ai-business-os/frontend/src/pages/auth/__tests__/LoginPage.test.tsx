@@ -43,10 +43,11 @@ describe("LoginPage", () => {
     useAuthStore.getState().clear();
   });
 
-  it("shows validation errors for an invalid email and empty password", async () => {
+  it("shows validation errors for missing company URL, invalid email, and empty password", async () => {
     renderLoginPage();
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
+    expect(await screen.findByText("Company URL is required")).toBeInTheDocument();
     expect(await screen.findByText("Enter a valid email address")).toBeInTheDocument();
     expect(await screen.findByText("Password is required")).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
@@ -65,12 +66,14 @@ describe("LoginPage", () => {
         role: "owner",
         companyId: "c1",
         companyName: "Acme",
+        companySlug: "acme",
         emailVerified: false,
       },
     });
 
     renderLoginPage();
 
+    await userEvent.type(screen.getByLabelText("Company URL"), "acme");
     await userEvent.type(screen.getByLabelText("Email"), "jane@acme.com");
     await userEvent.type(screen.getByLabelText("Password"), "Secret123");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
@@ -94,6 +97,7 @@ describe("LoginPage", () => {
         role: "owner",
         companyId: "c1",
         companyName: "Acme",
+        companySlug: "acme",
         emailVerified: false,
       },
     });
@@ -112,6 +116,7 @@ describe("LoginPage", () => {
       </QueryClientProvider>,
     );
 
+    await userEvent.type(screen.getByLabelText("Company URL"), "acme");
     await userEvent.type(screen.getByLabelText("Email"), "jane@acme.com");
     await userEvent.type(screen.getByLabelText("Password"), "Secret123");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
@@ -125,6 +130,7 @@ describe("LoginPage", () => {
 
     renderLoginPage();
 
+    await userEvent.type(screen.getByLabelText("Company URL"), "acme");
     await userEvent.type(screen.getByLabelText("Email"), "jane@acme.com");
     await userEvent.type(screen.getByLabelText("Password"), "WrongPass1");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));

@@ -159,6 +159,34 @@ async def test_register_generates_unique_slugs_for_same_company_name(db):
 
 
 @pytest.mark.asyncio
+async def test_register_limits_long_slugs_to_database_column_length(db):
+    company_name = "A" * 200
+
+    first = await _register(
+        db,
+        email="long-slug-a@example.com",
+        company=company_name,
+    )
+    second = await _register(
+        db,
+        email="long-slug-b@example.com",
+        company=company_name,
+    )
+
+    first_company = (
+        await db.execute(select(Company).where(Company.id == first.user.company_id))
+    ).scalar_one()
+    second_company = (
+        await db.execute(select(Company).where(Company.id == second.user.company_id))
+    ).scalar_one()
+
+    assert len(first_company.slug) == 80
+    assert len(second_company.slug) == 80
+    assert first_company.slug != second_company.slug
+    assert second_company.slug.endswith("-1")
+
+
+@pytest.mark.asyncio
 async def test_register_rejects_weak_password():
     with pytest.raises(ValueError):
         RegisterRequest(
@@ -168,13 +196,27 @@ async def test_register_rejects_weak_password():
 
 @pytest.mark.asyncio
 async def test_login_succeeds_with_correct_password_and_fails_otherwise(db):
-    await _register(db, email="login@example.com", password="CorrectHorse1")
+    registered = await _register(db, email="login@example.com", password="CorrectHorse1")
 
-    ok = await auth_service.login(db, LoginRequest(email="login@example.com", password="CorrectHorse1"))
+    ok = await auth_service.login(
+        db,
+        LoginRequest(
+            companySlug=registered.user.company_slug,
+            email="login@example.com",
+            password="CorrectHorse1",
+        ),
+    )
     assert ok.user.email == "login@example.com"
 
     with pytest.raises(UnauthorizedError):
-        await auth_service.login(db, LoginRequest(email="login@example.com", password="WrongPassword1"))
+        await auth_service.login(
+            db,
+            LoginRequest(
+                companySlug=registered.user.company_slug,
+                email="login@example.com",
+                password="WrongPassword1",
+            ),
+        )
 
 
 @pytest.mark.asyncio
@@ -187,19 +229,34 @@ async def test_same_email_may_register_two_separate_companies(db):
 
 
 @pytest.mark.asyncio
-async def test_login_rejects_credentials_matching_multiple_companies(db):
-    """Ambiguous credentials must never select an arbitrary tenant."""
+async def test_login_selects_company_by_slug_when_credentials_match_multiple_companies(db):
+    """A globally unique slug selects the intended tenant when the same
+    email and password legitimately exist in multiple companies."""
     email = "ambiguous-login@example.com"
     password = "Secret123x"
 
-    await _register(db, email=email, company="Company A", password=password)
-    await _register(db, email=email, company="Company B", password=password)
+    company_a = await _register(db, email=email, company="Company A", password=password)
+    company_b = await _register(db, email=email, company="Company B", password=password)
 
-    with pytest.raises(UnauthorizedError, match="Incorrect email or password"):
-        await auth_service.login(
-            db,
-            LoginRequest(email=email, password=password),
-        )
+    login_a = await auth_service.login(
+        db,
+        LoginRequest(
+            companySlug=company_a.user.company_slug,
+            email=email,
+            password=password,
+        ),
+    )
+    login_b = await auth_service.login(
+        db,
+        LoginRequest(
+            companySlug=company_b.user.company_slug,
+            email=email,
+            password=password,
+        ),
+    )
+
+    assert login_a.user.company_id == company_a.user.company_id
+    assert login_b.user.company_id == company_b.user.company_id
 
 
 @pytest.mark.asyncio
@@ -229,7 +286,12 @@ async def test_refresh_reuse_revokes_every_session_for_the_user(db):
 
     # A second, independent session for the same user (e.g. a second device).
     second = await auth_service.login(
-        db, LoginRequest(email="reuse@example.com", password="Secret123x")
+        db,
+        LoginRequest(
+            companySlug=first.user.company_slug,
+            email="reuse@example.com",
+            password="Secret123x",
+        ),
     )
 
     rotated = await auth_service.refresh(db, RefreshRequest(refreshToken=first.refresh_token))
@@ -324,9 +386,23 @@ async def test_reset_password_updates_credential_and_revokes_sessions(db):
     await auth_service.reset_password(db, ResetPasswordRequest(token=raw, password="NewPassword1"))
 
     with pytest.raises(UnauthorizedError):
-        await auth_service.login(db, LoginRequest(email="reset@example.com", password="OldPassword1"))
+        await auth_service.login(
+            db,
+            LoginRequest(
+                companySlug=result.user.company_slug,
+                email="reset@example.com",
+                password="OldPassword1",
+            ),
+        )
 
-    ok = await auth_service.login(db, LoginRequest(email="reset@example.com", password="NewPassword1"))
+    ok = await auth_service.login(
+        db,
+        LoginRequest(
+            companySlug=result.user.company_slug,
+            email="reset@example.com",
+            password="NewPassword1",
+        ),
+    )
     assert ok.user.email == "reset@example.com"
 
     # the original session (pre-reset) must now be revoked

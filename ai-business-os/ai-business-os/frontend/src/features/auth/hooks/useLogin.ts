@@ -13,27 +13,12 @@ export function useLogin() {
     mutationFn: (payload: LoginPayload) => login(payload),
 
     onSuccess: (data) => {
-      console.log("========== LOGIN SUCCESS ==========");
-      console.log("Backend response:", data);
-
-      console.log("Store BEFORE:", useAuthStore.getState());
-
       setTokens(data.accessToken, data.refreshToken);
-
-      console.log("Store AFTER setTokens:", useAuthStore.getState());
-
       setUser(toAuthUser(data.user));
-
-      console.log("Store AFTER setUser:", useAuthStore.getState());
 
       queryClient.invalidateQueries({
         queryKey: queryKeys.auth.all,
       });
-    },
-
-    onError: (error) => {
-      console.error("========== LOGIN ERROR ==========");
-      console.error(error);
     },
   });
 }

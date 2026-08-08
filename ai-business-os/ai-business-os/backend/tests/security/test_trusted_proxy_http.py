@@ -10,6 +10,7 @@ real routes, real rate-limit dependency wiring, real
 control the simulated TCP peer address per test. This proves the resolver
 is actually *wired in*, not just correct in isolation.
 """
+
 import os
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-must-be-32-chars-long!!")
@@ -29,6 +30,11 @@ from app.main import app  # noqa: E402
 
 HEALTH_PATH = "/api/v1/health"
 LOGIN_PATH = "/api/v1/auth/login"
+LOGIN_PAYLOAD = {
+    "companySlug": "nonexistent",
+    "email": "nobody@example.com",
+    "password": "x",
+}
 
 
 def _client(peer_host: str) -> TestClient:
@@ -55,12 +61,13 @@ def trust_10_8(monkeypatch):
 # SEC-001 — rate limiting through the real HTTP layer
 # --------------------------------------------------------------------------- #
 
+
 def test_rate_limit_trips_for_a_direct_untrusted_client():
     """Baseline: direct (no proxy configured) traffic is still rate
     limited exactly as before this remediation — this must not regress."""
     with _client("203.0.113.201") as c:
         statuses = [
-            c.post(LOGIN_PATH, json={"email": "nobody@example.com", "password": "x"}).status_code
+            c.post(LOGIN_PATH, json=LOGIN_PAYLOAD).status_code
             for _ in range(11)
         ]
     assert 429 in statuses, "expected the login limiter (limit=10/min) to trip"
@@ -76,8 +83,8 @@ def test_spoofed_forwarded_for_from_untrusted_peer_cannot_bypass_the_limit():
         for i in range(11):
             res = c.post(
                 LOGIN_PATH,
-                json={"email": "nobody@example.com", "password": "x"},
-                headers={"X-Forwarded-For": f"1.2.3.{i}"},  # different "identity" every time
+                json=LOGIN_PAYLOAD,
+                headers={"X-Forwarded-For": f"1.2.3.{i}"},
             )
             statuses.append(res.status_code)
     assert 429 in statuses, (
@@ -95,7 +102,7 @@ def test_two_real_clients_behind_a_trusted_proxy_get_independent_budgets(trust_1
         # Client A alone should not be rate-limited within a small budget.
         res_a = c.post(
             LOGIN_PATH,
-            json={"email": "nobody@example.com", "password": "x"},
+            json=LOGIN_PAYLOAD,
             headers={"X-Forwarded-For": "203.0.113.11"},
         )
         assert res_a.status_code != 429
@@ -104,7 +111,7 @@ def test_two_real_clients_behind_a_trusted_proxy_get_independent_budgets(trust_1
         # get its own independent budget rather than inheriting A's usage.
         res_b = c.post(
             LOGIN_PATH,
-            json={"email": "nobody@example.com", "password": "x"},
+            json=LOGIN_PAYLOAD,
             headers={"X-Forwarded-For": "203.0.113.22"},
         )
         assert res_b.status_code != 429
@@ -119,7 +126,7 @@ def test_trusted_proxy_client_can_still_be_individually_rate_limited(trust_10_8)
         statuses = [
             c.post(
                 LOGIN_PATH,
-                json={"email": "nobody@example.com", "password": "x"},
+                json=LOGIN_PAYLOAD,
                 headers={"X-Forwarded-For": "203.0.113.33"},
             ).status_code
             for _ in range(11)
@@ -133,25 +140,26 @@ def test_malformed_forwarded_header_does_not_crash_the_request(trust_10_8):
     with _client("10.5.5.7") as c:
         res = c.post(
             LOGIN_PATH,
-            json={"email": "nobody@example.com", "password": "x"},
+            json=LOGIN_PAYLOAD,
             headers={"X-Forwarded-For": "\x00garbage\x01"},
         )
-    assert res.status_code in (200, 401, 422, 429)  # anything but a crash
+    assert res.status_code in (200, 401, 422, 429)
 
 
 def test_ipv6_forwarded_client_is_accepted_end_to_end(trust_10_8):
     with _client("10.5.5.8") as c:
         res = c.post(
             LOGIN_PATH,
-            json={"email": "nobody@example.com", "password": "x"},
+            json=LOGIN_PAYLOAD,
             headers={"X-Forwarded-For": "2001:db8::42"},
         )
-    assert res.status_code in (200, 401, 422)  # not a crash, and not rate-limited yet
+    assert res.status_code in (200, 401, 422)
 
 
 # --------------------------------------------------------------------------- #
 # SEC-003 — HSTS / forwarded-scheme trust through the real HTTP layer
 # --------------------------------------------------------------------------- #
+
 
 def test_direct_untrusted_client_spoofing_https_proto_gets_no_hsts():
     with _client("203.0.113.210") as c:
@@ -174,6 +182,7 @@ def test_plain_http_without_any_proxy_never_gets_hsts():
 # --------------------------------------------------------------------------- #
 # TEST-003 — baseline security headers are present on a real response
 # --------------------------------------------------------------------------- #
+
 
 def test_baseline_security_headers_present_on_a_real_response():
     with _client("203.0.113.212") as c:

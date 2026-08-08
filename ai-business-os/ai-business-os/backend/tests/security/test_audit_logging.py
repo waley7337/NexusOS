@@ -215,7 +215,11 @@ def test_login_persists_expected_audit_record():
 
         login_res = c.post(
             "/api/v1/auth/login",
-            json={"email": email, "password": "AuditTest1234"},
+            json={
+                "companySlug": reg_data["user"]["companySlug"],
+                "email": email,
+                "password": "AuditTest1234",
+            },
             headers={"User-Agent": "AuditTestSuite-Login/2.0"},
         )
     assert login_res.status_code == 200
@@ -234,7 +238,14 @@ def test_failed_login_does_not_persist_a_login_succeeded_record():
         email, reg_data = _register(c, "login-wrongpass")
         user_id = uuid.UUID(reg_data["user"]["id"])
 
-        res = c.post("/api/v1/auth/login", json={"email": email, "password": "WrongPassword999"})
+        res = c.post(
+            "/api/v1/auth/login",
+            json={
+                "companySlug": reg_data["user"]["companySlug"],
+                "email": email,
+                "password": "WrongPassword999",
+            },
+        )
     assert res.status_code == 401
 
     rows = _run_db(lambda db: _fetch_audit_rows(db, entity_id=user_id, action="auth.login_succeeded"))
