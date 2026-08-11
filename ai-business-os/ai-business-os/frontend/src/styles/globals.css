@@ -583,28 +583,31 @@
     position: relative;
     display: inline-flex;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
     isolation: isolate;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
   }
 
   .nexusos-wordmark-img {
-    width: auto;
-    max-width: 100%;
-    height: 1.7rem; /* compact lockup for the 270px sidebar */
+    width: 210px;
+    max-width: calc(100% - 24px);
+    height: auto;
     object-fit: contain;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   /* Auth shell uses a slightly larger lockup. */
   .nexusos-wordmark-img--lg {
+    width: auto;
+    max-width: 100%;
     height: 2.25rem;
-  }
-
-  /* Light mode: the lockup is authored for dark surfaces (white "Nexus").
-     Seat it on a near-black plate so it stays legible on white chrome. */
-  :root:not(.dark) .nexusos-wordmark-lockup {
-    border-radius: 8px;
-    background: #0a0a0a;
-    padding: 0.2rem 0.45rem;
   }
 }
 

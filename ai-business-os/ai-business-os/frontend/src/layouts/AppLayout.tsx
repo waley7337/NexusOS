@@ -290,8 +290,10 @@ export function AppLayout() {
       >
         <div
           className={cn(
-            "nexusos-brand flex h-14 shrink-0 items-center",
-            collapsed ? "justify-center" : "gap-2.5 px-4",
+            "nexusos-brand flex shrink-0 items-center",
+            collapsed
+              ? "h-14 justify-center"
+              : "h-[4.75rem] px-3",
           )}
         >
           {collapsed ? (
@@ -312,10 +314,14 @@ export function AppLayout() {
               <div className="nexusos-wordmark-lockup">
                 <img
                   className="nexusos-wordmark-img"
-                  src="/nexusos-wordmark.png"
+                  src={
+                    theme === "dark"
+                      ? "/nexusos-wordmark.png"
+                      : "/nexusos-wordmark-light.png"
+                  }
                   alt="NexusOS"
-                  width={168}
-                  height={27}
+                  width={210}
+                  height={37}
                   draggable={false}
                 />
               </div>
