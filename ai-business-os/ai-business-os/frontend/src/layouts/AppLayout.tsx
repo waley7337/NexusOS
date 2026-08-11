@@ -290,18 +290,38 @@ export function AppLayout() {
       >
         <div
           className={cn(
-            "flex h-14 shrink-0 items-center",
+            "nexusos-brand flex h-14 shrink-0 items-center",
             collapsed ? "justify-center" : "gap-2.5 px-4",
           )}
         >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-fill">
-            <span className="font-mono text-xs font-bold text-white">N</span>
-          </div>
-
-          {!collapsed && (
-            <div className="min-w-0 leading-tight">
-              <div className="truncate text-sm font-semibold tracking-tight">NexusOS</div>
-              <div className="truncate text-2xs text-muted-foreground">Business Operating System</div>
+          {collapsed ? (
+            <div
+              className="nexusos-brand-mark h-8 w-8"
+              aria-label="NexusOS"
+            >
+              <img
+                src="/nexusos-logo.png"
+                alt=""
+                width={32}
+                height={32}
+                draggable={false}
+              />
+            </div>
+          ) : (
+            <div className="nexusos-brand-copy min-w-0 leading-tight">
+              <div className="nexusos-wordmark-lockup">
+                <img
+                  className="nexusos-wordmark-img"
+                  src="/nexusos-wordmark.png"
+                  alt="NexusOS"
+                  width={168}
+                  height={27}
+                  draggable={false}
+                />
+              </div>
+              <div className="truncate text-2xs text-muted-foreground">
+                Business Operating System
+              </div>
             </div>
           )}
         </div>

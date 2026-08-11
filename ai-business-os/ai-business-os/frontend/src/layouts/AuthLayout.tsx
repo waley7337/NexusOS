@@ -23,10 +23,16 @@ export function AuthLayout() {
         className="relative flex w-full flex-col items-center"
       >
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-card bg-primary text-primary-foreground shadow-sm">
-            <span className="text-h4">N</span>
+          <div className="nexusos-wordmark-lockup">
+            <img
+              className="nexusos-wordmark-img nexusos-wordmark-img--lg"
+              src="/nexusos-wordmark.png"
+              alt="NexusOS"
+              width={224}
+              height={36}
+              draggable={false}
+            />
           </div>
-          <span className="text-body font-semibold tracking-tight text-foreground">NexusOS</span>
         </div>
 
         <div className="w-full max-w-[400px] rounded-dialog border bg-card p-8 shadow-lg sm:p-10">
