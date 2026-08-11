@@ -119,7 +119,9 @@ flowchart TD
 
 Redis is used solely for shared rate-limit counters. It is not a cache and not a session store.
 
-Requests pass through middleware in a fixed order — server error boundary, CORS, security headers, request context — before reaching a router. Each request gets one database session, committed on success and rolled back on any raised exception. Every response, success or failure, uses the same envelope shape.
+Requests pass through middleware in a fixed order — server error boundary, CORS, security headers, request context — before reaching a router. Each request gets one database session, committed on success and rolled back on any raised exception. Every response, success or failure, uses the same envelope — `{ success, data, message, errors }` — so a client parses one shape.
+
+The service layer raises domain errors and never imports `HTTPException`; a single handler translates those errors into responses. HTTP status selection therefore lives at the edge rather than being scattered through business logic.
 
 ---
 
@@ -224,7 +226,7 @@ Stating what is absent is part of the point:
 
 ## Frontend Engineering
 
-React 19 and TypeScript on Vite, with route-level code splitting.
+React 19 and TypeScript on Vite, with route-level code splitting and vendor bundles split so charts, motion and table code load independently of the core bundle.
 
 - **Routing** — a declarative route table splitting a public authentication shell from an authenticated application shell behind a guard, with permission-gated branches rendering an explicit forbidden state
 - **State** — session state in a small persisted store; server data in a query cache with its own staleness policy, cleared wholesale when a session ends
@@ -234,6 +236,7 @@ React 19 and TypeScript on Vite, with route-level code splitting.
 - **Forms** — React Hook Form with Zod resolvers, so validation is declared once and shared between form and typed payload
 - **System states** — loading skeletons, empty states, error states with recovery actions, offline detection and toasts as shared components
 - **Themes** — light, dark and system, persisted locally
+- **Accessibility** — visible focus rings on interactive controls, ARIA labelling on icon-only and composite controls, and `prefers-reduced-motion` honoured both in global CSS and in the animation hooks that CSS rules cannot reach
 
 The authentication screens run against the live API. The dashboard is interface-complete but renders fixture data.
 
