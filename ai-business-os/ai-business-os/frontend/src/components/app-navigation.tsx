@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Bell, ChevronDown, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { transitionSpatial, transitionStandard } from "@/lib/motion";
 import { NAV_ITEMS, type NavItem } from "@/constants/routes";
 import { prefetchRoute } from "@/routes/prefetch";
 import { useUiStore } from "@/stores/ui";
 import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 
 interface AppNavigationProps {
   collapsed?: boolean;
@@ -28,44 +32,65 @@ function NavLinkItem({
   onNavigate?: () => void;
 }) {
   const { to, label, icon: Icon, end } = item;
-  return (
+  const prefersReducedMotion = useReducedMotion();
+  const collapseTransition = prefersReducedMotion ? { duration: 0 } : transitionSpatial;
+  const indicatorTransition = prefersReducedMotion ? { duration: 0 } : transitionStandard;
+
+  const link = (
     <NavLink
       to={to}
       end={end}
-      title={collapsed ? label : undefined}
       onClick={onNavigate}
       onMouseEnter={() => prefetchRoute(to)}
       onFocus={() => prefetchRoute(to)}
       className={({ isActive }) =>
         cn(
-          "focus-ring group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-fast",
-          collapsed && "justify-center px-0",
-          // Neutral raised fill, not a colour wash (Part 04 convergence,
-          // Commit C). The active row previously used bg-primary/10 +
-          // text-primary, which put the brand colour on the single most
-          // persistent element on screen and was a large part of why the
-          // accent read as a page-wide cast. Elevation now says "you are
-          // here"; the accent survives only on the icon and the trailing dot,
-          // where it marks position without tinting the label.
-          isActive
-            ? "bg-surface-3 font-medium text-foreground"
-            : "text-muted-foreground hover:bg-surface-3 hover:text-foreground",
+          "focus-ring group relative flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2 text-sm transition-colors duration-fast",
+          isActive ? "font-medium text-foreground" : "text-muted-foreground hover:bg-surface-3 hover:text-foreground",
         )
       }
     >
       {({ isActive }) => (
         <>
+          {isActive && (
+            // Shared layoutId: route changes FLIP this fill from the old row
+            // to the new one instead of popping it. -z-10 is load-bearing —
+            // an absolutely-positioned child with z-index:auto still paints
+            // above in-flow content, which would cover the icon and label.
+            <motion.span
+              layoutId="nav-active-surface"
+              className="absolute inset-0 -z-10 rounded-lg bg-surface-3 shadow-inset"
+              transition={indicatorTransition}
+              aria-hidden="true"
+            />
+          )}
           <Icon
             className={cn(
               "h-4 w-4 shrink-0 transition-colors duration-fast",
               isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
             )}
           />
-          {!collapsed && <span className="flex-1 truncate">{label}</span>}
-          {!collapsed && isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+          {/* Not flex-1: flex-basis:0 would out-rank the animated inline
+              width Framer Motion sets. Sized by content instead. */}
+          <motion.span
+            animate={{ width: collapsed ? 0 : "auto", opacity: collapsed ? 0 : 1 }}
+            transition={collapseTransition}
+            className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap"
+          >
+            <span className="min-w-0 truncate">{label}</span>
+            {isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+          </motion.span>
         </>
       )}
     </NavLink>
+  );
+
+  if (!collapsed) return link;
+
+  return (
+    <IconTooltip label={label} side="right">
+      {link}
+    </IconTooltip>
   );
 }
 
@@ -121,24 +146,92 @@ function NavItems({ collapsed = false, onNavigate }: AppNavigationProps) {
 /** Desktop sidebar navigation links. */
 export function AppNavigation({ collapsed = false }: AppNavigationProps) {
   return (
-    <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-      <NavItems collapsed={collapsed} />
+    <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden p-3">
+      {/* Scoped so this list's layoutId cannot cross-match the mobile
+          drawer. The desktop aside is only CSS-hidden below md, not
+          unmounted, so both trees exist whenever the drawer is open. */}
+      <LayoutGroup id="sidebar-nav">
+        <NavItems collapsed={collapsed} />
+      </LayoutGroup>
     </nav>
   );
 }
 
 /** Mobile drawer navigation — sheet behind hamburger (§5.17). */
-export function MobileSidebar() {
+export function MobileSidebar({
+  chrome,
+}: {
+  chrome?: {
+    userName: string;
+    companyName: string;
+    userInitial: string;
+    onAccount: () => void;
+    onNotifications: () => void;
+    onLogout: () => void;
+    logoutPending?: boolean;
+  };
+}) {
   const open = useUiStore((s) => s.isMobileSidebarOpen);
   const setOpen = useUiStore((s) => s.setMobileSidebarOpen);
+
+  const closeThen = (fn: () => void) => {
+    setOpen(false);
+    window.setTimeout(fn, 0);
+  };
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerContent side="left" className="max-w-[15rem] border-r p-0">
         <DrawerHeader title="NexusOS" />
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-          <NavItems onNavigate={() => setOpen(false)} />
+        <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden p-3">
+          <LayoutGroup id="mobile-nav">
+            <NavItems onNavigate={() => setOpen(false)} />
+          </LayoutGroup>
         </nav>
+        {chrome && (
+          <div className="mt-auto shrink-0 border-t border-line-soft p-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => closeThen(chrome.onAccount)}
+                aria-label="Open account"
+                className="focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-secondary/60"
+              >
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-4 text-xs font-semibold"
+                  aria-hidden="true"
+                >
+                  {chrome.userInitial}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{chrome.userName}</p>
+                  <p className="truncate text-xs text-muted-foreground">{chrome.companyName}</p>
+                </div>
+              </button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Notifications"
+                className="shrink-0"
+                onClick={() => closeThen(chrome.onNotifications)}
+              >
+                <Bell />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={chrome.logoutPending ? "Logging out" : "Log out"}
+                className="shrink-0 text-muted-foreground hover:text-destructive"
+                disabled={chrome.logoutPending}
+                onClick={() => closeThen(chrome.onLogout)}
+              >
+                <LogOut />
+              </Button>
+            </div>
+          </div>
+        )}
       </DrawerContent>
     </Drawer>
   );

@@ -157,16 +157,36 @@
     --shadow-surface: var(--surface-inset), 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 8px 24px -14px rgb(15 23 42 / 0.14);
     --shadow-lift: var(--surface-inset-strong), 0 12px 32px -12px rgb(15 23 42 / 0.18), 0 0 32px -20px hsl(var(--primary) / 0.35);
 
-    /* --- Motion (§4.23): communicate state, 150–250ms.
-       --ease-out-expo is the LifeOS entrance curve; --duration-reveal is
-       its section-reveal length. Both are defined here so Commit E has a
-       token to consume rather than inventing timings inline. --- */
+    /* --- Motion (§4.23) — banded by how far an element travels, not by
+       which component it belongs to. A checkbox and a drawer must never
+       share a duration.
+
+         instant   press, checkbox, icon swap, copy feedback
+         fast      hover, tooltip, nav hover, small menus
+         standard  tabs, nav indicator, route content, dropdown, card state
+         spatial   sidebar, drawer, mobile navigation
+         reveal    first-paint section entrance
+
+       --duration-fast/base/slow/reveal and --ease/--ease-out-expo predate
+       the banding and keep their names and values — duration-fast alone has
+       ~20 consumers, and renaming them would be churn with no visual
+       effect. base and slow remain valid mid-range steps. --- */
+    --duration-instant: 100ms;
     --duration-fast: 150ms;
     --duration-base: 200ms;
+    --duration-standard: 220ms;
     --duration-slow: 250ms;
+    --duration-spatial: 340ms;
     --duration-reveal: 700ms;
     --ease: cubic-bezier(0.2, 0, 0, 1);
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    /* Short, decisive deceleration. Less tail than expo, so a 220ms move
+       reads as finished at 220ms rather than still settling at 300ms —
+       which is what an interface used all day needs. */
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    /* Symmetric accelerate/decelerate, for elements that enter and leave
+       along the same axis (drawer, sidebar rail). */
+    --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
 
     /* --- Z-index scale (§4.27) --- */
     --z-sticky: 20;
@@ -174,6 +194,30 @@
     --z-overlay: 40;
     --z-modal: 50;
     --z-toast: 60;
+
+    /* --- Overlay scrim. One value for every modal layer. Dialog, Drawer
+       and the command palette each shipped their own: measured black/40 +
+       2px blur, black/40 with no blur, and black/60 + 4px blur. Three
+       overlays in one product dimmed the page by three different amounts,
+       so which surface you were under changed how "behind" the page felt.
+       Consumers migrate in Phase D. --- */
+    --overlay-scrim: rgb(0 0 0 / 0.55);
+    --overlay-blur: 4px;
+
+    /* --- Shell geometry. Exposed as custom properties so the sidebar can
+       collapse by interpolating a grid track rather than animating a flex
+       child's width — the current transition-[width] forces layout every
+       frame and drags the content column with it. Consumed in Phase B. --- */
+    --sidebar-w: 270px;
+    --sidebar-w-collapsed: 64px;
+    --shell-header-h: 56px;
+
+    /* --- Icon sizing. Every icon in the product is currently a literal
+       h-4 w-4; naming the three steps is what lets Phase D make icon scale
+       a decision rather than a default. --- */
+    --icon-xs: 0.875rem;  /* 14px — inline with text-xs / text-2xs */
+    --icon-sm: 1rem;      /* 16px — default control icon */
+    --icon-md: 1.25rem;   /* 20px — standalone / empty-state */
 
     /* --- Glow (Design Constitution §9) — marks the one dominant focal
        point per screen. Tied to the semantic roles so glow always
@@ -352,6 +396,17 @@
     background-repeat: no-repeat;
   }
 
+  /* Dark-theme autofill: keep typed/autofilled text on the input surface
+     instead of the browser's default cream wash. Does not change values. */
+  input:-webkit-autofill,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: hsl(var(--foreground));
+    caret-color: hsl(var(--foreground));
+    box-shadow: 0 0 0 1000px hsl(var(--surface-2)) inset;
+    transition: background-color 99999s ease-out;
+  }
+
   /* Scrollbars styled to the surface ladder — the browser default light
      scrollbar was one of the few remaining places the shell broke
      character on a true-black canvas. */
@@ -423,17 +478,98 @@
 
   /* Auth shell backdrop — one soft radial glow + a barely-visible grid,
      both built from existing tokens. Deliberately minimal: texture, not
-     decoration. */
-  .auth-page { @apply relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-16; }
+     decoration. Phase F: the page is a spatial field; the form stays
+     the readable surface. No particles, no WebGL, no looping motion. */
+  .auth-page {
+    @apply relative isolate flex min-h-dvh flex-col items-center justify-start overflow-x-hidden overflow-y-auto bg-background px-4 py-8 sm:justify-center lg:py-16;
+  }
   .auth-grid {
     background-image:
-      linear-gradient(hsl(var(--foreground) / 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
-    background-size: 56px 56px;
-    mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
-    -webkit-mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
+      linear-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 55% at 50% 42%, black, transparent 72%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 42%, black, transparent 72%);
   }
-  .auth-glow { background: radial-gradient(680px circle at 50% -10%, hsl(var(--primary) / 0.16), transparent 60%); }
+  .auth-glow {
+    background: radial-gradient(620px circle at 50% 18%, hsl(var(--primary) / 0.09), transparent 58%);
+  }
+  .auth-horizon {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 8%,
+      hsl(var(--foreground) / 0.12) 50%,
+      transparent 92%
+    );
+  }
+  .auth-frame {
+    position: relative;
+    display: flex;
+    width: min(100%, 56rem);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.75rem;
+  }
+  .auth-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  .auth-identity-kicker {
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: hsl(var(--muted-foreground));
+    letter-spacing: 0.04em;
+  }
+  .auth-identity-note {
+    display: none;
+    max-width: 16rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: hsl(var(--muted-foreground) / 0.9);
+  }
+  .auth-surface {
+    width: 100%;
+    max-width: 26.25rem;
+    margin-inline: auto;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-dialog);
+    background-color: hsl(var(--surface-2));
+    box-shadow: var(--shadow-surface);
+    padding: 1.75rem 1.5rem;
+  }
+  .auth-footnote {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: hsl(var(--muted-foreground));
+    letter-spacing: 0.02em;
+  }
+  @media (min-width: 640px) {
+    .auth-surface { padding: 2.25rem 2.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .auth-frame {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(22rem, 26.25rem);
+      align-items: start;
+      gap: 4rem;
+    }
+    .auth-identity {
+      align-items: flex-start;
+      text-align: left;
+      gap: 0.75rem;
+      padding-top: 2.25rem;
+    }
+    .auth-identity-note { display: block; }
+    .auth-surface { margin-inline: 0; }
+  }
 
   /* ----------------------------------------------------------------
      Surface System (LifeOS convergence, Commit A).
@@ -466,13 +602,25 @@
     border-color: hsl(var(--surface-glass-border) / 0.6);
   }
 
+  /* Shared modal/drawer/command scrim. One dim, one blur. */
+  .overlay-scrim {
+    background: var(--overlay-scrim);
+    backdrop-filter: blur(var(--overlay-blur));
+  }
+  /* Closed overlays must not intercept clicks if exit animation is
+     interrupted (reduced-motion, frozen timelines). Radix unmounts after
+     animate-out; this is a fail-safe while data-state=closed remains. */
+  .overlay-scrim[data-state="closed"] {
+    pointer-events: none;
+  }
+
   /* Restrained hover elevation. 2px is deliberate — enough to read as
      interactive, small enough that a grid of cards doesn't jitter. */
   .card-lift {
     transition:
-      transform var(--duration-slow) var(--ease-out-expo),
-      border-color var(--duration-slow) var(--ease-out-expo),
-      box-shadow var(--duration-slow) var(--ease-out-expo);
+      transform var(--duration-fast) var(--ease-out-quart),
+      border-color var(--duration-fast) var(--ease-out-quart),
+      box-shadow var(--duration-fast) var(--ease-out-quart);
   }
   .card-lift:hover {
     transform: translateY(-2px);
@@ -622,6 +770,123 @@
   from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
   to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
 }
+
+/* Authenticated route content (Phase C). Shell stays still; only the
+   surface inside <main> resolves. 8px / standard band — not the 14px
+   blur reveal, which is for first-paint sections, not navigation. */
+@keyframes route-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.route-enter {
+  animation: route-enter var(--duration-standard) var(--ease-out-quart) both;
+}
+.route-enter.route-enter-settled {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+/* Phase F — auth → control-plane overlay. Transform + opacity only.
+   Duration is visual, not a navigation gate. Fail-safe lives in JS. */
+.auth-entry-overlay {
+  --auth-entry-duration: 820ms;
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: hsl(0 0% 0%);
+  animation: auth-entry-overlay var(--auth-entry-duration) var(--ease-out-quart) both;
+}
+.auth-entry-plane {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(hsl(0 0% 100% / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(0 0% 100% / 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 55% 45% at 50% 50%, black, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 55% 45% at 50% 50%, black, transparent 70%);
+  animation: auth-entry-plane var(--auth-entry-duration) var(--ease-out-quart) both;
+}
+.auth-entry-aperture {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(72vw, 36rem);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(0 0% 100% / 0.42),
+    transparent
+  );
+  transform: translate(-50%, -50%) scaleX(0);
+  transform-origin: center;
+  animation: auth-entry-aperture var(--auth-entry-duration) var(--ease-out-quart) both;
+}
+.auth-entry-mark {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  animation: auth-entry-mark var(--auth-entry-duration) var(--ease-out-quart) both;
+}
+.auth-entry-rule {
+  display: block;
+  width: 2.25rem;
+  height: 1px;
+  background: hsl(0 0% 100% / 0.28);
+}
+.auth-entry-word {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: hsl(0 0% 96% / 0.82);
+}
+@keyframes auth-entry-overlay {
+  0% { opacity: 1; }
+  58% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes auth-entry-plane {
+  0% { opacity: 0.55; transform: scale(1.03); }
+  38% { opacity: 0.32; transform: scale(1.008); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes auth-entry-aperture {
+  0% { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
+  10% { opacity: 1; }
+  28% { transform: translate(-50%, -50%) scaleX(1); opacity: 0.9; }
+  68% { opacity: 0.35; }
+  100% { transform: translate(-50%, -50%) scaleX(1); opacity: 0; }
+}
+@keyframes auth-entry-mark {
+  0%, 8% { opacity: 0; transform: translateY(4px); }
+  26% { opacity: 1; transform: translateY(0); }
+  62% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(0); }
+}
+@keyframes auth-entry-overlay-reduce {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.auth-entry-overlay--reduce {
+  animation-name: auth-entry-overlay-reduce;
+  animation-duration: var(--duration-standard);
+}
+.auth-entry-overlay--reduce .auth-entry-plane,
+.auth-entry-overlay--reduce .auth-entry-aperture,
+.auth-entry-overlay--reduce .auth-entry-mark {
+  animation: none;
+  opacity: 0;
+  transform: none;
+}
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes drift {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -668,11 +933,36 @@
    ------------------------------------------------------------------ */
 @media (prefers-reduced-motion: reduce) {
   /* Entrances: land on the finished state rather than replaying fast. */
-  .reveal {
+  .reveal,
+  .route-enter {
     animation: none;
     opacity: 1;
     transform: none;
     filter: none;
+  }
+
+  /* Phase F overlay: luminance handoff only. No spatial travel.
+     !important beats the * duration backstop so the 220ms fade can finish. */
+  .auth-entry-overlay {
+    animation-name: auth-entry-overlay-reduce !important;
+    animation-duration: var(--duration-standard) !important;
+    animation-timing-function: var(--ease-out-quart) !important;
+    animation-iteration-count: 1 !important;
+  }
+  .auth-entry-overlay .auth-entry-plane,
+  .auth-entry-overlay .auth-entry-aperture,
+  .auth-entry-overlay .auth-entry-mark {
+    animation: none !important;
+    opacity: 0 !important;
+    transform: none !important;
+  }
+
+  /* Overlay panels: skip travel, keep the finished geometry
+     (dialog stays centred via its own -translate). */
+  .overlay-scrim,
+  .dialog-panel,
+  .drawer-panel {
+    animation: none !important;
   }
 
   /* NexusOS brand: disable the specular sweep entirely. */
@@ -705,12 +995,28 @@
     transform: none;
   }
 
-  /* Backstop for anything not named above. */
+  /* Backstop for anything not named above.
+
+     This block used to also set transition-duration: 0.01ms, which defeated
+     the paragraph at the top of this rule: every colour and opacity
+     transition in the product was flattened along with the movement, even
+     though a hover colour change communicates state and is not what WCAG
+     2.3.3 asks us to suppress.
+
+     Constraining transition-property instead is the correct instrument. The
+     enumerated properties keep transitioning at whatever duration their
+     component declared, while transform / translate / scale / rotate /
+     filter are absent from the list and therefore never transition at all —
+     the element lands on its final geometry immediately. That is strictly
+     safer than a 0.01ms replay, which still runs and can still be perceived
+     as a flicker. */
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    transition-property:
+      opacity, color, background-color, border-color, box-shadow,
+      outline-color, fill, stroke !important;
   }
 }
 

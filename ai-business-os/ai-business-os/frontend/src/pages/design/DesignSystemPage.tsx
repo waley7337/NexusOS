@@ -5,7 +5,7 @@
  * baseline: if something looks wrong here, it's wrong everywhere.
  */
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { CheckSquare, Plus, Users, Wallet } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -38,7 +38,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { fadeInUp, staggerChildren } from "@/lib/motion";
+import { fadeInPlain, fadeInUp, staggerChildren } from "@/lib/motion";
 
 /* ------------------------------ helpers ------------------------------- */
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -127,10 +127,12 @@ const demoColumns: ColumnDef<DemoCustomer, unknown>[] = [
 export function DesignSystemPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [thesisChecked, setThesisChecked] = useState(true);
+  const prefersReducedMotion = useReducedMotion();
+  const reveal = prefersReducedMotion ? fadeInPlain : fadeInUp;
 
   return (
     <motion.div variants={staggerChildren} initial="hidden" animate="visible" className="max-w-4xl space-y-12 pb-16">
-      <motion.div variants={fadeInUp}>
+      <motion.div variants={reveal}>
         <Breadcrumb items={[{ label: "NexusOS", to: "/" }, { label: "Design system" }]} className="mb-3" />
         <h1 className="text-display">Design system</h1>
         <p className="mt-2 max-w-xl text-body-lg text-muted-foreground">
@@ -387,8 +389,10 @@ export function DesignSystemPage() {
       {/* ---------------- Dashboard Framework (Part 04, Phase 7) --------------- */}
       <Section id="dashboard-framework" title="Dashboard Framework (Part 04, Phase 7)">
         <p className="text-sm text-muted-foreground">
-          StatCard, Sparkline, and RadialGauge — the primitives behind Dashboard's "Mission
-          Control" hero. RadialGauge carries a screen-reader text-equivalent alongside the SVG.
+          StatCard, Sparkline, and RadialGauge — sample primitives for future
+          module dashboards. Values on this page are labelled design-system
+          examples, not live NexusOS data. RadialGauge carries a screen-reader
+          text-equivalent alongside the SVG.
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard label="Revenue" value="$128,430" delta={18} icon={Wallet} trend={[74, 81, 78, 92, 99, 112, 128]} />
@@ -428,7 +432,7 @@ export function DesignSystemPage() {
           ProgressListItem and ChecklistCard — row-level primitives for lists of tracked work.
           StatCard's plain-integer values (Tasks due today, Inventory alerts, above) now count up
           on mount via <code className="font-mono text-xs">useCountUp</code>, and this page's
-          sections stagger in via <code className="font-mono text-xs">staggerSection</code>; both
+          sections stagger in via <code className="font-mono text-xs">staggerChildren</code>; both
           fall back to an instant, unanimated render under prefers-reduced-motion.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">

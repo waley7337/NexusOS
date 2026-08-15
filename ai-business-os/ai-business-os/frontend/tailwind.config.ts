@@ -57,6 +57,8 @@ export default {
         },
         "surface-glass": "hsl(var(--surface-glass))",
         "surface-glass-border": "hsl(var(--surface-glass-border))",
+        // Single scrim for every modal layer. Complete rgb(), like `line`.
+        "overlay-scrim": "var(--overlay-scrim)",
         chart: {
           1: "hsl(var(--chart-1))",
           2: "hsl(var(--chart-2))",
@@ -92,12 +94,33 @@ export default {
         modal: "var(--z-modal)",
         toast: "var(--z-toast)",
       },
-      transitionDuration: { fast: "150ms", base: "200ms", slow: "250ms", reveal: "700ms" },
-      transitionTimingFunction: {
-        brand: "cubic-bezier(0.2, 0, 0, 1)",
-        // LifeOS entrance curve — long tail, no overshoot.
-        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
+      // Motion bands. These were literals duplicating the --duration-* /
+      // --ease-* tokens in globals.css; they now reference them, so the
+      // stylesheet is the single source of truth and a timing can't drift
+      // between the CSS and the utility that claims to apply it.
+      transitionDuration: {
+        instant: "var(--duration-instant)",
+        fast: "var(--duration-fast)",
+        base: "var(--duration-base)",
+        standard: "var(--duration-standard)",
+        slow: "var(--duration-slow)",
+        spatial: "var(--duration-spatial)",
+        reveal: "var(--duration-reveal)",
       },
+      transitionTimingFunction: {
+        brand: "var(--ease)",
+        // LifeOS entrance curve — long tail, no overshoot.
+        "out-expo": "var(--ease-out-expo)",
+        "out-quart": "var(--ease-out-quart)",
+        "in-out-quint": "var(--ease-in-out-quint)",
+      },
+      backdropBlur: { overlay: "var(--overlay-blur)" },
+      // Shell geometry, for the Phase B sidebar work.
+      width: {
+        sidebar: "var(--sidebar-w)",
+        "sidebar-collapsed": "var(--sidebar-w-collapsed)",
+      },
+      height: { "shell-header": "var(--shell-header-h)" },
       // §4.6 — 8px system: only these values are sanctioned for layout gaps
       spacing: { 4.5: "1.125rem" },
       fontFamily: {

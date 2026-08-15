@@ -8,7 +8,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const base =
-  "w-full rounded-input border bg-card px-3 text-sm transition-colors duration-fast placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive";
+  "w-full rounded-input border border-line-soft bg-surface-2 px-3 text-sm text-foreground transition-colors duration-fast placeholder:text-muted-foreground hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line-soft aria-[invalid=true]:border-destructive aria-[invalid=true]:hover:border-destructive aria-[invalid=true]:ring-destructive";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
@@ -30,7 +30,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
       <select ref={ref} className={cn(base, "h-9 appearance-none pr-8", className)} {...props}>
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+      <ChevronDown
+        className="pointer-events-none absolute right-2.5 top-1/2 h-[var(--icon-sm)] w-[var(--icon-sm)] -translate-y-1/2 text-muted-foreground"
+        aria-hidden
+      />
     </div>
   ),
 );

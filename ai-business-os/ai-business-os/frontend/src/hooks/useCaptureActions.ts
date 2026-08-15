@@ -11,12 +11,9 @@ export interface CaptureAction {
 }
 
 /**
- * Quick-action registry shared by the shell's "+Capture" button and the
- * command palette (Part 04, Phase 5 introduced this empty; Phase 6 gives
- * it its first real, generic entries so both surfaces read from one place
- * instead of each hardcoding its own copy). "New customer" stays palette-
- * only — it's an explicit stub, not a generic action, so it doesn't belong
- * in the permanent registry until CRM (Part 6+) registers something real.
+ * Quick-action registry shared by the shell's Capture button and the
+ * command palette. Only real actions live here: theme toggle and
+ * navigation. Module create-actions join this list when those APIs exist.
  */
 export function useCaptureActions(): CaptureAction[] {
   const navigate = useNavigate();

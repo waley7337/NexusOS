@@ -1,4 +1,6 @@
 import { Users, FolderKanban, CheckSquare, UserRound, Wallet, Boxes, FileText, BarChart3, Sparkles, Settings } from "lucide-react";
+import { ROUTES } from "@/constants/routes";
+import { MODULE_SUMMARIES } from "@/features/dashboard/constants";
 import { ModulePlaceholder } from "./ModulePlaceholder";
 
 export function CrmPlaceholder() {
@@ -6,8 +8,7 @@ export function CrmPlaceholder() {
     <ModulePlaceholder
       title="CRM"
       icon={Users}
-      description="Track companies, contacts, leads, and deals in one connected pipeline."
-      action="Create customer"
+      description={MODULE_SUMMARIES[ROUTES.crm]}
     />
   );
 }
@@ -17,8 +18,7 @@ export function ProjectsPlaceholder() {
     <ModulePlaceholder
       title="Projects"
       icon={FolderKanban}
-      description="Plan work with boards, lists, timelines, and calendars."
-      action="Create project"
+      description={MODULE_SUMMARIES[ROUTES.projects]}
     />
   );
 }
@@ -28,8 +28,7 @@ export function TasksPlaceholder() {
     <ModulePlaceholder
       title="Tasks"
       icon={CheckSquare}
-      description="Everything assigned to you and your team, in one place."
-      action="Create task"
+      description={MODULE_SUMMARIES[ROUTES.tasks]}
     />
   );
 }
@@ -39,8 +38,7 @@ export function HrPlaceholder() {
     <ModulePlaceholder
       title="HR"
       icon={UserRound}
-      description="Employee profiles, attendance, leave, and performance."
-      action="Add employee"
+      description={MODULE_SUMMARIES[ROUTES.hr]}
     />
   );
 }
@@ -50,8 +48,7 @@ export function FinancePlaceholder() {
     <ModulePlaceholder
       title="Finance"
       icon={Wallet}
-      description="Revenue, expenses, invoices, and payments — all visual."
-      action="Create invoice"
+      description={MODULE_SUMMARIES[ROUTES.finance]}
     />
   );
 }
@@ -61,8 +58,7 @@ export function InventoryPlaceholder() {
     <ModulePlaceholder
       title="Inventory"
       icon={Boxes}
-      description="Products, warehouses, purchase orders, and stock movements."
-      action="Add product"
+      description={MODULE_SUMMARIES[ROUTES.inventory]}
     />
   );
 }
@@ -72,8 +68,7 @@ export function DocumentsPlaceholder() {
     <ModulePlaceholder
       title="Documents"
       icon={FileText}
-      description="Store, organize, and share every business document."
-      action="Upload document"
+      description={MODULE_SUMMARIES[ROUTES.documents]}
     />
   );
 }
@@ -83,8 +78,7 @@ export function ReportsPlaceholder() {
     <ModulePlaceholder
       title="Reports"
       icon={BarChart3}
-      description="Export, schedule, and share reports across every module."
-      action="Create report"
+      description={MODULE_SUMMARIES[ROUTES.reports]}
     />
   );
 }
@@ -94,8 +88,7 @@ export function AssistantPlaceholder() {
     <ModulePlaceholder
       title="AI Assistant"
       icon={Sparkles}
-      description="Ask questions about your business in plain language."
-      action="Start a conversation"
+      description={MODULE_SUMMARIES[ROUTES.assistant]}
     />
   );
 }
@@ -105,8 +98,7 @@ export function SettingsPlaceholder() {
     <ModulePlaceholder
       title="Settings"
       icon={Settings}
-      description="Company profile, members, roles, and preferences."
-      action="Open settings"
+      description={MODULE_SUMMARIES[ROUTES.settings]}
     />
   );
 }

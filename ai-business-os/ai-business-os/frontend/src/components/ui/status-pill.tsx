@@ -18,16 +18,10 @@ const DOT_CLASSES: Record<StatusPillVariant, string> = {
 export function StatusPill({ label, variant = "online", className }: StatusPillProps) {
   return (
     <span className={cn("inline-flex items-center gap-2 text-2xs font-medium text-muted-foreground", className)}>
-      {/* A halo ring expanding out of the dot reads as a live signal far more
-          clearly than opacity alone (Part 04 convergence, Commit C). Only the
-          healthy state pulses — a degraded or offline system should sit still,
-          not animate reassuringly. The halo is a separate absolutely
-          positioned span so the dot itself never changes size and the row
-          cannot reflow. */}
+      {/* Static dot. A continuous ping on the healthy state competed with
+          real status changes and read as decorative glow (Phase E). Size is
+          fixed so a variant change cannot reflow the row. */}
       <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden="true">
-        {variant === "online" && (
-          <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-60", DOT_CLASSES[variant])} />
-        )}
         <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", DOT_CLASSES[variant])} />
       </span>
       {label}

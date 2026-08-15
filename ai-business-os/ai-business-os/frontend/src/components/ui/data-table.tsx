@@ -26,6 +26,12 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, Download, Inbox, Search } from "lucide-react";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "./dropdown-menu";
 import { Input } from "./input";
 import { Pagination } from "./pagination";
 import { cn } from "@/lib/utils";
@@ -58,7 +64,6 @@ export function DataTable<TData>({
   const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
 
   const columns = useMemo<ColumnDef<TData, unknown>[]>(() => {
     if (!selectable) return userColumns;
@@ -154,58 +159,44 @@ export function DataTable<TData>({
               <Download /> Export
             </Button>
           )}
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              aria-expanded={columnsMenuOpen}
-              aria-haspopup="menu"
-              onClick={() => setColumnsMenuOpen((v) => !v)}
-            >
-              <Columns3 /> Columns
-            </Button>
-            {columnsMenuOpen && (
-              <>
-                <div className="fixed inset-0 z-dropdown" aria-hidden onClick={() => setColumnsMenuOpen(false)} />
-                <div
-                  role="menu"
-                  className="absolute right-0 z-dropdown mt-1 w-44 rounded-card border bg-card p-1.5 shadow-dropdown"
-                >
-                  {table
-                    .getAllLeafColumns()
-                    .filter((c) => c.getCanHide())
-                    .map((col) => (
-                      <label
-                        key={col.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-secondary/60"
-                      >
-                        <Checkbox
-                          checked={col.getIsVisible()}
-                          onCheckedChange={(v) => col.toggleVisibility(Boolean(v))}
-                        />
-                        {String(col.columnDef.header ?? col.id)}
-                      </label>
-                    ))}
-                </div>
-              </>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" aria-haspopup="menu">
+                <Columns3 /> Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllLeafColumns()
+                .filter((c) => c.getCanHide())
+                .map((col) => (
+                  <DropdownMenuCheckboxItem
+                    key={col.id}
+                    checked={col.getIsVisible()}
+                    onCheckedChange={(v) => col.toggleVisibility(Boolean(v))}
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    {String(col.columnDef.header ?? col.id)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-card border bg-card">
+      <div className="overflow-x-auto rounded-card border border-line-soft bg-surface-2">
         <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b bg-muted/50">
+              <tr key={hg.id} className="border-b border-line-soft bg-surface-3/80">
                 {hg.headers.map((header) => {
                   const sortDir = header.column.getIsSorted();
                   return (
                     <th
                       key={header.id}
                       aria-sort={sortDir === "asc" ? "ascending" : sortDir === "desc" ? "descending" : undefined}
-                      className="px-4 py-2.5 text-left font-medium text-muted-foreground"
+                      className="px-4 py-2.5 text-left text-2xs font-medium uppercase tracking-wide text-muted-foreground"
                     >
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <button
@@ -244,8 +235,8 @@ export function DataTable<TData>({
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
                   className={cn(
-                    "border-b transition-colors duration-fast last:border-0 hover:bg-secondary/40",
-                    row.getIsSelected() && "bg-primary/5",
+                    "border-b border-line-soft transition-colors duration-fast last:border-0 hover:bg-surface-3/60",
+                    row.getIsSelected() && "bg-primary-fill/5 hover:bg-primary-fill/10",
                   )}
                 >
                   {row.getVisibleCells().map((cell) => (

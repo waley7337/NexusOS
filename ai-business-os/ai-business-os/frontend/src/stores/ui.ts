@@ -10,6 +10,10 @@ interface UiState {
    * AppLayout's topbar trigger and DashboardPage's hero trigger open the
    * same sheet instead of each owning an independent copy. */
   isCaptureOpen: boolean;
+  /** Phase F — presentational auth→shell overlay. Armed only by an
+   * intentional successful LoginPage submit. Not persisted. Never consulted
+   * by auth, routing, or authorization. */
+  isAuthEntryActive: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebarCollapsed: () => void;
   setMobileSidebarOpen: (open: boolean) => void;
@@ -20,6 +24,8 @@ interface UiState {
   toggleNotificationPanel: () => void;
   setCaptureOpen: (open: boolean) => void;
   toggleCapture: () => void;
+  armAuthEntry: () => void;
+  clearAuthEntry: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -28,6 +34,7 @@ export const useUiStore = create<UiState>((set) => ({
   isCommandPaletteOpen: false,
   isNotificationPanelOpen: false,
   isCaptureOpen: false,
+  isAuthEntryActive: false,
   setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
   toggleSidebarCollapsed: () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
   setMobileSidebarOpen: (open) => set({ isMobileSidebarOpen: open }),
@@ -38,4 +45,6 @@ export const useUiStore = create<UiState>((set) => ({
   toggleNotificationPanel: () => set((s) => ({ isNotificationPanelOpen: !s.isNotificationPanelOpen })),
   setCaptureOpen: (open) => set({ isCaptureOpen: open }),
   toggleCapture: () => set((s) => ({ isCaptureOpen: !s.isCaptureOpen })),
+  armAuthEntry: () => set({ isAuthEntryActive: true }),
+  clearAuthEntry: () => set({ isAuthEntryActive: false }),
 }));

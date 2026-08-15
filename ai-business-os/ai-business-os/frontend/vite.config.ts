@@ -14,12 +14,10 @@ export default defineConfig({
     },
   },
   build: {
-    // Performance budget: keep the shell light; charts load as their own chunk.
     rollupOptions: {
       output: {
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
-          charts: ["recharts"],
           motion: ["framer-motion"],
           table: ["@tanstack/react-table"],
         },

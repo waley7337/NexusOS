@@ -8,9 +8,9 @@
  * correctly positioned whether the sidebar is expanded, collapsed, or (on
  * mobile) not rendered at all, because it lives in the content column.
  *
- * Data: every value comes from a real source — useSystemStatus (which derives
- * from navigator.onLine and the dashboard query's cache state) and
- * useLiveClock. Nothing here is a hardcoded "operational" string.
+ * Data: every value comes from a real source — useSystemStatus (navigator.onLine
+ * plus the dashboard health/ready snapshot cache) and useLiveClock. Nothing
+ * here is a hardcoded "operational" string.
  *
  * A11y:
  *  - the status region is role="status" aria-live="polite", so a screen-reader
@@ -50,11 +50,14 @@ export function ShellStatusBar({
       className={cn(
         // shrink-0 keeps the bar at its intrinsic height inside the shell's
         // flex column; pb env() clears the iOS home indicator.
-        "flex h-8 shrink-0 items-center justify-between gap-4 border-t px-4 font-mono text-2xs text-muted-foreground backdrop-blur",
+        // shrink-0 keeps the bar at its intrinsic height inside the shell's
+        // flex column; pb env() clears the iOS home indicator. border-line-soft
+        // is the Tailwind utility for the same --line-soft token previously
+        // set via inline style — presentation only, no behaviour change.
+        "flex h-8 shrink-0 items-center justify-between gap-4 border-t border-line-soft px-4 font-mono text-2xs text-muted-foreground backdrop-blur",
         className,
       )}
       style={{
-        borderColor: "var(--line-soft)",
         backgroundColor: "hsl(var(--surface-1) / 0.8)",
         paddingBottom: "env(safe-area-inset-bottom)",
       }}

@@ -1,6 +1,6 @@
 /**
- * EmptyState — the spec bans "No Data". An empty screen is an invitation to act:
- * what this space is for, and the one button that fills it.
+ * EmptyState — honest empty surface. Describes what the space is for.
+ * An action is optional and only rendered when the caller has a real one.
  */
 import { type ComponentType, type ReactNode } from "react";
 import { Button } from "./button";
@@ -12,15 +12,17 @@ interface EmptyStateProps {
   actionLabel?: string;
   onAction?: () => void;
   children?: ReactNode;
+  /** Default h3 for nested empties (page already has an h1). Error pages pass h1. */
+  as?: "h1" | "h2" | "h3";
 }
 
-export function EmptyState({ icon: Icon, title, description, actionLabel, onAction, children }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, actionLabel, onAction, children, as: Heading = "h3" }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-16 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
-        <Icon className="h-5 w-5 text-muted-foreground" />
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line-soft px-6 py-12 text-center">
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface-4">
+        <Icon className="h-[var(--icon-md)] w-[var(--icon-md)] text-muted-foreground" aria-hidden="true" />
       </div>
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <Heading className="text-sm font-semibold">{title}</Heading>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
       {actionLabel && onAction && (
         <Button className="mt-5" onClick={onAction}>{actionLabel}</Button>

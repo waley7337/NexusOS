@@ -8,18 +8,12 @@ describe("StatusPill", () => {
     expect(screen.getByText("All systems nominal")).toBeInTheDocument();
   });
 
-  // The animation moved from an opacity pulse on the dot itself to an
-  // expanding halo ring behind it (Part 04 convergence, Commit C). The
-  // guarantee under test is unchanged: only a healthy system animates — a
-  // degraded or offline one must sit still rather than animate reassuringly.
-  it("animates only the online variant", () => {
+  it("does not ping in any variant", () => {
     const { container: online } = render(<StatusPill label="Online" variant="online" />);
-    expect(online.querySelector(".animate-ping")).toBeInTheDocument();
-
     const { container: offline } = render(<StatusPill label="Offline" variant="offline" />);
-    expect(offline.querySelector(".animate-ping")).not.toBeInTheDocument();
-
     const { container: warning } = render(<StatusPill label="Syncing" variant="warning" />);
+    expect(online.querySelector(".animate-ping")).not.toBeInTheDocument();
+    expect(offline.querySelector(".animate-ping")).not.toBeInTheDocument();
     expect(warning.querySelector(".animate-ping")).not.toBeInTheDocument();
   });
 
