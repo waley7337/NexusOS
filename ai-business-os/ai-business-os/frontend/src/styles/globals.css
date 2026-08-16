@@ -804,15 +804,6 @@
     box-shadow: var(--shadow-surface), 0 1px 0 0 var(--edge-shade);
     padding: 1.75rem 1.5rem;
   }
-  .auth-footnote {
-    margin-top: 2rem;
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 400;
-    line-height: 1.5;
-    color: hsl(var(--muted-foreground));
-    letter-spacing: 0.02em;
-  }
   @media (min-width: 640px) {
     .auth-surface { padding: 2.25rem 2.5rem; }
   }
@@ -918,24 +909,14 @@
   .glow-banner { background: radial-gradient(680px circle at 50% -10%, rgb(255 255 255 / 0.035), transparent 60%); }
 
   /* Faint structural grid for hero/branded panels. */
-  .grid-field {
-    background-image:
-      linear-gradient(hsl(var(--foreground) / 0.022) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--foreground) / 0.022) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(120% 120% at 50% 0%, #000 30%, transparent 78%);
-    -webkit-mask-image: radial-gradient(120% 120% at 50% 0%, #000 30%, transparent 78%);
-  }
 
   /* Live-status pulse — for a live/online status dot (StatusPill).
      Collapses to a static dot under the reduced-motion rule below. */
-  .pulse-live { animation: pulse-live 2s var(--ease) infinite; }
 
   /* Ambient drift for the hero's blurred backdrop orbs. 14s and ~3% travel:
      slow and small enough to be felt rather than watched. The @keyframes
      landed in Commit A but this class did not, so the orbs were static —
      measured animation-name: none. Switched off under reduced motion. */
-  .drift { animation: drift 14s ease-in-out infinite; }
 
   /* ----------------------------------------------------------------
      NexusOS brand mark + typography lockup (authenticated shell).
@@ -1024,10 +1005,6 @@
   }
 }
 
-@keyframes pulse-live {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.55; transform: scale(0.85); }
-}
 
 /* Entrance keyframes (LifeOS convergence). Defined in Commit A alongside
    the tokens they use; consumed by the motion system in Commit E. */
@@ -1271,10 +1248,6 @@
 }
 
 @keyframes draw { to { stroke-dashoffset: 0; } }
-@keyframes drift {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50%      { transform: translate3d(3%, -4%, 0) scale(1.08); }
-}
 
 /* NexusOS brand specular — one-shot diagonal catch-light only.
    ~200ms settle, ~580ms sweep, then fully static. */
@@ -1385,8 +1358,6 @@
 
   /* BREATHE is ambient by definition and carries no state the user needs.
      Stop it entirely rather than running it once very fast. */
-  .drift,
-  .pulse-live,
   .animate-ping {
     animation: none;
   }
