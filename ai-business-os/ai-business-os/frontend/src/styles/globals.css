@@ -499,6 +499,20 @@
      itself is true-black now, so the auth shell mostly inherits and
      just tightens the mid-steps. */
   .dark.auth-shell {
+    /* V6, and load-bearing — this is the reason the block redefines tokens
+       at all. `color` inherits as a RESOLVED value, not as a var()
+       reference, so every descendant without an explicit text class was
+       still inheriting body's LIGHT-theme ink inside this forced-dark
+       scope. Measured on /login: field labels rendered rgb(15,23,41) on a
+       near-black panel — roughly 1.1:1, effectively invisible. Headings
+       looked correct only because they carry text-foreground and re-resolve
+       the variable here.
+
+       Declaring color makes the forced-dark scope actually establish its
+       own inherited colour, which is what this block always claimed to do,
+       and fixes every auth route at once rather than control by control. */
+    color: hsl(var(--foreground));
+
     --surface-0: 0 0% 0%;            /* #000000 page */
     --surface-1: 0 0% 2.5%;          /* #060606 */
     --surface-2: 0 0% 4.5%;          /* #0B0B0B card surface */
@@ -705,66 +719,89 @@
      both built from existing tokens. Deliberately minimal: texture, not
      decoration. Phase F: the page is a spatial field; the form stays
      the readable surface. No particles, no WebGL, no looping motion. */
+  /* ================================================================
+     AUTH ENVIRONMENT (rebuilt, V6).
+
+     Login is the first room of the SAME product, so it is built from the
+     chassis vocabulary rather than from its own private one:
+
+       - a full-height structural SEAM at the same geometry the workspace
+         rail occupies. This is deliberate and load-bearing: V7 transforms
+         one into the other, and that only works if the seam is a real
+         element sitting where the rail will be.
+       - the environment is neutral graphite (V1 removed the violet/cyan
+         ambient wash product-wide; nothing here re-adds it).
+       - the form sits on a Plane, which is the first surface in the
+         product that genuinely earns one — it is a distinct layer
+         floating in an environment, not a band on a canvas.
+       - identity and legal-ish metadata are machine register.
+
+     Auth semantics are untouched by all of this: no form, field, schema
+     or submit path is defined in CSS.
+     ================================================================ */
   .auth-page {
-    @apply relative isolate flex min-h-dvh flex-col items-center justify-start overflow-x-hidden overflow-y-auto bg-background px-4 py-8 sm:justify-center lg:py-16;
+    @apply relative isolate min-h-dvh overflow-x-hidden overflow-y-auto bg-background;
   }
-  .auth-grid {
-    background-image:
-      linear-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--foreground) / 0.035) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse 70% 55% at 50% 42%, black, transparent 72%);
-    -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 42%, black, transparent 72%);
-  }
-  .auth-glow {
-    background: radial-gradient(620px circle at 50% 18%, hsl(var(--primary) / 0.09), transparent 58%);
-  }
-  .auth-horizon {
-    height: 1px;
-    background: linear-gradient(
+
+  /* Structural field. Vertical rules only, at the same 80px pitch the
+     workspace uses for its own structure, faded out toward the right so
+     the form never competes with it. */
+  .auth-rules {
+    background-image: repeating-linear-gradient(
       90deg,
-      transparent 8%,
-      hsl(var(--foreground) / 0.12) 50%,
-      transparent 92%
+      hsl(var(--foreground) / 0.055) 0 1px,
+      transparent 1px 80px
     );
+    mask-image: linear-gradient(100deg, #000 0%, rgb(0 0 0 / 0.55) 45%, transparent 88%);
+    -webkit-mask-image: linear-gradient(100deg, #000 0%, rgb(0 0 0 / 0.55) 45%, transparent 88%);
   }
+
+  /* Illumination: one wide, weak key from upper-left. Luminance only —
+     the accent is not the atmosphere. */
+  .auth-key-light {
+    background: radial-gradient(64rem 46rem at 18% 6%, rgb(255 255 255 / 0.035), transparent 76%);
+  }
+
+  /* THE SEAM. Same token and same 1px width as the workspace rail, so the
+     two are literally the same object in two states. */
+  .auth-seam {
+    background: var(--rail);
+  }
+
   .auth-frame {
     position: relative;
     display: flex;
-    width: min(100%, 56rem);
+    min-height: 100dvh;
+    width: 100%;
     flex-direction: column;
-    align-items: stretch;
+    justify-content: center;
     gap: 1.75rem;
+    padding: 2rem 1rem;
   }
+  @media (min-width: 1024px) {
+    .auth-frame {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1px minmax(0, 1fr);
+      align-items: stretch;
+      gap: 0;
+      padding: 0;
+    }
+  }
+
   .auth-identity {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 0.5rem;
-    text-align: center;
   }
-  .auth-identity-kicker {
-    font-size: 0.75rem;
-    font-weight: 400;
-    line-height: 1.5;
-    color: hsl(var(--muted-foreground));
-    letter-spacing: 0.04em;
-  }
-  .auth-identity-note {
-    display: none;
-    max-width: 16rem;
-    font-size: 0.8125rem;
-    line-height: 1.45;
-    color: hsl(var(--muted-foreground) / 0.9);
-  }
+
+  /* The authentication surface — a Plane. */
   .auth-surface {
     width: 100%;
-    max-width: 26.25rem;
-    margin-inline: auto;
-    border: 1px solid hsl(var(--border));
-    border-radius: var(--radius-dialog);
+    max-width: 25rem;
+    border-radius: var(--r-surface);
+    border: 1px solid var(--line-soft);
     background-color: hsl(var(--surface-2));
-    box-shadow: var(--shadow-surface);
+    box-shadow: var(--shadow-surface), 0 1px 0 0 var(--edge-shade);
     padding: 1.75rem 1.5rem;
   }
   .auth-footnote {
@@ -779,22 +816,10 @@
   @media (min-width: 640px) {
     .auth-surface { padding: 2.25rem 2.5rem; }
   }
-  @media (min-width: 1024px) {
-    .auth-frame {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(22rem, 26.25rem);
-      align-items: start;
-      gap: 4rem;
-    }
-    .auth-identity {
-      align-items: flex-start;
-      text-align: left;
-      gap: 0.75rem;
-      padding-top: 2.25rem;
-    }
-    .auth-identity-note { display: block; }
-    .auth-surface { margin-inline: 0; }
-  }
+  /* The superseded two-column override is gone: .auth-frame now IS the
+     chassis grid at lg, so a second competing grid here would have fought
+     the seam's position — and the seam has to land exactly where the
+     workspace rail lands for V7 to work. */
 
   /* ----------------------------------------------------------------
      Surface System (LifeOS convergence, Commit A).
