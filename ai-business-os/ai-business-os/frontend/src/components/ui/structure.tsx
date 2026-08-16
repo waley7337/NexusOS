@@ -22,7 +22,7 @@
  * None of these own a fill. That is deliberate: fill is what makes a thing
  * a Plane, and a Plane is a decision, not a default.
  */
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------
@@ -94,35 +94,52 @@ export function RowGroup({ children, className }: { children: ReactNode; classNa
    lifts one step and the leading edge lights. No translate, no scale —
    material response, not movement.
    ------------------------------------------------------------------ */
-export function Row({
-  marker,
-  register,
-  interactive = false,
-  className,
-  children,
-}: {
+interface RowOwnProps {
   marker?: ReactNode;
   register?: ReactNode;
   interactive?: boolean;
   className?: string;
   children: ReactNode;
-}) {
+}
+
+/**
+ * V3 amended the signature. As shipped in V2, Row was a hard-coded <div>,
+ * and the first three real consumers — capture actions, notification items,
+ * the module list — are all buttons or links. A div cannot be any of them,
+ * and wrapping a button inside a Row would have put the hit target and the
+ * layout on different elements.
+ *
+ * Rather than bend those surfaces to fit the primitive, the primitive became
+ * polymorphic. `as` also carries the interaction props through, so an
+ * interactive Row is genuinely the <button> — one element, one focus ring,
+ * one hit area.
+ */
+export function Row<E extends ElementType = "div">(
+  props: RowOwnProps & { as?: E } & Omit<ComponentPropsWithoutRef<E>, keyof RowOwnProps | "as">,
+) {
+  const { as, marker, register, interactive = false, className, children, ...rest } =
+    props as RowOwnProps & { as?: ElementType } & Record<string, unknown>;
+  const Comp = (as ?? "div") as ElementType;
+
   return (
-    <div
+    <Comp
       className={cn(
-        "flex items-start gap-3 px-1 py-3",
-        interactive && "motion-respond transition-colors hover:bg-surface-2",
+        "flex w-full items-start gap-3 px-1 py-3 text-left",
+        interactive && "focus-ring motion-respond transition-colors hover:bg-surface-2",
         className,
       )}
+      {...rest}
     >
       {marker !== undefined && (
-        <span className="mt-0.5 flex w-4 shrink-0 justify-center text-muted-foreground">{marker}</span>
+        <span className="mt-0.5 flex w-4 shrink-0 justify-center text-disabled-foreground">
+          {marker}
+        </span>
       )}
       <div className="min-w-0 flex-1">{children}</div>
       {register !== undefined && (
         <span className="text-machine mt-0.5 shrink-0 whitespace-nowrap">{register}</span>
       )}
-    </div>
+    </Comp>
   );
 }
 

@@ -42,6 +42,7 @@ import { ShellStatusBar } from "@/components/ui/shell-status-bar";
 import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Row, RowGroup } from "@/components/ui/structure";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -135,7 +136,7 @@ export function AppLayout() {
     // away with the document. dvh rather than vh so mobile browser chrome
     // collapsing doesn't leave the bar off-screen.
     <TooltipProvider delayDuration={150} skipDelayDuration={200}>
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className="chassis h-dvh overflow-hidden bg-background" data-collapsed={collapsed}>
       <CommandPalette />
       <MobileSidebar
         chrome={{
@@ -175,27 +176,28 @@ export function AppLayout() {
               description="Modules register their create actions here as they ship."
             />
           ) : (
-            <div className="max-h-80 space-y-1 overflow-y-auto">
+            /* V3: first production consumer of the V2 RowGroup/Row pair.
+               Hairline-separated rows with no container — the dialog is
+               already the bounded surface, so a second box inside it was
+               redundant. */
+            <RowGroup className="max-h-80 overflow-y-auto">
               {captureActions.map((action) => (
-                <button
+                <Row
                   key={action.id}
+                  as="button"
                   type="button"
+                  interactive
+                  marker={<action.icon className="h-4 w-4" aria-hidden="true" />}
+                  className="items-center rounded-control text-sm text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     setCaptureOpen(false);
                     action.onSelect();
                   }}
-                  className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-4 hover:text-foreground focus-ring"
                 >
-                  {/* V2: de-chipped, matching the command palette. The row's
-                      own hover fill already carries the interaction; a tinted
-                      square behind the icon just added a second one. */}
-                  <span className="flex w-4 shrink-0 items-center justify-center text-disabled-foreground group-hover:text-primary">
-                    <action.icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <span className="flex-1 truncate">{action.label}</span>
-                </button>
+                  <span className="block truncate">{action.label}</span>
+                </Row>
               ))}
-            </div>
+            </RowGroup>
           )}
         </DialogContent>
       </Dialog>
@@ -229,29 +231,27 @@ export function AppLayout() {
             <section className="space-y-3">
               <h3 className="text-caption">Personal information</h3>
 
-              <div className="divide-y divide-line-soft rounded-card border border-line-soft bg-surface-1">
-                <div className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-3">
-                  <span className="text-sm text-muted-foreground">
-                    Name
-                  </span>
+              {/* V3: RowGroup semantics — hairline rows, no container. The
+                  dialog is already the bounded surface; the box around
+                  these rows drew a second boundary to express the same
+                  grouping the rules already expressed. */}
+              <div className="divide-y divide-line-soft">
+                <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+                  <span className="text-machine">Name</span>
                   <span className="min-w-0 break-words text-sm font-medium">
                     {user?.name ?? "—"}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-3">
-                  <span className="text-sm text-muted-foreground">
-                    Email
-                  </span>
+                <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+                  <span className="text-machine">Email</span>
                   <span className="min-w-0 break-all text-sm font-medium">
                     {user?.email ?? "—"}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-3">
-                  <span className="text-sm text-muted-foreground">
-                    Email status
-                  </span>
+                <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+                  <span className="text-machine">Email status</span>
                   <span className="text-sm font-medium">
                     {user?.emailVerified ? "Verified" : "Not verified"}
                   </span>
@@ -262,20 +262,20 @@ export function AppLayout() {
             <section className="space-y-3">
               <h3 className="text-caption">Company</h3>
 
-              <div className="divide-y divide-line-soft rounded-card border border-line-soft bg-surface-1">
-                <div className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-3">
-                  <span className="text-sm text-muted-foreground">
-                    Company
-                  </span>
+              {/* V3: RowGroup semantics — hairline rows, no container. The
+                  dialog is already the bounded surface; the box around
+                  these rows drew a second boundary to express the same
+                  grouping the rules already expressed. */}
+              <div className="divide-y divide-line-soft">
+                <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+                  <span className="text-machine">Company</span>
                   <span className="min-w-0 break-words text-sm font-medium">
                     {user?.companyName ?? "—"}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 items-start gap-2 px-4 py-3 sm:grid-cols-[7.5rem_minmax(0,1fr)_auto] sm:items-center sm:gap-3">
-                  <span className="text-sm text-muted-foreground">
-                    Company URL
-                  </span>
+                <div className="grid grid-cols-1 items-start gap-2 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-center sm:gap-3">
+                  <span className="text-machine">Company URL</span>
 
                   <code className="min-w-0 break-all text-sm text-foreground">
                     {user?.companySlug ?? "—"}
@@ -307,10 +307,14 @@ export function AppLayout() {
       {/* surface-1 (one step below the card level) + blur: the sidebar now
           reads as chrome sitting behind the content rather than as another
           card. Previously it was bg-card, byte-identical to every panel. */}
+      {/* V3: the sidebar no longer owns its own width or its own boundary.
+          Width comes from the chassis grid track, so it cannot desync from
+          the rail or the content origin; the border-r is gone because the
+          boundary is now the rail track, which spans the full chassis
+          height rather than stopping where the aside stops. */}
       <aside
         className={cn(
-          "hidden min-w-0 shrink-0 flex-col overflow-hidden border-r border-line-soft bg-surface-1/95 backdrop-blur-xl transition-[width] duration-spatial ease-in-out-quint md:flex",
-          collapsed ? "w-sidebar-collapsed" : "w-sidebar",
+          "hidden min-w-0 flex-col overflow-hidden bg-surface-1 md:flex",
         )}
       >
         {/* Fixed height in both states (previously h-14 vs h-[4.75rem]) so
@@ -358,9 +362,11 @@ export function AppLayout() {
                 draggable={false}
               />
             </div>
-            <div className="truncate text-2xs text-muted-foreground">
-              Business Operating System
-            </div>
+            {/* V3: the nameplate is machine register. It is the product's
+                own identity string sitting in the chassis, not a sentence
+                anyone wrote for a reader — and folding it into the register
+                removes a chassis type style that existed only here. */}
+            <div className="text-machine truncate">Business Operating System</div>
           </motion.div>
         </div>
 
@@ -397,7 +403,7 @@ export function AppLayout() {
               )}
             >
               <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-4 text-xs font-semibold"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-4 font-mono text-2xs font-medium"
                 aria-hidden="true"
               >
                 {userInitial}
@@ -413,7 +419,7 @@ export function AppLayout() {
                   {user?.name ?? "Guest"}
                 </p>
 
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="text-machine truncate">
                   {user?.companyName ?? "No company"}
                 </p>
               </motion.div>
@@ -454,8 +460,21 @@ export function AppLayout() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-shell-header shrink-0 items-center gap-3 border-b border-line-soft bg-surface-1/80 px-4 backdrop-blur-xl md:px-6">
+      {/* ---- THE STRUCTURAL RAIL ----
+          A real 1px grid track, full chassis height, from the top of the
+          header to the bottom of the system register. This is the product's
+          single continuity device and the object V7 will later transform
+          from the login seam. It is decorative to assistive tech. */}
+      <span className="chassis-rail hidden md:block" aria-hidden="true" />
+
+      <div className="flex min-w-0 flex-col overflow-hidden">
+        {/* V3: de-filled. The header was a second horizontal card
+            (bg-surface-1/80 + blur), so the chassis read as two stacked
+            bars. It is now controls ATTACHED to the chassis: no fill, a
+            single soft hairline beneath, and the rail to its left doing the
+            structural work. --line-soft deliberately, so the horizontal
+            separation stays weaker than the vertical rail. */}
+        <header className="flex h-shell-header shrink-0 items-center gap-2 border-b border-line-soft px-3 md:px-5">
           <IconTooltip label="Open navigation">
           <Button
             type="button"
@@ -492,18 +511,36 @@ export function AppLayout() {
 
           <div className="hidden h-5 w-px shrink-0 bg-line-soft md:block" aria-hidden="true" />
 
+          {/* V3: progressive reduction, CSS only — no viewport JS.
+              The label was a single fixed string that wrapped to two lines
+              and overflowed its own field at 390px. Three representations
+              now share one control:
+
+                >=lg   icon + "Search pages and actions…" + ⌘K
+                >=sm   icon + "Search…"
+                <sm    icon only, square
+
+              The accessible name is a constant aria-label, so it stays
+              complete at every width regardless of which span is visible;
+              the visible copy is aria-hidden to avoid announcing it twice.
+              Recessed like every other control (V2), not a raised field. */}
           <button
             type="button"
             onClick={toggleCommandPalette}
-            className="focus-ring flex h-9 flex-1 items-center gap-2 rounded-lg border bg-surface-2 px-3 text-sm text-muted-foreground transition-colors duration-fast hover:border-line-strong hover:text-foreground md:max-w-md"
+            aria-label="Search pages and actions"
+            aria-keyshortcuts="Meta+K"
+            className="focus-ring group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-control border border-line-soft bg-surface-0 text-muted-foreground shadow-[inset_0_1px_2px_0_var(--edge-shade)] transition-colors duration-fast hover:border-line-strong hover:text-foreground sm:w-auto sm:flex-1 sm:justify-start sm:px-3 md:max-w-sm lg:max-w-md"
           >
             <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
 
-            <span className="flex-1 text-left">
+            <span className="hidden flex-1 truncate text-left text-sm sm:inline lg:hidden" aria-hidden="true">
+              Search…
+            </span>
+            <span className="hidden flex-1 truncate text-left text-sm lg:inline" aria-hidden="true">
               Search pages and actions…
             </span>
 
-            <span className="ml-2 hidden items-center gap-0.5 sm:flex">
+            <span className="ml-2 hidden shrink-0 items-center gap-0.5 lg:flex" aria-hidden="true">
               <kbd className="kbd">⌘</kbd>
               <kbd className="kbd">K</kbd>
             </span>
@@ -550,6 +587,9 @@ export function AppLayout() {
         <ShellStatusBar
           variant={systemStatus.variant}
           label={systemStatus.label}
+          api={systemStatus.api}
+          db={systemStatus.db}
+          environment={systemStatus.environment}
           lastSyncedAt={systemStatus.lastSyncedAt}
           now={clock}
           onCommandPalette={toggleCommandPalette}

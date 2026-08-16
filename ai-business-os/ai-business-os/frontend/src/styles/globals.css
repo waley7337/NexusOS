@@ -14,6 +14,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------
+   CHASSIS GEOMETRY (V3).
+
+   --sidebar-w is registered so it can be ANIMATED. A bare custom
+   property is not interpolatable, which is why the sidebar previously
+   had to animate its own `width` while the rail, header and content
+   origin were laid out independently — four elements arriving at the new
+   geometry on four separate clocks, which is what made collapse read as
+   several components resizing rather than one mechanism moving.
+
+   Registered as a <length>, the shell's single grid track list
+   interpolates, and the rail, the header's left edge and the content
+   origin are all derived from that one track. One property, one clock,
+   one mechanism.
+
+   Declared outside @layer so the registration is never tree-shaken.
+   ------------------------------------------------------------------ */
+@property --sidebar-w {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 270px;
+}
+
 /* ============================================================
    NexusOS Design Tokens — Part 4, single source of truth.
    Source hex values are documented next to each token.
@@ -673,7 +696,7 @@
 
   /* Keycap. */
   .kbd {
-    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-md border px-1.5 font-mono text-2xs text-muted-foreground;
+    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-control border px-1.5 font-mono text-2xs font-medium text-muted-foreground;
     border-color: var(--line);
     background-color: hsl(var(--surface-4));
   }
@@ -1019,6 +1042,50 @@
    component's decision, which is what keeps the grammar from degrading
    into a pile of animation presets.
    ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   CHASSIS (V3).
+
+   The shell is one grid, not a sidebar next to a stack of bars:
+
+     ┌ NAVIGATION ┆ WORKSPACE
+     │            ┆
+     └ SYSTEM     ┆
+
+   `.chassis` owns the track list. Collapse animates --sidebar-w, and
+   because every column derives from it, the rail, the header's left
+   edge and the content origin travel together. The middle track is the
+   rail itself: 1px of real layout, not a border on the sidebar. That
+   matters twice over — a border belongs to the sidebar and stops where
+   it stops, whereas a track spans the full chassis height including the
+   header and the system register; and V7 needs the rail to be an
+   addressable element with stable geometry, which a border is not.
+   ------------------------------------------------------------------ */
+.chassis {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1px minmax(0, 1fr);
+  transition: --sidebar-w var(--duration-spatial) var(--ease-in-out-quint);
+}
+.chassis[data-collapsed="true"] {
+  --sidebar-w: var(--sidebar-w-collapsed);
+}
+/* Below the sidebar breakpoint the navigation and rail tracks collapse to
+   zero: the mobile chassis is a single column with a drawer, not a
+   desktop layout with a hidden aside. */
+@media (max-width: 767.98px) {
+  .chassis {
+    grid-template-columns: minmax(0, 1fr);
+    transition: none;
+  }
+}
+
+/* The structural rail. The only full-height line in the product, and the
+   only consumer of --rail in the chassis. Neutral graphite, hairline, no
+   glow, no gradient, no animation of its own — it does not move, the
+   grid moves it. */
+.chassis-rail {
+  background: var(--rail);
+}
+
 .motion-travel  { transition-duration: var(--duration-spatial);  transition-timing-function: var(--ease-in-out-quint); }
 .motion-resolve { transition-duration: var(--duration-standard); transition-timing-function: var(--ease-out-quart); }
 .motion-respond { transition-duration: var(--duration-fast);     transition-timing-function: var(--ease-out-quart); }
@@ -1259,6 +1326,14 @@
   .motion-resolve {
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out-quart);
+  }
+
+  /* The chassis reconfigures instantly rather than travelling. The new
+     geometry is still fully expressed — sidebar width, rail position and
+     content origin all land in their collapsed state — so orientation and
+     state survive; only the journey is removed. */
+  .chassis {
+    transition: none;
   }
 
   /* BREATHE is ambient by definition and carries no state the user needs.

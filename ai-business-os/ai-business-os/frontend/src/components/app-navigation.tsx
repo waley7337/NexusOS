@@ -8,7 +8,6 @@ import { NAV_ITEMS, type NavItem } from "@/constants/routes";
 import { prefetchRoute } from "@/routes/prefetch";
 import { useUiStore } from "@/stores/ui";
 import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/tooltip";
 
@@ -118,16 +117,22 @@ function NavItems({ collapsed = false, onNavigate }: AppNavigationProps) {
       ))}
 
       {MORE_ITEMS.length > 0 && (
-        <div className="pt-1">
+        // V3: a rule separates the groups, not just spacing. The primary
+        // modules and the rest were previously distinguished only by a gap,
+        // which reads as a list that happens to have a button in it rather
+        // than as two groups. The hairline is --line-soft, deliberately
+        // weaker than the chassis rail: this is a division inside a region,
+        // not a structural boundary.
+        <div className="mt-2 border-t border-line-soft pt-2">
           <button
             type="button"
             onClick={() => setMoreOpen((v) => !v)}
             aria-expanded={moreOpen}
-            className="focus-ring flex w-full items-center gap-2 rounded-lg px-3 py-2 text-2xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors duration-fast hover:bg-surface-3 hover:text-foreground"
+            className="focus-ring text-machine flex w-full items-center gap-2 rounded-control px-3 py-2 transition-colors duration-fast hover:bg-surface-3 hover:text-foreground"
           >
             <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-fast", !moreOpen && "-rotate-90")} />
             <span className="flex-1 text-left">More modules</span>
-            <Badge>{MORE_ITEMS.length}</Badge>
+            <span className="num tabular-nums">{MORE_ITEMS.length}</span>
           </button>
 
           {moreOpen && (

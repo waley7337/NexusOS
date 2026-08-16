@@ -1,33 +1,45 @@
 /**
- * ShellStatusBar — the persistent monospace status strip across the bottom of
- * the application shell (Part 04 convergence, Commit C).
+ * ShellStatusBar — the chassis' machine register (reconstructed, V3).
  *
- * Replaces the status block that previously sat in the sidebar footer; the
- * status is deliberately rendered in exactly one place. Sitting at the foot of
- * the shell rather than inside the sidebar means it stays visible and
- * correctly positioned whether the sidebar is expanded, collapsed, or (on
- * mobile) not rendered at all, because it lives in the content column.
+ * This is the product's natural home for V1's mono machine language: every
+ * value here is something a machine reported, and none of it is prose.
  *
- * Data: every value comes from a real source — useSystemStatus (navigator.onLine
- * plus the dashboard health/ready snapshot cache) and useLiveClock. Nothing
- * here is a hardcoded "operational" string.
+ * V3 changes what it SAYS, not where it lives. It used to collapse the whole
+ * system into one sentence ("Connected", "Database unavailable") next to a
+ * coloured dot — a status widget. It now reads as instrumentation:
  *
- * A11y:
- *  - the status region is role="status" aria-live="polite", so a screen-reader
- *    user is told when the system degrades or recovers, without the update
- *    stealing focus;
- *  - the clock is aria-hidden — a per-second live region would flood a
- *    screen reader with meaningless announcements;
- *  - the ⌘K affordance is a real <button>, reachable and operable by keyboard,
- *    not a decorative keycap.
+ *     ● API / READY    DB / READY    ENV / PRODUCTION      14:22:01   ⌘K
+ *
+ * Rules this follows:
+ *  - Truth only. Every segment comes from useSystemStatus, which derives
+ *    from GET /health + GET /ready and navigator.onLine. A probe that has
+ *    not resolved renders "—", not a guess, because "unknown" and "down"
+ *    are different facts.
+ *  - ENV renders only when the API actually reported one.
+ *  - Healthy is QUIET: neutral text, no colour, so a nominal system never
+ *    competes with product content. Only degradation earns colour, which is
+ *    the one case where the register should pull the eye.
+ *  - The chassis is separated from content by the rail and a hairline, not
+ *    by a fill.
+ *
+ * A11y (unchanged from the previous version):
+ *  - one role="status" aria-live="polite" region carrying the human summary,
+ *    so a screen reader hears "Database unavailable", not "DB slash DOWN";
+ *  - the per-segment register is aria-hidden — it is a visual restatement of
+ *    that same summary, and announcing both would double every change;
+ *  - the clock is aria-hidden (a per-second live region is noise);
+ *  - ⌘K is a real button, reachable and operable by keyboard.
  */
-import { Clock } from "lucide-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
-import { StatusPill, type StatusPillVariant } from "./status-pill";
+import type { ProbeState } from "@/hooks/useSystemStatus";
+import type { StatusPillVariant } from "./status-pill";
 
 interface ShellStatusBarProps {
   variant: StatusPillVariant;
   label: string;
+  api: ProbeState;
+  db: ProbeState;
+  environment: string | null;
   lastSyncedAt: number | null;
   /** Current time — passed in so the whole shell shares one ticking clock. */
   now: Date;
@@ -35,9 +47,37 @@ interface ShellStatusBarProps {
   className?: string;
 }
 
+const PROBE_TEXT: Record<ProbeState, string> = {
+  ok: "READY",
+  down: "DOWN",
+  unknown: "—",
+};
+
+const DOT: Record<StatusPillVariant, string> = {
+  online: "bg-success",
+  warning: "bg-warning",
+  offline: "bg-destructive",
+};
+
+/** One instrument segment. Neutral unless the probe is actually down. */
+function Segment({ name, state }: { name: string; state: ProbeState }) {
+  return (
+    <span className="hidden items-center gap-1 sm:inline-flex">
+      <span className="text-disabled-foreground">{name}</span>
+      <span className="text-disabled-foreground">/</span>
+      <span className={cn(state === "down" ? "text-destructive" : "text-muted-foreground")}>
+        {PROBE_TEXT[state]}
+      </span>
+    </span>
+  );
+}
+
 export function ShellStatusBar({
   variant,
   label,
+  api,
+  db,
+  environment,
   lastSyncedAt,
   now,
   onCommandPalette,
@@ -48,44 +88,54 @@ export function ShellStatusBar({
   return (
     <footer
       className={cn(
-        // shrink-0 keeps the bar at its intrinsic height inside the shell's
-        // flex column; pb env() clears the iOS home indicator.
-        // shrink-0 keeps the bar at its intrinsic height inside the shell's
-        // flex column; pb env() clears the iOS home indicator. border-line-soft
-        // is the Tailwind utility for the same --line-soft token previously
-        // set via inline style — presentation only, no behaviour change.
-        "flex h-8 shrink-0 items-center justify-between gap-4 border-t border-line-soft px-4 font-mono text-2xs text-muted-foreground backdrop-blur",
+        // No fill: the register is part of the chassis, separated by a
+        // hairline and the rail rather than by another filled bar.
+        "flex h-8 shrink-0 items-center justify-between gap-4 border-t border-line-soft px-3 font-mono text-2xs font-medium tracking-[0.08em] text-muted-foreground md:px-5",
         className,
       )}
-      style={{
-        backgroundColor: "hsl(var(--surface-1) / 0.8)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="flex min-w-0 items-center gap-4">
-        <div role="status" aria-live="polite" className="min-w-0 truncate">
-          <StatusPill variant={variant} label={label} />
-        </div>
+      <div className="flex min-w-0 items-center gap-3">
+        {/* The dot is the only colour, and the only thing that survives at
+            the narrowest width. */}
+        <span
+          className={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[variant])}
+          aria-hidden="true"
+        />
 
-        {synced && (
-          <span className="num hidden truncate sm:inline">Synced {synced}</span>
-        )}
+        {/* Screen readers get the human summary, once. */}
+        <span role="status" aria-live="polite" className="sr-only">
+          {label}
+        </span>
+
+        <span className="flex min-w-0 items-center gap-3 truncate tabular-nums" aria-hidden="true">
+          <Segment name="API" state={api} />
+          <Segment name="DB" state={db} />
+          {environment && (
+            <span className="hidden items-center gap-1 lg:inline-flex">
+              <span className="text-disabled-foreground">ENV</span>
+              <span className="text-disabled-foreground">/</span>
+              <span className="text-muted-foreground">{environment.toUpperCase()}</span>
+            </span>
+          )}
+          {/* Below sm the segments are hidden; the summary carries it. */}
+          <span className="truncate sm:hidden">{label.toUpperCase()}</span>
+        </span>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4">
-        <span className="num hidden items-center gap-1.5 md:inline-flex" aria-hidden="true">
-          <Clock className="h-3 w-3" />
+      <div className="flex shrink-0 items-center gap-3 tabular-nums">
+        {synced && <span className="hidden md:inline">SYNC / {synced.toUpperCase()}</span>}
+
+        <span className="hidden lg:inline" aria-hidden="true">
           {now.toLocaleTimeString([], { hour12: false })}
         </span>
 
         <button
           type="button"
           onClick={onCommandPalette}
-          className="focus-ring inline-flex items-center gap-1.5 rounded transition-colors hover:text-foreground"
+          className="focus-ring rounded transition-colors duration-fast hover:text-foreground"
         >
-          {/* The glyph is the affordance — pairing a Command icon with the
-              literal "⌘K" rendered the symbol twice in a row. */}
-          <span className="num">⌘K</span>
+          <span aria-hidden="true">⌘K</span>
           <span className="sr-only">Open the command palette</span>
         </button>
       </div>
