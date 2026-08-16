@@ -171,6 +171,26 @@ export function LeadDetail({
         </dl>
       </section>
 
+      <Can permission="deals.read">
+        <section aria-labelledby="lead-deals">
+          <h4
+            id="lead-deals"
+            className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            Deals
+          </h4>
+          <p className="mb-2 text-xs text-muted-foreground">
+            View deals filtered to this lead. Conversion is not automated.
+          </p>
+          <Link
+            to={`${ROUTES.crmDeals}?leadId=${lead.id}`}
+            className="text-sm text-primary underline-offset-2 hover:underline focus-ring rounded"
+          >
+            View deals for this lead
+          </Link>
+        </section>
+      </Can>
+
       <section aria-labelledby="lead-opportunity">
         <h4
           id="lead-opportunity"

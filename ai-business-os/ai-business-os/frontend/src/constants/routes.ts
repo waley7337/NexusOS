@@ -16,6 +16,7 @@ export const ROUTES = {
   crmCustomers: "/crm/customers",
   crmContacts: "/crm/contacts",
   crmLeads: "/crm/leads",
+  crmDeals: "/crm/deals",
   projects: "/projects",
   tasks: "/tasks",
   hr: "/hr",

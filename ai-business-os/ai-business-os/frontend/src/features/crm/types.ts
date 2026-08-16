@@ -1,4 +1,4 @@
-/** CRM Customers + Contacts + Leads — wire types matching backend contracts. */
+/** CRM Customers + Contacts + Leads + Deals — wire types matching backend contracts. */
 
 export const CUSTOMER_STATUSES = ["lead", "active", "inactive", "churned"] as const;
 export type CustomerStatus = (typeof CUSTOMER_STATUSES)[number];
@@ -169,3 +169,57 @@ export interface LeadCreatePayload {
 }
 
 export type LeadUpdatePayload = Partial<LeadCreatePayload>;
+
+// ---------------------------------------------------------------------------
+// Deals
+// ---------------------------------------------------------------------------
+
+export const DEAL_STATUSES = ["open", "won", "lost"] as const;
+export type DealStatus = (typeof DEAL_STATUSES)[number];
+
+export const DEAL_SORT_FIELDS = ["created_at", "value", "status"] as const;
+export type DealSortField = (typeof DEAL_SORT_FIELDS)[number];
+
+export interface Deal {
+  id: string;
+  companyId: string;
+  leadId: string;
+  value: string | number;
+  currency: string;
+  status: DealStatus;
+  wonAt: string | null;
+  lostReason: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedAt: string | null;
+}
+
+export interface DealListParams {
+  page?: number;
+  pageSize?: number;
+  sortBy?: DealSortField;
+  sortDesc?: boolean;
+  leadId?: string;
+  status?: DealStatus;
+}
+
+export interface DealCreatePayload {
+  leadId: string;
+  value: string | number;
+  currency?: string;
+  status?: DealStatus;
+  wonAt?: string | null;
+  lostReason?: string | null;
+}
+
+/** Partial update — leadId is intentionally absent (immutable after create). */
+export interface DealUpdatePayload {
+  value?: string | number | null;
+  currency?: string | null;
+  status?: DealStatus | null;
+  wonAt?: string | null;
+  lostReason?: string | null;
+}

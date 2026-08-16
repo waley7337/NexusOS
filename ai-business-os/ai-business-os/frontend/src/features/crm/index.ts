@@ -1,4 +1,4 @@
-/** CRM module — Customers (06.3) + Contacts (06.5) + Leads (06.7). */
+/** CRM module — Customers / Contacts / Leads / Deals. */
 
 export type {
   Customer,
@@ -18,6 +18,12 @@ export type {
   LeadSortField,
   LeadUpdatePayload,
   PipelineStage,
+  Deal,
+  DealCreatePayload,
+  DealListParams,
+  DealSortField,
+  DealStatus,
+  DealUpdatePayload,
 } from "./types";
 
 export {
@@ -26,6 +32,8 @@ export {
   CONTACT_SORT_FIELDS,
   LEAD_SORT_FIELDS,
   PIPELINE_STAGES,
+  DEAL_SORT_FIELDS,
+  DEAL_STATUSES,
 } from "./types";
 
 export {
@@ -53,6 +61,14 @@ export {
 } from "./services/leadsService";
 
 export {
+  listDeals,
+  getDeal,
+  createDeal,
+  updateDeal,
+  archiveDeal,
+} from "./services/dealsService";
+
+export {
   useCustomers,
   useCustomer,
   useCreateCustomer,
@@ -76,7 +92,16 @@ export {
   useArchiveLead,
 } from "./hooks/useLeads";
 
+export {
+  useDeals,
+  useDeal,
+  useCreateDeal,
+  useUpdateDeal,
+  useArchiveDeal,
+} from "./hooks/useDeals";
+
 export { useCustomerOptions } from "./hooks/useCustomerOptions";
+export { useLeadOptions, useBoundDealLeadIds } from "./hooks/useLeadOptions";
 
 export {
   customerFormSchema,
@@ -93,6 +118,12 @@ export {
   type LeadFormValues,
 } from "./schemas/leadSchema";
 
+export {
+  dealFormSchema,
+  type DealFormValues,
+} from "./schemas/dealSchema";
+
 export { CustomersPage } from "./pages/CustomersPage";
 export { ContactsPage } from "./pages/ContactsPage";
 export { LeadsPage } from "./pages/LeadsPage";
+export { DealsPage } from "./pages/DealsPage";

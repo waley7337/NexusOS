@@ -40,6 +40,18 @@ export const queryKeys = {
         ["crm", "leads", "list", params] as const,
       details: () => ["crm", "leads", "detail"] as const,
       detail: (id: string) => ["crm", "leads", "detail", id] as const,
+      /** Bounded options for Deal lead picker / labels (pageSize ≤ 100). */
+      options: () => ["crm", "leads", "options"] as const,
+    },
+    deals: {
+      all: ["crm", "deals"] as const,
+      lists: () => ["crm", "deals", "list"] as const,
+      list: (params: Record<string, unknown>) =>
+        ["crm", "deals", "list", params] as const,
+      details: () => ["crm", "deals", "detail"] as const,
+      detail: (id: string) => ["crm", "deals", "detail", id] as const,
+      /** Bounded active Deal→Lead ids for create-picker filtering. */
+      boundLeadIds: () => ["crm", "deals", "bound-lead-ids"] as const,
     },
   },
 } as const;
