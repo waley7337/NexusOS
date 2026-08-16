@@ -1,20 +1,23 @@
 /**
- * Signature login → workspace transition.
+ * Signature login → NexusOS cinematic entry.
  *
- * Presentational bridge only. Mounted above RouterProvider.
- * Armed AFTER successful authentication (LoginPage). Never delays auth,
- * navigation, prefetch, or authorization.
- *
+ * Presentational only. Armed AFTER successful authentication.
+ * Never delays auth, navigation, prefetch, or authorization.
  * pointer-events: none; aria-hidden.
+ *
+ * Architecture (GPU-friendly):
+ *   dark field → logo resolves → atmosphere opens → product shell
+ *   scales toward camera → overlay fades onto real AppLayout.
+ * Transform + opacity only. No animated filters / blur.
  */
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
 
-/** Full cinematic sequence length. Not a navigation delay. */
-export const AUTH_ENTRY_DURATION_MS = 1650;
-/** Defensive escape hatch if animationend never fires. */
-export const AUTH_ENTRY_FAILSAFE_MS = 2400;
+/** Cinematic band. Not a navigation delay. */
+export const AUTH_ENTRY_DURATION_MS = 1200;
+/** Failsafe if animationend never fires. */
+export const AUTH_ENTRY_FAILSAFE_MS = 1600;
 
 export function AuthEntryOverlay() {
   const active = useUiStore((s) => s.isAuthEntryActive);
@@ -65,37 +68,45 @@ export function AuthEntryOverlay() {
         ["--auth-entry-duration" as string]: `${AUTH_ENTRY_DURATION_MS}ms`,
       }}
     >
-      {/* Depth stack: atmosphere → lights → receding login → product push → seam */}
-      <div className="auth-entry-atmosphere" />
-      <div className="auth-entry-light auth-entry-light--cobalt" />
-      <div className="auth-entry-light auth-entry-light--cyan" />
-      <div className="auth-entry-plane" />
-      <div className="auth-entry-login-glass" />
-      <div className="auth-entry-mark">
+      <div className="auth-entry-field" />
+      <div className="auth-entry-glow auth-entry-glow--a" />
+      <div className="auth-entry-glow auth-entry-glow--b" />
+
+      {/* Spatial fragments — atmospheric only, not operational UI */}
+      <div className="auth-entry-fragments" aria-hidden="true">
+        <span className="auth-entry-frag auth-entry-frag--a" />
+        <span className="auth-entry-frag auth-entry-frag--b" />
+        <span className="auth-entry-frag auth-entry-frag--c" />
+      </div>
+
+      {/* NexusOS identity — spatial anchor */}
+      <div className="auth-entry-identity">
         <img
+          className="auth-entry-symbol"
+          src="/nexusos-logo.png"
+          alt=""
+          width={56}
+          height={56}
+          draggable={false}
+        />
+        <img
+          className="auth-entry-wordmark"
           src="/nexusos-wordmark.png"
           alt=""
-          width={180}
-          height={29}
+          width={200}
+          height={32}
           draggable={false}
         />
       </div>
-      <div className="auth-entry-product">
-        <div className="auth-entry-product-shell">
-          <div className="auth-entry-product-rail" />
-          <div className="auth-entry-product-body">
-            <div className="auth-entry-product-bar" />
-            <div className="auth-entry-product-grid">
-              <span />
-              <span />
-              <span />
-              <span />
-            </div>
-          </div>
+
+      {/* Product shell materializing toward camera */}
+      <div className="auth-entry-shell">
+        <div className="auth-entry-shell-chrome">
+          <div className="auth-entry-shell-rail" />
+          <div className="auth-entry-shell-stage" />
         </div>
       </div>
-      <div className="auth-entry-seam" />
-      <div className="auth-entry-sweep" />
+
       <div className="auth-entry-vignette" />
     </div>
   );

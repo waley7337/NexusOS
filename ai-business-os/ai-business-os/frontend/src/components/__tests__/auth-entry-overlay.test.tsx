@@ -58,10 +58,10 @@ describe("AuthEntryOverlay", () => {
   it("does not clear when a child animation ends", () => {
     useUiStore.getState().armAuthEntry();
     const { container } = render(<AuthEntryOverlay />);
-    const plane = container.querySelector(".auth-entry-plane");
-    expect(plane).not.toBeNull();
+    const field = container.querySelector(".auth-entry-field");
+    expect(field).not.toBeNull();
     act(() => {
-      plane!.dispatchEvent(new Event("animationend", { bubbles: true }));
+      field!.dispatchEvent(new Event("animationend", { bubbles: true }));
     });
     expect(screen.getByTestId("auth-entry-overlay")).toBeInTheDocument();
     expect(useUiStore.getState().isAuthEntryActive).toBe(true);

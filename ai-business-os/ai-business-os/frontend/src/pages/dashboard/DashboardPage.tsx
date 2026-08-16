@@ -7,6 +7,7 @@
  * Decorative waveforms are explicitly non-semantic ambient graphics.
  */
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -66,6 +67,19 @@ export function DashboardPage() {
   const storyRef = useRevealOnScroll<HTMLElement>();
   const modulesRef = useRevealOnScroll<HTMLElement>();
 
+  /* One-shot cinema after auth entry — never replay on later module visits. */
+  const [cinemaEntry] = useState(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return false;
+    }
+    const pending = useUiStore.getState().pendingCinematicReveal;
+    if (pending) useUiStore.getState().clearCinematicReveal();
+    return pending;
+  });
+
   const firstName = user?.name?.split(" ")[0] ?? "there";
   const dateLabel = clock.toLocaleDateString(undefined, {
     weekday: "long",
@@ -92,7 +106,10 @@ export function DashboardPage() {
       : null;
 
   return (
-    <div className="space-y-10 pb-8">
+    <div
+      className={cn("space-y-10 pb-8", cinemaEntry && "cinema-entry")}
+      data-cinema={cinemaEntry ? "entry" : undefined}
+    >
       {/* ===== Cinematic product stage ===== */}
       <div
         ref={stageRef}
@@ -104,6 +121,7 @@ export function DashboardPage() {
             className="product-hero mb-8 max-w-2xl space-y-4"
             data-motion={motionAttr}
           >
+            <div className="cinema-hero space-y-4">
             <p className="text-sm font-medium text-primary/90">
               {user?.companyName ?? "NexusOS"}
             </p>
@@ -134,14 +152,15 @@ export function DashboardPage() {
                 Search workspace
               </Button>
             </div>
+            </div>
           </header>
 
           <div className="product-stage-frame" data-motion={motionAttr}>
-            <div className="space-y-4 rounded-[var(--r-panel)] border border-[rgb(160_190_255_/_0.12)] bg-[hsl(var(--surface-1)/0.55)] p-3 shadow-[0_0_60px_-28px_var(--glow-blue)] sm:p-4">
+            <div className="mission-primary cinema-stage space-y-4 rounded-[var(--r-panel)] border border-[rgb(160_190_255_/_0.14)] bg-[hsl(var(--surface-1)/0.72)] p-3 shadow-[0_0_60px_-28px_var(--glow-blue),0_1px_0_0_rgb(180_210_255_/_0.08)_inset] sm:p-4">
               {/* Signal row */}
               <section
                 aria-label="System signals"
-                className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                className="cinema-signals grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
               >
                 <SignalPanel
                   label="API"
@@ -189,7 +208,7 @@ export function DashboardPage() {
               {/* Primary + secondary panels */}
               <section
                 aria-label="Operations"
-                className="grid gap-3 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]"
+                className="cinema-ops grid gap-3 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]"
               >
                 <Plane className="relative overflow-hidden p-5 sm:p-6">
                   <div
@@ -519,6 +538,7 @@ function ReadinessRing({
 /**
  * Ambient waveform — decorative only.
  * Not a chart of business data. No axis labels implying metrics.
+ * Transform-only phase motion — no SVG feGaussianBlur (paint cost).
  */
 function AmbientWaveform() {
   return (
@@ -538,13 +558,6 @@ function AmbientWaveform() {
               <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
-            <filter id="nx-wave-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
           </defs>
           {[48, 88, 128, 168].map((y) => (
             <line
@@ -567,7 +580,7 @@ function AmbientWaveform() {
             fill="none"
             stroke="hsl(var(--primary-soft))"
             strokeWidth="2.25"
-            filter="url(#nx-wave-glow)"
+            strokeOpacity="0.85"
             className="ambient-wave-sheen"
             strokeDasharray="8 14"
           />
@@ -575,7 +588,7 @@ function AmbientWaveform() {
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
-        <div className="flex items-center gap-2 rounded-full border border-line-soft bg-surface-2/90 px-3 py-1.5 backdrop-blur-sm">
+        <div className="flex items-center gap-2 rounded-full border border-line-soft bg-surface-2/90 px-3 py-1.5">
           <LayoutDashboard className="h-3.5 w-3.5 text-disabled-foreground" />
           <span className="text-xs text-muted-foreground">
             Ambient preview · not operational data

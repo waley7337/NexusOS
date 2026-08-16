@@ -1,16 +1,18 @@
 /**
- * Quietly-alive presence for the authenticated shell.
+ * Ambient presence — compositor-friendly.
  *
- * Writes CSS custom properties on the stage element via rAF:
- *   --alive-px / --alive-py   pointer (-1…1), desktop fine pointer only
+ * Writes CSS custom properties via coalesced rAF (never React state):
+ *   --alive-px / --alive-py   pointer (-1…1), fine desktop only
  *   --alive-energy            0 calm → 1 after interaction
  *   --alive-scroll            0…1 main scroll progress
  *
- * No React state on pointer/scroll. Respects prefers-reduced-motion.
+ * Pointer is throttled; uses clientX/innerWidth (no getBoundingClientRect).
+ * Energy settle uses a timeout, not a continuous rAF decay loop.
  */
 import { useEffect, useRef } from "react";
 
-const IDLE_MS = 3200;
+const IDLE_MS = 2800;
+const POINTER_MIN_MS = 32;
 
 export function useAmbientPresence(enabled = true) {
   const ref = useRef<HTMLDivElement>(null);
@@ -37,7 +39,7 @@ export function useAmbientPresence(enabled = true) {
     let scrollP = 0;
     let frame = 0;
     let idleTimer = 0;
-    let energyFrame = 0;
+    let lastPointer = 0;
 
     const paint = () => {
       frame = 0;
@@ -51,68 +53,55 @@ export function useAmbientPresence(enabled = true) {
       if (!frame) frame = window.requestAnimationFrame(paint);
     };
 
-    const settleEnergy = () => {
-      energyFrame = 0;
-      if (energy <= 0.002) {
+    const wake = (nextEnergy = 0.55) => {
+      energy = Math.min(1, Math.max(energy, nextEnergy));
+      root.dataset.alive = "active";
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => {
         energy = 0;
         root.dataset.alive = "calm";
         schedule();
-        return;
-      }
-      energy *= 0.92;
-      schedule();
-      energyFrame = window.requestAnimationFrame(settleEnergy);
-    };
-
-    const wake = () => {
-      energy = Math.min(1, Math.max(energy, 0.55));
-      root.dataset.alive = "active";
-      if (energyFrame) {
-        window.cancelAnimationFrame(energyFrame);
-        energyFrame = 0;
-      }
-      window.clearTimeout(idleTimer);
-      idleTimer = window.setTimeout(() => {
-        energyFrame = window.requestAnimationFrame(settleEnergy);
       }, IDLE_MS);
       schedule();
     };
 
     const onPointer = (event: PointerEvent) => {
-      if (!finePointer.matches) {
-        wake();
-        return;
+      const now = performance.now();
+      if (now - lastPointer < POINTER_MIN_MS) return;
+      lastPointer = now;
+
+      if (finePointer.matches && window.innerWidth > 0 && window.innerHeight > 0) {
+        px = (event.clientX / window.innerWidth) * 2 - 1;
+        py = (event.clientY / window.innerHeight) * 2 - 1;
       }
-      const rect = root.getBoundingClientRect();
-      if (rect.width < 1 || rect.height < 1) return;
-      px = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      py = ((event.clientY - rect.top) / rect.height) * 2 - 1;
-      wake();
+      wake(0.5);
     };
+
+    const onPointerDown = () => wake(0.65);
+    const onFocusIn = () => wake(0.4);
 
     const main = root.querySelector("main");
     const onScroll = () => {
       if (!main) return;
       const max = Math.max(1, main.scrollHeight - main.clientHeight);
       scrollP = Math.min(1, Math.max(0, main.scrollTop / max));
-      wake();
+      wake(0.35);
     };
 
     root.dataset.alive = "calm";
     schedule();
 
     root.addEventListener("pointermove", onPointer, { passive: true });
-    root.addEventListener("pointerdown", wake, { passive: true });
-    root.addEventListener("focusin", wake, { passive: true });
+    root.addEventListener("pointerdown", onPointerDown, { passive: true });
+    root.addEventListener("focusin", onFocusIn, { passive: true });
     main?.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
-      if (energyFrame) window.cancelAnimationFrame(energyFrame);
       window.clearTimeout(idleTimer);
       root.removeEventListener("pointermove", onPointer);
-      root.removeEventListener("pointerdown", wake);
-      root.removeEventListener("focusin", wake);
+      root.removeEventListener("pointerdown", onPointerDown);
+      root.removeEventListener("focusin", onFocusIn);
       main?.removeEventListener("scroll", onScroll);
     };
   }, [enabled]);

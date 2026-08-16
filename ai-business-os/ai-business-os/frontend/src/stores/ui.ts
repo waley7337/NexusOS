@@ -14,6 +14,8 @@ interface UiState {
    * intentional successful LoginPage submit. Not persisted. Never consulted
    * by auth, routing, or authorization. */
   isAuthEntryActive: boolean;
+  /** One-shot Mission Control stagger after auth entry. Cleared by Dashboard. */
+  pendingCinematicReveal: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebarCollapsed: () => void;
   setMobileSidebarOpen: (open: boolean) => void;
@@ -26,6 +28,7 @@ interface UiState {
   toggleCapture: () => void;
   armAuthEntry: () => void;
   clearAuthEntry: () => void;
+  clearCinematicReveal: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -35,6 +38,7 @@ export const useUiStore = create<UiState>((set) => ({
   isNotificationPanelOpen: false,
   isCaptureOpen: false,
   isAuthEntryActive: false,
+  pendingCinematicReveal: false,
   setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
   toggleSidebarCollapsed: () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
   setMobileSidebarOpen: (open) => set({ isMobileSidebarOpen: open }),
@@ -45,6 +49,7 @@ export const useUiStore = create<UiState>((set) => ({
   toggleNotificationPanel: () => set((s) => ({ isNotificationPanelOpen: !s.isNotificationPanelOpen })),
   setCaptureOpen: (open) => set({ isCaptureOpen: open }),
   toggleCapture: () => set((s) => ({ isCaptureOpen: !s.isCaptureOpen })),
-  armAuthEntry: () => set({ isAuthEntryActive: true }),
+  armAuthEntry: () => set({ isAuthEntryActive: true, pendingCinematicReveal: true }),
   clearAuthEntry: () => set({ isAuthEntryActive: false }),
+  clearCinematicReveal: () => set({ pendingCinematicReveal: false }),
 }));
