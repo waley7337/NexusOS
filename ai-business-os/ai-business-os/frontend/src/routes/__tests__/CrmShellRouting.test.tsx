@@ -120,7 +120,7 @@ function renderCrmShell(
     router,
     ...render(
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <RouterProvider router={router} useTransitions={false} />
       </QueryClientProvider>,
     ),
   };
