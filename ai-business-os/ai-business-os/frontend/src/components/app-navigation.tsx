@@ -58,25 +58,16 @@ function NavLinkItem({
             // above in-flow content, which would cover the icon and label.
             <motion.span
               layoutId="nav-active-surface"
-              className="absolute inset-0 -z-10 rounded-lg bg-surface-3 shadow-inset"
+              className="absolute inset-0 -z-10 rounded-lg bg-primary/10 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.22),0_0_24px_-8px_var(--glow-blue)]"
               transition={indicatorTransition}
               aria-hidden="true"
             />
           )}
           {isActive && (
-            // V4: the position marker, and the reason navigation now reads as
-            // spatial rather than as a fill moving between rows. It sits on
-            // the sidebar's outer edge — flush against the chassis rail — and
-            // FLIPs vertically to the new row on every route change, so the
-            // rail visibly reports where you are. The rail is the product's
-            // continuity anchor (V3); this is what makes it answer to
-            // navigation instead of just standing there.
-            //
-            // Violet is correct here and nowhere near decorative: this is
-            // position state, which is exactly what the accent is reserved for.
+            // Position marker on the chassis rail — accent reserved for state.
             <motion.span
               layoutId="nav-rail-marker"
-              className="absolute -right-3 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-primary"
+              className="absolute -right-3 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-primary shadow-[0_0_10px_var(--glow-blue)]"
               transition={indicatorTransition}
               aria-hidden="true"
             />

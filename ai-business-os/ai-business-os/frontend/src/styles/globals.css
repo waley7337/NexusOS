@@ -205,8 +205,10 @@
        same reason — raw `rounded-lg` bypassed these tokens entirely and
        was the single largest source of the old spread.
        ================================================================ */
-    --r-surface: 4px;
-    --r-control: 6px;
+    --r-surface: 14px;
+    --r-control: 10px;
+    --r-panel: 20px;
+    --r-shell: 28px;
     --r-full: 9999px;
 
     --radius-btn: var(--r-control);
@@ -297,6 +299,9 @@
     /* Symmetric accelerate/decelerate, for elements that enter and leave
        along the same axis (drawer, sidebar rail). */
     --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+    /* Premium cinematic ease — long decelerating settle for spatial moves. */
+    --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+    --stagger-small: 70ms;
 
     /* --- Z-index scale (§4.27) --- */
     --z-sticky: 20;
@@ -341,6 +346,11 @@
        luminance, no hue. */
     --glow-ambient-1: rgb(15 23 42 / 0.030);
     --glow-ambient-2: rgb(15 23 42 / 0.018);
+    --glow-ambient-3: rgb(15 23 42 / 0.012);
+    --glow-blue: rgb(47 111 239 / 0.18);
+    --glow-cyan: rgb(34 200 232 / 0.1);
+    --accent-cyan: 191 90% 42%;
+    --accent-violet: 248 70% 58%;
 
     /* --- Surface: glass (Part 04, Phase 1) — floating/elevated surfaces
        only (hero headers, command palette, notification panel), never
@@ -362,62 +372,51 @@
   }
 
   .dark {
-    /* --- Surface ladder (dark) — true black canvas rising through five
-       near-black steps. 0% saturation throughout: genuinely neutral, no
-       blue cast at any level. --- */
-    --surface-0: 0 0% 0%;     /* #000000 page canvas — true black */
-    --surface-1: 0 0% 3%;     /* #080808 shell chrome (sidebar, topbar) */
-    --surface-2: 0 0% 5%;     /* #0D0D0D card / panel */
-    --surface-3: 0 0% 7%;     /* #121212 raised / hover */
-    --surface-4: 0 0% 9%;     /* #171717 control fill */
-    --surface-5: 0 0% 11%;    /* #1C1C1C control hover */
+    /* --- Surface ladder (dark) — navy-black cinematic environment.
+       Cool-tinted navy steps (#02040A → #0B1526), not pure black. Blue is
+       illumination, not the fill. --- */
+    --surface-0: 225 67% 2.4%;  /* #02040A canvas */
+    --surface-1: 222 61% 4%;    /* #050914 chassis chrome */
+    --surface-2: 220 61% 7%;    /* #07101D card / panel */
+    --surface-3: 218 52% 9%;    /* #0B1526 raised / hover */
+    --surface-4: 217 45% 11%;   /* #101B2E control fill */
+    --surface-5: 216 40% 14%;   /* #152238 control hover */
 
-    /* --- Hairlines (dark): white at low alpha, so every border is a lit
-       edge whose apparent brightness tracks the surface under it. --- */
-    /* Line/rail roles (dark). White at low alpha, so each border is a lit
-       edge whose apparent brightness tracks the surface beneath it.
-       --rail is brighter than the interactive edge on purpose: structure
-       should be the most confident line in the room, and it is what lets
-       hierarchy be drawn with one rule instead of a box. */
-    --line-soft: rgb(255 255 255 / 0.05);
-    --line: rgb(255 255 255 / 0.09);
-    --line-strong: rgb(255 255 255 / 0.16);
-    --rail: rgb(255 255 255 / 0.12);
+    /* Cool-lit edges — faint blue-white rather than pure white. */
+    --line-soft: rgb(160 190 255 / 0.07);
+    --line: rgb(170 200 255 / 0.11);
+    --line-strong: rgb(180 210 255 / 0.18);
+    --rail: rgb(160 190 255 / 0.14);
     --line-focus: hsl(var(--primary) / 0.55);
-    --line-transient: rgb(255 255 255 / 0.11);
+    --line-transient: rgb(180 210 255 / 0.12);
 
     --background: var(--surface-0);
     --card: var(--surface-2);
-    --card-foreground: 0 0% 93%;        /* #EDEDED */
-    --foreground: 0 0% 93%;             /* #EDEDED */
+    --card-foreground: 210 40% 96%;     /* #F1F5F9 */
+    --foreground: 210 40% 96%;
     --muted: var(--surface-4);
-    --muted-foreground: 0 0% 64%;       /* #A3A3A3 */
-    --disabled-foreground: 0 0% 42%;    /* #6B6B6B */
+    --muted-foreground: 215 20% 65%;    /* #94A3B8 */
+    --disabled-foreground: 215 16% 42%;
     --secondary: var(--surface-4);
-    --secondary-foreground: 0 0% 93%;
+    --secondary-foreground: 210 40% 96%;
     --accent: var(--surface-5);
-    --accent-foreground: 0 0% 93%;
+    --accent-foreground: 210 40% 96%;
 
-    /* Composited equivalent of --line over --surface-2, for the
-       remaining hsl(var(--border)) call sites. Migrates in Commits C/D. */
-    --border: 0 0% 13%;                 /* #212121 */
-    --input: 0 0% 13%;                  /* #212121 */
+    --border: 217 35% 14%;
+    --input: 217 35% 14%;
 
-    /* --- Brand: two-step violet (LifeOS convergence).
-       Dark mode needs the LIGHT violet for --primary, because here the
-       accent is read as text/icon against near-black: #7C74FF on #0D0D0D
-       = 5.63:1 (AA). White on #7C74FF would be only 3.62:1 — the exact
-       contrast defect the LifeOS reference ships — so --primary-foreground
-       is near-black instead (5.47:1), keeping every existing
-       `bg-primary text-primary-foreground` pair AA-compliant with no
-       component edit. Filled controls that specifically want white
-       labels use --primary-fill (#5B51E8, white → 5.49:1); Button
-       adopts that in Commit C. */
-    --primary: 244 100% 73%;            /* #7C74FF accent: text/icon/border/glow */
-    --primary-fill: 244 77% 61%;        /* #5B51E8 filled controls, white label */
-    --primary-soft: 244 100% 80%;       /* #A29BFF emphasis / hover */
-    --primary-foreground: 0 0% 4%;      /* #0A0A0A on #7C74FF → 5.47:1 AA */
-    --primary-dim: rgb(124 116 255 / 0.14);
+    /* Brand: electric blue / cyan-blue illumination family.
+       --primary for text/icon/glow on navy; --primary-fill for solid CTAs
+       with white labels (AA on fill). Subtle violet-blue as soft accent. */
+    --primary: 217 96% 68%;             /* #5B9BFF electric blue */
+    --primary-fill: 217 91% 55%;        /* #2F6FEF filled controls */
+    --primary-soft: 199 95% 70%;        /* #5FD4F8 cyan-blue emphasis */
+    --primary-foreground: 0 0% 100%;    /* white on fill */
+    --primary-dim: rgb(47 111 239 / 0.16);
+    --accent-cyan: 191 90% 55%;         /* #22C8E8 */
+    --accent-violet: 248 70% 68%;       /* #8B7CFF restrained violet-blue */
+    --glow-blue: rgb(47 111 239 / 0.28);
+    --glow-cyan: rgb(34 200 232 / 0.18);
 
     /* --- Semantic state colours (dark) — retuned to the LifeOS values,
        which are calibrated for near-black. All pass AA as text on
@@ -434,15 +433,12 @@
 
     --ring: var(--primary);
 
-    /* Directional edge light (dark). The key is upper-left, so a plane
-       catches a faint highlight on its top edge and the room swallows its
-       bottom edge. --edge-shade is pure black rather than a tinted
-       navy: on a true-black canvas any tint reads as colour contamination. */
-    --edge-light: rgb(255 255 255 / 0.045);
-    --edge-shade: rgb(0 0 0 / 0.55);
-    --occlusion-1: 0 1px 2px -1px rgb(0 0 0 / 0.7);
-    --occlusion-2: 0 6px 16px -8px rgb(0 0 0 / 0.75);
-    --occlusion-3: 0 28px 60px -24px rgb(0 0 0 / 0.9);
+    /* Directional edge light (dark). Cool highlight + deep navy shade. */
+    --edge-light: rgb(180 210 255 / 0.08);
+    --edge-shade: rgb(0 4 12 / 0.65);
+    --occlusion-1: 0 1px 2px -1px rgb(0 4 12 / 0.75);
+    --occlusion-2: 0 8px 24px -8px rgb(0 4 12 / 0.7);
+    --occlusion-3: 0 32px 72px -24px rgb(0 4 12 / 0.85);
 
     --surface-inset: 0 1px 0 0 var(--edge-light) inset;
     --surface-inset-strong: 0 1px 0 0 rgb(255 255 255 / 0.07) inset;
@@ -463,15 +459,11 @@
     --shadow-surface: var(--surface-inset), var(--occlusion-1), var(--occlusion-2);
     --shadow-lift: var(--surface-inset-strong), var(--occlusion-2), var(--occlusion-3);
 
-    /* Ambient field (dark) — NEUTRAL as of V1. These were violet 6% and
-       cyan 4%: a page-wide two-hue wash, i.e. exactly "violet as
-       atmosphere" plus the blue contamination this system rejects. The
-       room now gets luminance only — a faint key from upper-left and a
-       weaker fill from upper-right — so depth still exists but the
-       environment has no hue of its own and violet is free to mean
-       something. */
-    --glow-ambient-1: rgb(255 255 255 / 0.030);
-    --glow-ambient-2: rgb(255 255 255 / 0.016);
+    /* Ambient field (dark) — restrained cobalt / cyan atmospheric light.
+       Illumination behind the product, not a bright blue wash. */
+    --glow-ambient-1: rgb(37 99 235 / 0.16);
+    --glow-ambient-2: rgb(34 211 238 / 0.08);
+    --glow-ambient-3: rgb(99 102 241 / 0.06);
 
     /* --- Chart palette (dark) — brightened for AA legibility on
        near-black, same hue family as light mode. --glow-*, --ring and
@@ -499,38 +491,21 @@
      itself is true-black now, so the auth shell mostly inherits and
      just tightens the mid-steps. */
   .dark.auth-shell {
-    /* V6, and load-bearing — this is the reason the block redefines tokens
-       at all. `color` inherits as a RESOLVED value, not as a var()
-       reference, so every descendant without an explicit text class was
-       still inheriting body's LIGHT-theme ink inside this forced-dark
-       scope. Measured on /login: field labels rendered rgb(15,23,41) on a
-       near-black panel — roughly 1.1:1, effectively invisible. Headings
-       looked correct only because they carry text-foreground and re-resolve
-       the variable here.
-
-       Declaring color makes the forced-dark scope actually establish its
-       own inherited colour, which is what this block always claimed to do,
-       and fixes every auth route at once rather than control by control. */
     color: hsl(var(--foreground));
 
-    --surface-0: 0 0% 0%;            /* #000000 page */
-    --surface-1: 0 0% 2.5%;          /* #060606 */
-    --surface-2: 0 0% 4.5%;          /* #0B0B0B card surface */
-    --surface-3: 0 0% 6%;            /* #0F0F0F */
-    --surface-4: 0 0% 8%;            /* #141414 subtle fills */
-    --surface-5: 0 0% 10.5%;         /* #1B1B1B */
+    --surface-0: 225 67% 2.4%;
+    --surface-1: 222 61% 4%;
+    --surface-2: 220 61% 7%;
+    --surface-3: 218 52% 9%;
+    --surface-4: 217 45% 11%;
+    --surface-5: 216 40% 14%;
 
-    --card-foreground: 0 0% 96%;     /* #F5F5F5 */
-    --foreground: 0 0% 96%;          /* #F5F5F5 text primary */
-    --muted-foreground: 0 0% 60%;    /* #999999 text secondary */
-    --disabled-foreground: 0 0% 40%; /* #666666 text disabled */
-    --border: 0 0% 15%;              /* #262626 hairline */
-    --input: 0 0% 15%;
-
-    /* V2: the auth shell no longer overrides the shadow set. It kept a
-       third set of literals, so a dialog on /login was lit by a different
-       light than the same dialog in the workspace. It now inherits the
-       occlusion-derived values from .dark — one light position product-wide. */
+    --card-foreground: 210 40% 96%;
+    --foreground: 210 40% 96%;
+    --muted-foreground: 215 20% 65%;
+    --disabled-foreground: 215 16% 42%;
+    --border: 217 35% 14%;
+    --input: 217 35% 14%;
   }
 
   * { @apply border-border; }
@@ -547,10 +522,19 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image:
-      radial-gradient(900px 500px at 12% -8%, var(--glow-ambient-1), transparent 60%),
-      radial-gradient(1100px 600px at 100% 0%, var(--glow-ambient-2), transparent 55%);
+      radial-gradient(ellipse 90% 55% at 50% 110%, var(--glow-ambient-1), transparent 58%),
+      radial-gradient(ellipse 55% 40% at 12% -5%, var(--glow-ambient-2), transparent 55%),
+      radial-gradient(ellipse 50% 35% at 92% 8%, var(--glow-ambient-3, var(--glow-ambient-2)), transparent 50%);
     background-attachment: fixed;
     background-repeat: no-repeat;
+  }
+
+  /* Light mode keeps restrained graphite ambient (no cyan wash). */
+  :root:not(.dark) body,
+  html:not(.dark) body {
+    background-image:
+      radial-gradient(900px 500px at 12% -8%, var(--glow-ambient-1), transparent 60%),
+      radial-gradient(1100px 600px at 100% 0%, var(--glow-ambient-2), transparent 55%);
   }
 
   /* Dark-theme autofill: keep typed/autofilled text on the input surface
@@ -743,23 +727,44 @@
     @apply relative isolate min-h-dvh overflow-x-hidden overflow-y-auto bg-background;
   }
 
-  /* Structural field. Vertical rules only, at the same 80px pitch the
-     workspace uses for its own structure, faded out toward the right so
-     the form never competes with it. */
+  /* Cinematic atmosphere behind auth (and reusable on the app stage). */
+  .atmosphere {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 85% 55% at 50% 95%, rgb(37 99 235 / 0.28), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 15% 15%, rgb(56 189 248 / 0.1), transparent 50%),
+      radial-gradient(ellipse 45% 35% at 88% 25%, rgb(99 102 241 / 0.08), transparent 52%),
+      radial-gradient(ellipse 120% 90% at 50% 40%, transparent 35%, rgb(2 4 10 / 0.72) 100%);
+  }
+  .atmosphere::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+    mix-blend-mode: overlay;
+  }
+
+  /* Structural field. Soft vertical rhythm, faded toward the form. */
   .auth-rules {
     background-image: repeating-linear-gradient(
       90deg,
-      hsl(var(--foreground) / 0.055) 0 1px,
+      hsl(var(--foreground) / 0.035) 0 1px,
       transparent 1px 80px
     );
-    mask-image: linear-gradient(100deg, #000 0%, rgb(0 0 0 / 0.55) 45%, transparent 88%);
-    -webkit-mask-image: linear-gradient(100deg, #000 0%, rgb(0 0 0 / 0.55) 45%, transparent 88%);
+    mask-image: linear-gradient(100deg, #000 0%, rgb(0 0 0 / 0.45) 45%, transparent 88%);
+    -webkit-mask-image: linear-gradient(100deg, #000 0%, rgb(0 0 0 / 0.45) 45%, transparent 88%);
   }
 
-  /* Illumination: one wide, weak key from upper-left. Luminance only —
-     the accent is not the atmosphere. */
+  /* Illumination: cobalt key from below-center + soft upper fill. */
   .auth-key-light {
-    background: radial-gradient(64rem 46rem at 18% 6%, rgb(255 255 255 / 0.035), transparent 76%);
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 85%, rgb(37 99 235 / 0.22), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 30% 10%, rgb(56 189 248 / 0.08), transparent 55%);
   }
 
   /* THE SEAM. Same token and same 1px width as the workspace rail, so the
@@ -770,6 +775,7 @@
 
   .auth-frame {
     position: relative;
+    z-index: 1;
     display: flex;
     min-height: 100dvh;
     width: 100%;
@@ -794,23 +800,41 @@
     gap: 0.5rem;
   }
 
-  /* The authentication surface — a Plane. */
+  /* Floating glass authentication surface. */
   .auth-surface {
     width: 100%;
-    max-width: 25rem;
-    border-radius: var(--r-surface);
-    border: 1px solid var(--line-soft);
-    background-color: hsl(var(--surface-2));
-    box-shadow: var(--shadow-surface), 0 1px 0 0 var(--edge-shade);
+    max-width: 26rem;
+    border-radius: var(--r-panel);
+    border: 1px solid rgb(160 190 255 / 0.14);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.04), transparent 40%),
+      hsl(var(--surface-2) / 0.88);
+    box-shadow:
+      var(--shadow-surface),
+      0 0 0 1px rgb(37 99 235 / 0.06),
+      0 40px 80px -32px rgb(0 4 12 / 0.9),
+      0 0 80px -20px rgb(37 99 235 / 0.25);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     padding: 1.75rem 1.5rem;
+    animation: auth-surface-enter var(--duration-reveal) var(--ease-premium) both;
   }
   @media (min-width: 640px) {
     .auth-surface { padding: 2.25rem 2.5rem; }
   }
-  /* The superseded two-column override is gone: .auth-frame now IS the
-     chassis grid at lg, so a second competing grid here would have fought
-     the seam's position — and the seam has to land exactly where the
-     workspace rail lands for V7 to work. */
+  @keyframes auth-surface-enter {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-surface { animation: none; }
+  }
 
   /* ----------------------------------------------------------------
      Surface System (LifeOS convergence, Commit A).
@@ -827,7 +851,9 @@
   .surface {
     border-radius: var(--radius-surface);
     border: 1px solid var(--line-soft);
-    background-color: hsl(var(--surface-2));
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent 42%),
+      hsl(var(--surface-2));
     box-shadow: var(--shadow-surface), 0 1px 0 0 var(--edge-shade);
   }
 
@@ -1076,6 +1102,117 @@
 @media (max-width: 767.98px) {
   .chassis {
     grid-template-columns: minmax(0, 1fr);
+    transition: none;
+  }
+}
+
+/* Floating product shell over atmospheric stage. */
+.app-stage {
+  position: relative;
+  isolation: isolate;
+  background: hsl(var(--surface-0));
+}
+.app-stage > .atmosphere {
+  z-index: 0;
+}
+.app-shell-frame {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.app-shell-frame > .chassis {
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--r-shell);
+  border: 1px solid rgb(160 190 255 / 0.14);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 28%),
+    hsl(var(--surface-1) / 0.94);
+  box-shadow:
+    0 1px 0 0 rgb(180 210 255 / 0.08) inset,
+    0 0 0 1px rgb(37 99 235 / 0.05),
+    0 28px 80px -28px rgb(0 4 12 / 0.95),
+    0 0 100px -40px rgb(37 99 235 / 0.35);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+@media (max-width: 767.98px) {
+  .app-shell-frame {
+    padding: 0;
+  }
+  .app-shell-frame > .chassis {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+/* Light mode: keep shell framed but without blue atmospheric bloom. */
+:root:not(.dark) .app-stage > .atmosphere,
+html:not(.dark) .app-stage > .atmosphere {
+  opacity: 0.35;
+  filter: saturate(0.3);
+}
+
+/* Scroll-linked product stage (Mission Control cinematic sequence). */
+.product-stage-track {
+  position: relative;
+  --stage-p: 0;
+}
+.product-stage-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: 0.5rem 1.5rem;
+}
+.product-stage-frame {
+  transform-origin: center top;
+  will-change: transform, opacity;
+  transform: translate3d(0, calc((1 - var(--stage-p)) * 36px), 0)
+    scale(calc(0.82 + (var(--stage-p) * 0.2)));
+  opacity: calc(0.72 + (var(--stage-p) * 0.28));
+  transition: none;
+}
+.product-stage-frame[data-motion="reduce"] {
+  transform: none;
+  opacity: 1;
+  will-change: auto;
+}
+.product-hero {
+  transition: opacity 120ms linear, transform 120ms linear;
+  opacity: calc(1 - (var(--stage-p) * 1.15));
+  transform: translate3d(0, calc(var(--stage-p) * -28px), 0);
+}
+.product-hero[data-motion="reduce"] {
+  opacity: 1;
+  transform: none;
+}
+@media (max-width: 767.98px) {
+  .product-stage-frame {
+    transform: translate3d(0, calc((1 - var(--stage-p)) * 12px), 0)
+      scale(calc(0.94 + (var(--stage-p) * 0.06)));
+  }
+}
+
+/* Reveal sections below the stage. */
+.reveal-section {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity var(--duration-reveal) var(--ease-premium),
+    transform var(--duration-reveal) var(--ease-premium);
+}
+.reveal-section[data-visible="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-section {
+    opacity: 1;
+    transform: none;
     transition: none;
   }
 }

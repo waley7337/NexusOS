@@ -56,7 +56,7 @@ describe("DashboardPage", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: /Waley/ })).toBeInTheDocument();
     expect(screen.getAllByText("Phase B Verify").length).toBeGreaterThan(0);
-    expect(screen.getByText(/owner/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/owner/i).length).toBeGreaterThan(0);
     expect(await screen.findByText("Reachable")).toBeInTheDocument();
     expect(screen.getByText("Ready")).toBeInTheDocument();
     expect(screen.getByText("No operational metrics yet")).toBeInTheDocument();

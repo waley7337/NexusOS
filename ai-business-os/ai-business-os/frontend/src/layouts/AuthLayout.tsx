@@ -25,9 +25,10 @@ import { Outlet } from "react-router-dom";
 export function AuthLayout() {
   return (
     <div className="dark auth-shell auth-page">
-      {/* ---- environment ---- */}
-      <div className="auth-rules pointer-events-none absolute inset-0" aria-hidden="true" />
-      <div className="auth-key-light pointer-events-none absolute inset-0" aria-hidden="true" />
+      {/* ---- cinematic environment ---- */}
+      <div className="atmosphere" aria-hidden="true" />
+      <div className="auth-rules pointer-events-none absolute inset-0 z-0" aria-hidden="true" />
+      <div className="auth-key-light pointer-events-none absolute inset-0 z-0" aria-hidden="true" />
 
       <div className="auth-frame">
         {/* ---- identity · sits where navigation sits ---- */}
@@ -41,13 +42,10 @@ export function AuthLayout() {
               height={36}
               draggable={false}
             />
-            <p className="text-machine">Business operating system</p>
+            <p className="text-sm text-muted-foreground">Business operating system</p>
           </div>
 
-          {/* Machine register, and every line of it is true: this is the
-              workspace sign-in route. Nothing here asserts a security
-              property the client cannot actually observe. */}
-          <p className="text-machine hidden lg:block">Workspace access</p>
+          <p className="hidden text-sm text-muted-foreground lg:block">Workspace access</p>
         </div>
 
         {/* ---- THE SEAM ----
@@ -56,7 +54,7 @@ export function AuthLayout() {
             rail it becomes. */}
         <span className="auth-seam hidden lg:block" aria-hidden="true" />
 
-        {/* ---- the authentication surface ---- */}
+        {/* ---- floating authentication surface ---- */}
         <div className="flex items-center justify-center px-4 py-8 lg:px-12">
           <div className="auth-surface">
             <Outlet />

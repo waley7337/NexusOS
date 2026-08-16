@@ -84,7 +84,9 @@ export function LoginPage() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
       <div className="space-y-1.5">
         <h1 className="text-h2 text-foreground">Sign in</h1>
-        <p className="text-body text-muted-foreground">Access your workspace.</p>
+        <p className="text-body text-muted-foreground">
+          Enter your company URL and credentials to open your workspace.
+        </p>
       </div>
 
       <div className="space-y-4">

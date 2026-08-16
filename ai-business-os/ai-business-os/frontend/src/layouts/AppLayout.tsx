@@ -136,7 +136,10 @@ export function AppLayout() {
     // away with the document. dvh rather than vh so mobile browser chrome
     // collapsing doesn't leave the bar off-screen.
     <TooltipProvider delayDuration={150} skipDelayDuration={200}>
-    <div className="chassis h-dvh overflow-hidden bg-background" data-collapsed={collapsed}>
+    <div className="app-stage h-dvh overflow-hidden">
+      <div className="atmosphere" aria-hidden="true" />
+      <div className="app-shell-frame">
+    <div className="chassis h-full overflow-hidden bg-transparent" data-collapsed={collapsed}>
       <CommandPalette />
       <MobileSidebar
         chrome={{
@@ -366,7 +369,7 @@ export function AppLayout() {
                 own identity string sitting in the chassis, not a sentence
                 anyone wrote for a reader — and folding it into the register
                 removes a chassis type style that existed only here. */}
-            <div className="text-machine truncate">Business Operating System</div>
+            <div className="truncate text-xs text-muted-foreground">Business Operating System</div>
           </motion.div>
         </div>
 
@@ -546,7 +549,13 @@ export function AppLayout() {
             </span>
           </button>
 
-          <Button type="button" size="sm" onClick={() => setCaptureOpen(true)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="motion-respond hover:-translate-y-px"
+            onClick={() => setCaptureOpen(true)}
+          >
             <Plus />
             <span className="hidden sm:inline">Capture</span>
           </Button>
@@ -594,6 +603,8 @@ export function AppLayout() {
           now={clock}
           onCommandPalette={toggleCommandPalette}
         />
+      </div>
+    </div>
       </div>
     </div>
     </TooltipProvider>
