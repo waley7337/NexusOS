@@ -35,11 +35,7 @@ from app.core.exceptions import (  # noqa: E402
     ValidationError,
 )
 from app.models import Company, Customer, User  # noqa: E402
-from app.repositories.base import BaseRepository  # noqa: E402
-
-
-class CustomerRepository(BaseRepository[Customer]):
-    model = Customer
+from app.repositories.crm import CustomerRepository  # noqa: E402
 
 
 @pytest_asyncio.fixture

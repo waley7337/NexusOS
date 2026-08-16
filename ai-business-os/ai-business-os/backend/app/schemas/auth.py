@@ -7,11 +7,9 @@ consumers without either side compromising its own naming convention.
 
 import uuid
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import EmailStr, Field, field_validator
 
-
-class CamelModel(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+from app.schemas.base import CamelModel
 
 
 def _password_strength(password: str) -> str:

@@ -27,12 +27,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # no
 from sqlalchemy.pool import NullPool  # noqa: E402
 
 from app.models import Company, Customer  # noqa: E402
-from app.repositories.base import BaseRepository  # noqa: E402
+from app.repositories.crm import CustomerRepository  # noqa: E402
 from app.schemas.auth import RegisterRequest  # noqa: E402
-
-
-class CustomerRepository(BaseRepository[Customer]):
-    model = Customer
 
 
 @pytest_asyncio.fixture
