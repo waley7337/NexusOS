@@ -1,21 +1,25 @@
 import { Link } from "react-router-dom";
 import { FileQuestion } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
 
 export function NotFoundPage() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-      <FileQuestion className="h-12 w-12 text-muted-foreground" aria-hidden />
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Page not found</h1>
-        <p className="max-w-md text-sm text-muted-foreground">
-          That URL doesn&apos;t match anything in NexusOS. Check the address or head back to the dashboard.
-        </p>
-      </div>
-      <Link to={ROUTES.home}>
-        <Button>Go to dashboard</Button>
-      </Link>
+    <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <EmptyState
+        icon={FileQuestion}
+        title="Page not found"
+        as="h1"
+        description="That URL doesn't match anything in NexusOS. Check the address or head back to the dashboard."
+      >
+        <div className="mt-5">
+          <Link to={ROUTES.home} className={cn(buttonVariants())}>
+            Go to dashboard
+          </Link>
+        </div>
+      </EmptyState>
     </div>
   );
 }

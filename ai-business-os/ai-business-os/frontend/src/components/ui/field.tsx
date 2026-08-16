@@ -12,18 +12,23 @@ interface FieldProps {
   required?: boolean;
   error?: string;
   helper?: string;
+  /** Optional control aligned with the label (e.g. a forgot-password link). */
+  labelAccessory?: ReactNode;
   children: ReactElement;
   className?: string;
 }
 
-export function Field({ label, required, error, helper, children, className }: FieldProps) {
+export function Field({ label, required, error, helper, labelAccessory, children, className }: FieldProps) {
   const id = useId();
-  const describedBy = error ? `${id}-error` : helper ? `${id}-helper` : undefined;
+  const describedBy = [error ? `${id}-error` : null, !error && helper ? `${id}-helper` : null]
+    .filter(Boolean)
+    .join(" ") || undefined;
 
   const control = isValidElement(children)
     ? cloneElement(children as ReactElement<Record<string, unknown>>, {
         id,
         "aria-describedby": describedBy,
+        "aria-errormessage": error ? `${id}-error` : undefined,
         "aria-invalid": error ? true : undefined,
         required: required || undefined,
       })
@@ -31,7 +36,14 @@ export function Field({ label, required, error, helper, children, className }: F
 
   return (
     <div className={cn("space-y-1.5", className)}>
-      <Label htmlFor={id} required={required}>{label}</Label>
+      {labelAccessory ? (
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor={id} required={required}>{label}</Label>
+          {labelAccessory}
+        </div>
+      ) : (
+        <Label htmlFor={id} required={required}>{label}</Label>
+      )}
       {control}
       {error ? (
         <p id={`${id}-error`} role="alert" className="text-xs text-destructive">{error}</p>

@@ -1,4 +1,4 @@
-/** Drawer — side panel for detail views and longer forms. Built on Radix Dialog. */
+/** Drawer — side panel for detail views, mobile nav, and longer forms. Built on Radix Dialog. */
 import { forwardRef, type ComponentPropsWithoutRef, type ElementRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -14,14 +14,15 @@ export const DrawerContent = forwardRef<
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { side?: "right" | "left" }
 >(({ className, children, side = "right", ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-overlay bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
+    <DialogPrimitive.Overlay className="overlay-scrim fixed inset-0 z-overlay data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:pointer-events-none" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-y-0 z-modal flex w-full max-w-md flex-col border-l bg-card shadow-modal duration-base data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "drawer-panel fixed inset-y-0 z-modal flex w-full max-w-md flex-col border-line-transient bg-surface-2 shadow-modal duration-spatial ease-in-out-quint",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
         side === "right"
-          ? "right-0 data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right"
-          : "left-0 border-l-0 border-r data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left",
+          ? "right-0 border-l data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right"
+          : "left-0 border-r data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left",
         className,
       )}
       {...props}
@@ -39,7 +40,7 @@ DrawerContent.displayName = "DrawerContent";
 
 export function DrawerHeader({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="space-y-1.5 border-b p-5 pr-12">
+    <div className="space-y-1.5 border-b border-line-soft p-5 pr-12">
       <DialogPrimitive.Title className="text-h3">{title}</DialogPrimitive.Title>
       {description && (
         <DialogPrimitive.Description className="text-sm text-muted-foreground">

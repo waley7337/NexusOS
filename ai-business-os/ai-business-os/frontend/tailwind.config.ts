@@ -27,11 +27,16 @@ export default {
         },
         // Translucent hairlines. Complete rgb() values (not HSL triplets),
         // so a border composites over whatever surface is beneath it.
+        // Five line roles (V1). Weakest that still communicates wins.
         line: {
-          DEFAULT: "var(--line)",
-          soft: "var(--line-soft)",
-          strong: "var(--line-strong)",
+          DEFAULT: "var(--line)",       // interactive edge
+          soft: "var(--line-soft)",     // normal surface edge — the default
+          strong: "var(--line-strong)", // interactive, engaged
+          focus: "var(--line-focus)",   // the one line carrying violet
+          transient: "var(--line-transient)",
         },
+        // Structural divider. The only line allowed to span a whole region.
+        rail: "var(--rail)",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           // Deep violet for filled controls carrying white labels
@@ -57,6 +62,8 @@ export default {
         },
         "surface-glass": "hsl(var(--surface-glass))",
         "surface-glass-border": "hsl(var(--surface-glass-border))",
+        // Single scrim for every modal layer. Complete rgb(), like `line`.
+        "overlay-scrim": "var(--overlay-scrim)",
         chart: {
           1: "hsl(var(--chart-1))",
           2: "hsl(var(--chart-2))",
@@ -66,12 +73,34 @@ export default {
           6: "hsl(var(--chart-6))",
         },
       },
+      // ONE radius family (V1). Semantic aliases first, then a REMAP of
+      // Tailwind's own scale. The remap is the load-bearing half: measured
+      // on the dashboard, six radii rendered at once (4/6/8/10/12/9999px)
+      // and the widest spread came from raw `rounded-lg` / `rounded-xl` /
+      // `rounded-md` in ~40 components, which never touched --radius-*.
+      // Pointing the default scale at the same two values means the whole
+      // product inherits the family without editing those components.
+      // `full` is deliberately NOT remapped — it stays a real pill, but is
+      // reserved for status dots and avatars.
       borderRadius: {
-        btn: "var(--radius-btn)",         // 10px — buttons
-        input: "var(--radius-input)",     // 10px — inputs
-        card: "var(--radius-card)",       // 12px — cards
-        dialog: "var(--radius-dialog)",   // 16px — dialogs
-        surface: "var(--radius-surface)", // 18px — elevated panels
+        // semantic
+        btn: "var(--radius-btn)",         // 6px  — controls
+        input: "var(--radius-input)",     // 6px  — controls
+        card: "var(--radius-card)",       // 4px  — planes
+        dialog: "var(--radius-dialog)",   // 4px  — regions
+        surface: "var(--radius-surface)", // 4px  — planes
+        // family
+        control: "var(--r-control)",
+        plane: "var(--r-surface)",
+        // remapped Tailwind defaults
+        none: "0px",
+        sm: "var(--r-surface)",
+        DEFAULT: "var(--r-surface)",
+        md: "var(--r-control)",
+        lg: "var(--r-control)",
+        xl: "var(--r-surface)",
+        "2xl": "var(--r-surface)",
+        "3xl": "var(--r-surface)",
       },
       boxShadow: {
         sm: "var(--shadow-sm)",
@@ -92,12 +121,33 @@ export default {
         modal: "var(--z-modal)",
         toast: "var(--z-toast)",
       },
-      transitionDuration: { fast: "150ms", base: "200ms", slow: "250ms", reveal: "700ms" },
-      transitionTimingFunction: {
-        brand: "cubic-bezier(0.2, 0, 0, 1)",
-        // LifeOS entrance curve — long tail, no overshoot.
-        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
+      // Motion bands. These were literals duplicating the --duration-* /
+      // --ease-* tokens in globals.css; they now reference them, so the
+      // stylesheet is the single source of truth and a timing can't drift
+      // between the CSS and the utility that claims to apply it.
+      transitionDuration: {
+        instant: "var(--duration-instant)",
+        fast: "var(--duration-fast)",
+        base: "var(--duration-base)",
+        standard: "var(--duration-standard)",
+        slow: "var(--duration-slow)",
+        spatial: "var(--duration-spatial)",
+        reveal: "var(--duration-reveal)",
       },
+      transitionTimingFunction: {
+        brand: "var(--ease)",
+        // LifeOS entrance curve — long tail, no overshoot.
+        "out-expo": "var(--ease-out-expo)",
+        "out-quart": "var(--ease-out-quart)",
+        "in-out-quint": "var(--ease-in-out-quint)",
+      },
+      backdropBlur: { overlay: "var(--overlay-blur)" },
+      // Shell geometry, for the Phase B sidebar work.
+      width: {
+        sidebar: "var(--sidebar-w)",
+        "sidebar-collapsed": "var(--sidebar-w-collapsed)",
+      },
+      height: { "shell-header": "var(--shell-header-h)" },
       // §4.6 — 8px system: only these values are sanctioned for layout gaps
       spacing: { 4.5: "1.125rem" },
       fontFamily: {

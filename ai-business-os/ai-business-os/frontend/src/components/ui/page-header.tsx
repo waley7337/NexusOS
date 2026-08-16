@@ -29,7 +29,9 @@ export function PageHeader({ eyebrow, title, description, actions, status, as: H
     <div className={cn("space-y-1.5", className)}>
       {(eyebrow || status) && (
         <div className="flex items-center justify-between gap-3">
-          {eyebrow ? <p className="text-caption">{eyebrow}</p> : <span />}
+          {/* V2: the eyebrow carries workspace identity — a system fact,
+              not a human sentence — so it moves to the machine register. */}
+          {eyebrow ? <p className="text-machine">{eyebrow}</p> : <span />}
           {status && <div className="shrink-0">{status}</div>}
         </div>
       )}

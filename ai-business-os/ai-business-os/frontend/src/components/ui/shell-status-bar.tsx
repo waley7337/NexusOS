@@ -1,88 +1,112 @@
 /**
- * ShellStatusBar — the persistent monospace status strip across the bottom of
- * the application shell (Part 04 convergence, Commit C).
+ * ShellStatusBar — the chassis' machine register (reconstructed, V3).
  *
- * Replaces the status block that previously sat in the sidebar footer; the
- * status is deliberately rendered in exactly one place. Sitting at the foot of
- * the shell rather than inside the sidebar means it stays visible and
- * correctly positioned whether the sidebar is expanded, collapsed, or (on
- * mobile) not rendered at all, because it lives in the content column.
- *
- * Data: every value comes from a real source — useSystemStatus (which derives
- * from navigator.onLine and the dashboard query's cache state) and
- * useLiveClock. Nothing here is a hardcoded "operational" string.
- *
- * A11y:
- *  - the status region is role="status" aria-live="polite", so a screen-reader
- *    user is told when the system degrades or recovers, without the update
- *    stealing focus;
- *  - the clock is aria-hidden — a per-second live region would flood a
- *    screen reader with meaningless announcements;
- *  - the ⌘K affordance is a real <button>, reachable and operable by keyboard,
- *    not a decorative keycap.
+ * Owns its own live clock subscription so AppLayout is not re-rendered
+ * every second. Shares the singleton interval in useLiveClock.
  */
-import { Clock } from "lucide-react";
 import { cn, formatRelativeTime } from "@/lib/utils";
-import { StatusPill, type StatusPillVariant } from "./status-pill";
+import { useLiveClock } from "@/hooks/useLiveClock";
+import type { ProbeState } from "@/hooks/useSystemStatus";
+import type { StatusPillVariant } from "./status-pill";
 
 interface ShellStatusBarProps {
   variant: StatusPillVariant;
   label: string;
+  api: ProbeState;
+  db: ProbeState;
+  environment: string | null;
   lastSyncedAt: number | null;
-  /** Current time — passed in so the whole shell shares one ticking clock. */
-  now: Date;
   onCommandPalette: () => void;
   className?: string;
+}
+
+const PROBE_TEXT: Record<ProbeState, string> = {
+  ok: "READY",
+  down: "DOWN",
+  unknown: "—",
+};
+
+const DOT: Record<StatusPillVariant, string> = {
+  online: "bg-success",
+  warning: "bg-warning",
+  offline: "bg-destructive",
+};
+
+/** One instrument segment. Neutral unless the probe is actually down. */
+function Segment({ name, state }: { name: string; state: ProbeState }) {
+  return (
+    <span className="hidden items-center gap-1 sm:inline-flex">
+      <span className="text-muted-foreground">{name}</span>
+      <span className="text-muted-foreground">/</span>
+      <span className={cn(state === "down" ? "text-destructive" : "text-muted-foreground")}>
+        {PROBE_TEXT[state]}
+      </span>
+    </span>
+  );
 }
 
 export function ShellStatusBar({
   variant,
   label,
+  api,
+  db,
+  environment,
   lastSyncedAt,
-  now,
   onCommandPalette,
   className,
 }: ShellStatusBarProps) {
+  const now = useLiveClock();
   const synced = lastSyncedAt ? formatRelativeTime(lastSyncedAt, now.getTime()) : null;
 
   return (
     <footer
       className={cn(
-        // shrink-0 keeps the bar at its intrinsic height inside the shell's
-        // flex column; pb env() clears the iOS home indicator.
-        "flex h-8 shrink-0 items-center justify-between gap-4 border-t px-4 font-mono text-2xs text-muted-foreground backdrop-blur",
+        "flex h-8 shrink-0 items-center justify-between gap-4 border-t border-line-soft px-3 font-mono text-2xs font-medium tracking-[0.08em] text-muted-foreground md:px-5",
         className,
       )}
-      style={{
-        borderColor: "var(--line-soft)",
-        backgroundColor: "hsl(var(--surface-1) / 0.8)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="flex min-w-0 items-center gap-4">
-        <div role="status" aria-live="polite" className="min-w-0 truncate">
-          <StatusPill variant={variant} label={label} />
-        </div>
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className={cn(
+            "h-1.5 w-1.5 shrink-0 rounded-full",
+            DOT[variant],
+            variant === "online" && "status-dot-alive text-success",
+          )}
+          aria-hidden="true"
+        />
 
-        {synced && (
-          <span className="num hidden truncate sm:inline">Synced {synced}</span>
-        )}
+        <span role="status" aria-live="polite" className="sr-only">
+          {label}
+        </span>
+
+        <span className="flex min-w-0 items-center gap-3 truncate tabular-nums" aria-hidden="true">
+          <Segment name="API" state={api} />
+          <Segment name="DB" state={db} />
+          {environment && (
+            <span className="hidden items-center gap-1 lg:inline-flex">
+              <span className="text-muted-foreground">ENV</span>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-muted-foreground">{environment.toUpperCase()}</span>
+            </span>
+          )}
+          <span className="truncate sm:hidden">{label.toUpperCase()}</span>
+        </span>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4">
-        <span className="num hidden items-center gap-1.5 md:inline-flex" aria-hidden="true">
-          <Clock className="h-3 w-3" />
+      <div className="flex shrink-0 items-center gap-3 tabular-nums">
+        {synced && <span className="hidden md:inline">SYNC / {synced.toUpperCase()}</span>}
+
+        <span className="hidden lg:inline" aria-hidden="true">
           {now.toLocaleTimeString([], { hour12: false })}
         </span>
 
         <button
           type="button"
           onClick={onCommandPalette}
-          className="focus-ring inline-flex items-center gap-1.5 rounded transition-colors hover:text-foreground"
+          className="focus-ring -mx-1.5 -my-1.5 rounded px-1.5 py-1.5 transition-colors duration-fast hover:text-foreground"
         >
-          {/* The glyph is the affordance — pairing a Command icon with the
-              literal "⌘K" rendered the symbol twice in a row. */}
-          <span className="num">⌘K</span>
+          <span aria-hidden="true">⌘K</span>
           <span className="sr-only">Open the command palette</span>
         </button>
       </div>

@@ -1,6 +1,7 @@
 /**
  * Dialog & confirmation — §4.20. Radix: focus trap, ESC, scroll lock,
- * aria wiring. 16px radius, modal shadow, 200ms scale-fade.
+ * aria wiring. Overlay uses the shared scrim token; panel motion is a
+ * short fade + 4px rise, not a zoom.
  */
 import { forwardRef, type ComponentPropsWithoutRef, type ElementRef, type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -21,11 +22,12 @@ export const DialogContent = forwardRef<
   DialogContentProps
 >(({ className, children, showClose = true, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-overlay bg-black/40 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
+    <DialogPrimitive.Overlay className="overlay-scrim fixed inset-0 z-overlay data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:pointer-events-none" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-modal w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-dialog border bg-card p-6 shadow-modal duration-base data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+        "dialog-panel fixed left-1/2 top-1/2 z-modal w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-dialog border border-line-transient bg-surface-2 p-6 shadow-modal",
+        "duration-standard data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
         className,
       )}
       {...props}

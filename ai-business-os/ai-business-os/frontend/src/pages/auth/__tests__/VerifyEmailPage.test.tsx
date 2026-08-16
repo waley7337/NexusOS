@@ -28,6 +28,10 @@ describe("VerifyEmailPage", () => {
   it("shows an invalid-link state when no token is present", () => {
     renderPage(["/verify-email"]);
     expect(screen.getByText("Invalid verification link")).toBeInTheDocument();
+    expect(
+      screen.getByText("This link is missing or malformed. Sign in and request a new verification email."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/account settings/i)).not.toBeInTheDocument();
     expect(mockVerifyEmail).not.toHaveBeenCalled();
   });
 
@@ -47,5 +51,7 @@ describe("VerifyEmailPage", () => {
     await waitFor(() =>
       expect(screen.getByText("This link is invalid or has expired")).toBeInTheDocument(),
     );
+    expect(screen.getByText("Sign in and request a new verification email.")).toBeInTheDocument();
+    expect(screen.queryByText(/account settings/i)).not.toBeInTheDocument();
   });
 });

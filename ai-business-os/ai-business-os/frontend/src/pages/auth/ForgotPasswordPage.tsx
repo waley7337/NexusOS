@@ -60,7 +60,7 @@ export function ForgotPasswordPage() {
         </Button>
         <Link
           to={ROUTES.login}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-colors duration-fast hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-colors duration-fast hover:text-primary/80 focus-ring rounded-sm"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Back to sign in
@@ -115,7 +115,7 @@ export function ForgotPasswordPage() {
 
       <Link
         to={ROUTES.login}
-        className="flex items-center justify-center gap-1.5 text-sm font-medium text-primary transition-colors duration-fast hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+        className="flex items-center justify-center gap-1.5 text-sm font-medium text-primary transition-colors duration-fast hover:text-primary/80 focus-ring rounded-sm"
       >
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
         Back to sign in

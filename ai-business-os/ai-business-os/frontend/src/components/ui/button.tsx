@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn text-sm font-medium transition-colors duration-fast ease-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-fast ease-out-quart focus-edge disabled:pointer-events-none disabled:opacity-40 active:scale-[0.985] active:brightness-[0.92] [&_svg]:h-[var(--icon-sm)] [&_svg]:w-[var(--icon-sm)] [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -20,8 +20,8 @@ const buttonVariants = cva(
         // shadow-inset is the top "lip" highlight that makes a filled control
         // read as a physical key rather than a flat rectangle.
         primary: "bg-primary-fill text-white hover:bg-primary-fill/90 shadow-inset",
-        secondary: "bg-surface-4 text-foreground hover:bg-surface-5 border shadow-inset",
-        outline: "border bg-transparent hover:bg-surface-4",
+        secondary: "bg-surface-4 text-foreground hover:bg-surface-5 border border-line-soft shadow-inset",
+        outline: "border border-line-soft bg-transparent hover:bg-surface-4 hover:border-line-strong",
         ghost: "hover:bg-surface-4",
         danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-inset",
         success: "bg-success text-success-foreground hover:bg-success/90 shadow-inset",
@@ -52,7 +52,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       aria-busy={loading || undefined}
       {...props}
     >
-      {loading && <Loader2 className="animate-spin" aria-hidden />}
+      {loading && <Loader2 className="motion-safe:animate-spin" aria-hidden />}
       {children}
     </button>
   ),

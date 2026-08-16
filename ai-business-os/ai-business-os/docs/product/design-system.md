@@ -278,3 +278,221 @@ eight viewport/theme combinations.
 ## Definition of Done (§4.29)
 
 A component ships only when it is responsive, keyboard navigable, dark-mode complete, built from tokens only, unit tested (`npm test` — Vitest + Testing Library), documented here, and free of console warnings. The `/design` page is the review surface: if it looks wrong there, it's wrong everywhere.
+
+---
+
+# Visual reconstruction (V1–V9)
+
+The system above describes the token layer. This section describes the
+**visual language** built on top of it during the V1–V9 reconstruction, and
+the reasoning behind the decisions that are easy to undo by accident.
+
+## The one-sentence description
+
+> NexusOS is a lit instrument panel: a black room with a fixed structural
+> rail, where information is separated by line, register and light rather
+> than by boxes — and where every surface responds to where the user is.
+
+Four rules follow from it, and they are the ones to defend in review:
+
+1. **Rails and hairlines before boxes.** A group is defined by a rule and its
+   spacing. A box is reserved for something that is genuinely a separate
+   plane. If a change adds a bordered rounded rectangle, ask what rule it
+   could have been instead.
+2. **One radius family.** `--r-surface: 4px` for planes, regions and dialogs;
+   `--r-control: 6px` for buttons, inputs and chips; `--r-full` reserved for
+   status dots and avatars only. Regions are *squarer* than controls on
+   purpose. Tailwind's own `sm/md/lg/xl` scale is remapped into the family,
+   so raw `rounded-lg` cannot escape it.
+3. **Light has a position.** One key, upper-left. `--edge-light` /
+   `--edge-shade` and `--occlusion-1..3` all derive from it, and every shadow
+   in the product composes from that ladder. Nothing invents its own shadow.
+4. **Register carries meaning.** Sans is human language; mono is machine
+   language. Anything a machine produced — status, environment, slug,
+   timestamp, count, probe result — wears `.text-machine`.
+
+## Violet is a signal, not an atmosphere
+
+Violet marks **state**: active navigation, focus, selection, the primary
+action. It is not allowed to be ambient. Specifically removed and not to be
+reintroduced: the page-wide violet + cyan body wash, the violet halo under
+`--shadow-lift`, the violet pointer spotlight, the violet hero glow, and the
+decorative six-hue `SectionHeader` tone palette. Semantic success / warning /
+destructive remain semantic.
+
+## Line roles
+
+Five roles, deliberately unequal. **A boundary takes the weakest role that
+still communicates.**
+
+| Token | Role |
+|---|---|
+| `--line-soft` | normal surface edge — the default, quietest |
+| `--line` | interactive edge: this can be operated |
+| `--line-strong` | interactive and engaged (hover, emphasis) |
+| `--rail` | structural divider; the only line allowed to span a whole region |
+| `--line-focus` | focused edge — the one line that carries violet |
+| `--line-transient` | edge of something floating above the room |
+
+## The chassis, and why the rail is a grid track
+
+The shell is a single grid: `[--sidebar-w] [1px] [minmax(0,1fr)]`. The middle
+track **is** the structural rail.
+
+This is not a styling preference. A `border-r` belongs to the sidebar and
+stops where the sidebar stops; a track spans the full chassis height, through
+the header and the system register. It also gives the rail stable, addressable
+geometry — which is what the signature transition depends on.
+
+`--sidebar-w` is registered with `@property` as a `<length>` so it can be
+**animated**. Because every column derives from it, collapse moves the
+sidebar, the rail, the header origin and the content origin on one clock
+instead of four. Do not reintroduce a `width` transition on the aside.
+
+## The signature transition: one object survives
+
+`/login` is laid out on the *same* three-track grid, so the login seam and the
+workspace rail are the same 1px line at the same coordinate. Measured: seam
+`x=270` on login, overlay seam `x=270` mid-transition, chassis rail `x=270` in
+the workspace.
+
+The transition therefore does not cross-fade two screens. The login room
+clears while the line stays, and the workspace resolves around the line the
+user was already watching.
+
+**Hard constraint:** the overlay is presentational. It is mounted above the
+router, reads one boolean, and gates nothing. Navigation completes in ~125ms
+against an ~820ms sequence. If it never rendered, login would work
+identically. Never make authentication or navigation await it.
+
+## Motion grammar
+
+Every animation must be able to name which class it is. If it cannot, it
+should not move.
+
+| Class | Meaning | Timing |
+|---|---|---|
+| TRAVEL | a persistent object changes location or state | `--duration-spatial` 340ms, in-out-quint |
+| RESOLVE | new content establishes itself in an existing frame | `--duration-standard` 220ms, out-quart |
+| RESPOND | direct reaction at the point of contact | `--duration-fast` 150ms, out-quart |
+| BREATHE | ambient system state | near-extinct; currently zero instances |
+
+**Motion coverage is explicitly not a goal.** The V4 audit measured 28 of 29
+interactive elements already animating; the product still felt inert. Twenty
+elements moving for a reason beat a hundred moving because a utility existed.
+
+Under reduced motion, TRAVEL and RESOLVE collapse to the RESPOND duration
+rather than to zero — state, focus, hierarchy and orientation still change
+visibly, only the journey is removed.
+
+## Structural vocabulary
+
+`Rail` · `Row` · `RowGroup` · `Ticks` · `Plane` (`src/components/ui/structure.tsx`).
+
+None of them own a fill, deliberately: fill is what makes something a Plane,
+and **a Plane is a decision, not a default**. Mission Control uses no Plane at
+all — it is one canvas, so a box around any band would re-introduce exactly
+what the recomposition removed. The login form is the first surface that
+genuinely earns one.
+
+`Row` is polymorphic (`as`). It shipped in V2 as a `<div>` and every real
+consumer turned out to be a button or a link; the abstraction was fixed rather
+than the call sites bent around it.
+
+## Empty states
+
+Nine of eleven modules are deliberately non-operational, so the empty surface
+is the product's most common screen, not an edge case. It must read as
+
+> **nothing is here yet** — deliberate, measured, operational
+
+and never as
+
+> this component is unfinished
+
+Hence: left-aligned against a rail, registration marks instead of a dashed
+outline, a machine-register line stating the condition, a bare icon rather
+than a circle chip, and no illustration, gradient, glow or entrance animation.
+
+`EmptyState`'s `status` prop has **no default on purpose**. An earlier draft
+defaulted to "No records", which rendered on a panel about missing *metrics* —
+a small invented fact, in a product whose whole position is that it does not
+invent. A caller that knows the condition states it; one that does not says
+nothing.
+
+## Truthfulness (non-negotiable)
+
+Mission Control shows only: auth identity, the live clock, and `GET /health` +
+`GET /ready`. No KPI, revenue, pipeline, customer count, activity feed or AI
+insight. An unresolved probe renders `—`, never a guess, because *unknown* and
+*down* are different facts.
+
+`DashboardPage.test.tsx` carries six negative assertions that fail the suite if
+the mock dashboard ever returns. **Treat them as load-bearing and do not
+weaken them.**
+
+## The pre-login sky (`Starfield`)
+
+The cinematic entrance is deep space, so it has a real sky: `components/
+starfield.tsx`, drawn into a device-pixel-backed `<canvas>` rather than
+assembled from CSS gradients.
+
+Why canvas. A CSS starfield has a fixed number of dots regardless of viewport,
+one brightness curve for all of them, no twinkle, and resampled soft edges on a
+high-DPI panel. The canvas gives per-star size, brightness, tint and twinkle
+phase, and it paints at the display's real resolution — measured at
+`3840x2160` backing pixels on a 1920x1080 CSS viewport at 2x.
+
+Two modes. `drift` is the sign-in sky: slow lateral parallax by depth, tuned to
+sit near the threshold of perception. `warp` is the immersion continuation:
+stars accelerate radially outward from the camera centre, so the sky and the
+camera agree about which way the shot is travelling. `Atmosphere
+variant="cinematic"` mounts the first; `AuthEntryOverlay` mounts the second.
+
+Cost contract, and it is the reason for every design choice in the file:
+
+- no React state and no layout reads per frame — refs and one `rAF` loop;
+- no `filter`, `backdrop-filter`, `box-shadow` or `blur` anywhere. The glow is
+  baked into pre-rendered sprites once and then blitted with `drawImage`, so a
+  frame is N textured quads and nothing else;
+- density is derived from viewport area, not a fixed count, and DPR is capped
+  at 2;
+- the loop stops on `visibilitychange` and on unmount.
+
+Measured at 1920x1080 @2x: median frame 16.7ms, p95 16.7ms, max 16.8ms — a
+locked 60fps with no dropped frames. Hidden-tab check: zero pixels change.
+
+`prefers-reduced-motion` paints exactly one static frame and never starts a
+loop — the sky is still there, it just isn't moving — and the overlay's warp
+field is not mounted at all. Verified: 5,556 lit pixels, 0 changed over 1.4s.
+
+## Product proxy (`NexusProductProxy`)
+
+The object the camera flies toward. It contains no text, no number and no data
+— it is the *shape* of the product at a distance where type would not be
+legible — which is what makes a shape proxy the honest way to show a product
+you have not signed into yet.
+
+It was rebuilt away from skeleton language, because uniform grey rounded bars
+in empty panels are not "a product seen from a distance", they are a loading
+state. Three rules keep it out of that reading: primitives vary (icon marks,
+chips, list rows, a plotted chart, an avatar); contrast is ranked (exactly one
+accented nav row, one dominant panel); and every panel carries structure at
+roughly the density the real product has.
+
+Every colour in its stylesheet is literal, never a token. The immersion overlay
+mounts above `RouterProvider`, outside the auth shell's forced-dark scope, so
+`hsl(var(--surface-1))` resolved to the *viewer's* theme: on light mode the
+chrome came back `#FFFFFF` and the entire immersion played as a white slab.
+
+## Known debt
+
+- `progress.tsx` and `useCountUp.ts` trip `react-hooks/set-state-in-effect`
+  (2 errors). Pre-existing; the source predates the reconstruction and the
+  rule arrived with a newer plugin.
+- `StatCard` / `useCountUp` / `ProgressListItem` / `ChecklistCard` have no
+  product consumer since the Mission Control recomposition — they survive only
+  in `/design` and their own tests. Removal is a judgement call left open
+  because it would drop the 150-test baseline.
+- Light mode is functional, accessible and structurally correct, but is not
+  art-directed to the same level as dark. Dark is the flagship.

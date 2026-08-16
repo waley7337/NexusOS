@@ -23,6 +23,17 @@ describe("Field", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Enter a valid email address");
     const input = screen.getByLabelText(/Work email/);
     expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute("aria-errormessage");
     expect(input).toHaveAccessibleDescription("Enter a valid email address");
+  });
+
+  it("keeps the label associated when a label accessory is present", () => {
+    render(
+      <Field label="Password" labelAccessory={<a href="/forgot">Forgot password?</a>}>
+        <Input type="password" />
+      </Field>,
+    );
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toBeInTheDocument();
   });
 });

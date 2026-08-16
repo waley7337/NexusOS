@@ -1,49 +1,70 @@
 /**
- * Centered brand shell for login / register / password reset.
- * Renders on NexusOS's jet-black auth surface (see `.dark.auth-shell`
- * in globals.css) regardless of the viewer's light/dark preference —
- * every control below (Field, Input, Button, Label) is unmodified and
- * simply reads the scoped tokens, so behavior and a11y are untouched.
+ * AuthLayout — the first room of NexusOS.
+ *
+ * WHAT CHANGED
+ * This route used to render a mock of the product beside the form: a
+ * proxy dashboard with a fake rail, fake tiles and a fake chart. It is
+ * gone. Showing a placeholder of the application to someone who has not
+ * signed in yet is a promise made in fake pixels, and it also gave the
+ * cinematic a fake object to fly into. Neither is wanted.
+ *
+ * What is left is the environment and the door: deep space, live stars,
+ * the NexusOS identity, and one sign-in surface, centred. The emptiness is
+ * the composition, not a gap where something should go.
+ *
+ * The environment itself is NOT rendered here. It is SpaceField, mounted
+ * outside the router, so it survives the navigation into the workspace —
+ * see that file. This layout only declares that the space should be awake
+ * ("idle") while a sign-in route is on screen, and lets it be when the
+ * cinematic has taken it over.
+ *
+ * Renders on the forced-dark auth shell regardless of the viewer's theme
+ * (see .dark.auth-shell). Auth semantics are untouched: this file renders
+ * no form, no field and no submit path.
  */
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ShieldCheck } from "lucide-react";
-import { fadeInUp } from "@/lib/motion";
+import { useUiStore } from "@/stores/ui";
 
 export function AuthLayout() {
-  return (
-    <div className="dark auth-shell auth-page">
-      <div className="auth-grid pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
-      <div className="auth-glow pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
+  const immersing = useUiStore((s) => s.isAuthEntryActive);
 
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeInUp}
-        className="relative flex w-full flex-col items-center"
-      >
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="nexusos-wordmark-lockup">
-            <img
-              className="nexusos-wordmark-img nexusos-wordmark-img--lg"
-              src="/nexusos-wordmark.png"
-              alt="NexusOS"
-              width={224}
-              height={36}
-              draggable={false}
-            />
+  useEffect(() => {
+    const { setSpaceStage } = useUiStore.getState();
+    // Only claim the space if the cinematic has not already taken it.
+    if (useUiStore.getState().spaceStage !== "travel") setSpaceStage("idle");
+    return () => {
+      // On the way out during a sign-in, the cinematic owns the space and
+      // clears it when it settles. On any other exit (back button, a
+      // redirect), put it away.
+      if (!useUiStore.getState().isAuthEntryActive) setSpaceStage("off");
+    };
+  }, []);
+
+  return (
+    <div
+      className="dark auth-shell auth-page auth-world"
+      data-auth-stage={immersing ? "leaving" : "idle"}
+    >
+      <div className="auth-column">
+        <div className="auth-identity">
+          <img
+            className="nexusos-wordmark-img"
+            src="/nexusos-wordmark.png"
+            alt="NexusOS"
+            width={196}
+            height={30}
+            draggable={false}
+          />
+          <p className="auth-tagline">Business operating system</p>
+        </div>
+
+        <div className="auth-panel">
+          <div className="auth-surface">
+            <Outlet />
           </div>
         </div>
-
-        <div className="w-full max-w-[400px] rounded-dialog border bg-card p-8 shadow-lg sm:p-10">
-          <Outlet />
-        </div>
-
-        <p className="mt-8 flex items-center gap-1.5 text-small text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-          Secured with enterprise-grade encryption
-        </p>
-      </motion.div>
+      </div>
     </div>
   );
 }

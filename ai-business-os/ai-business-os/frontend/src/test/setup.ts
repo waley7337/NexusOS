@@ -50,3 +50,16 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
     }),
   });
 }
+
+/**
+ * jsdom has no 2D canvas without the native `canvas` package, and calling
+ * getContext() there logs a "Not implemented" error through jsdom's virtual
+ * console for every render. Starfield already treats a null context as
+ * "this environment cannot draw" and bails before it observes or animates
+ * anything, so the correct test behaviour is exactly that — return null
+ * quietly rather than install a fake 2D context that would let the draw
+ * path run against a surface nobody can assert on.
+ */
+if (typeof HTMLCanvasElement !== "undefined") {
+  HTMLCanvasElement.prototype.getContext = (() => null) as HTMLCanvasElement["getContext"];
+}

@@ -1,184 +1,669 @@
 /**
- * Dashboard — "How is my business doing?"
- * Hero (Part 04, Phase 7): live status + clock, greeting, directive,
- * quarter progress, RadialGauge — the visual language the whole Core
- * Platform effort has been building toward, applied with NexusOS's own
- * business content (not LifeOS's personal-life modules). Everything below
- * the hero (charts, activity, insights) is untouched from Parts 1-3: one
- * query, each widget owns its own skeleton.
+ * Mission Control — cinematic product stage + dense system dashboard.
+ *
+ * TRUTHFULNESS IS UNCHANGED AND NON-NEGOTIABLE.
+ * Values come only from auth identity, useLiveClock, and GET /health +
+ * GET /ready. No KPI, revenue, pipeline, activity, or invented series.
+ * Decorative waveforms are explicitly non-semantic ambient graphics.
  */
-import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useReducedMotion } from "framer-motion";
+import {
+  LayoutDashboard,
+  Plus,
+  Shield,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 import { useLiveClock } from "@/hooks/useLiveClock";
-import { useSystemStatus } from "@/hooks/useSystemStatus";
-import { useSpotlight } from "@/hooks/useSpotlight";
-import { useRevealVariants } from "@/hooks/useRevealVariants";
-import {
-  useDashboard,
-  ActivityFeed,
-  AiInsights,
-  KpiGrid,
-  PipelineChart,
-  RevenueChart,
-  UpcomingMeetings,
-} from "@/features/dashboard";
+import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
+import { useDashboard } from "@/features/dashboard";
+import { MODULE_SUMMARIES } from "@/features/dashboard/constants";
+import { NAV_ITEMS, ROUTES } from "@/constants/routes";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ErrorState } from "@/components/ui/error-state";
-import { PageHeader } from "@/components/ui/page-header";
-import { Progress } from "@/components/ui/progress";
-import { RadialGauge } from "@/components/ui/radial-gauge";
+import { Plane } from "@/components/ui/structure";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusPill } from "@/components/ui/status-pill";
+import { cn } from "@/lib/utils";
 
-function greeting(): string {
-  const h = new Date().getHours();
+function greetingAt(date: Date): string {
+  const h = date.getHours();
   if (h < 12) return "Good morning";
   if (h < 18) return "Good afternoon";
   return "Good evening";
 }
 
+const MODULES = NAV_ITEMS.filter((item) => item.to !== ROUTES.home);
+
+const CAPABILITY_SECTIONS = [
+  {
+    id: "operations",
+    title: "Business operations",
+    body: "CRM, projects, tasks, finance, HR, inventory, and documents share one workspace identity — each module route is ready; service APIs land over time.",
+  },
+  {
+    id: "ai",
+    title: "AI operations",
+    body: "The AI Assistant surface is routed and permission-aware. Conversational workflows activate when assistant services are connected.",
+  },
+  {
+    id: "security",
+    title: "Security architecture",
+    body: "Tenant isolation, JWT sessions, and role-gated routes are live. Visual polish never changes authorization behavior.",
+  },
+] as const;
+
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const { data, isError, refetch } = useDashboard();
-  const systemStatus = useSystemStatus();
-  const clock = useLiveClock();
+  const { data, isPending, isError, dataUpdatedAt, refetch } = useDashboard();
   const setCaptureOpen = useUiStore((s) => s.setCaptureOpen);
-  const heroRef = useSpotlight<HTMLDivElement>();
-  const reveal = useRevealVariants();
+  const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
+  const prefersReducedMotion = useReducedMotion();
+  const storyRef = useRevealOnScroll<HTMLElement>();
+  const modulesRef = useRevealOnScroll<HTMLElement>();
 
-  if (isError) {
-    return (
-      <ErrorState
-        title="We couldn't load your dashboard"
-        description="Something went wrong on our side. Your data is safe — please try again."
-        onRetry={() => refetch()}
-      />
-    );
-  }
+  /* One-shot cinema after auth entry — never replay on later module visits. */
+  const [cinemaEntry] = useState(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return false;
+    }
+    const pending = useUiStore.getState().pendingCinematicReveal;
+    if (pending) useUiStore.getState().clearCinematicReveal();
+    return pending;
+  });
+
+  const firstName = user?.name?.split(" ")[0] ?? "there";
+  const roleLabel = user?.role ? user.role.replace(/_/g, " ") : null;
+
+  const apiOk = data?.apiStatus === "ok";
+  const dbOk = data?.database === "ok";
+  const probesPending = isPending && !isError;
+  const motionAttr = prefersReducedMotion ? "reduce" : "full";
+
+  const syncedLabel =
+    dataUpdatedAt > 0
+      ? new Date(dataUpdatedAt).toLocaleTimeString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null;
 
   return (
-    <motion.div variants={reveal.container} initial="hidden" animate="visible" className="space-y-6">
-      <motion.div variants={reveal.item}>
-        <Card ref={heroRef} className="spotlight relative overflow-hidden">
-          <div className="glow-banner pointer-events-none absolute inset-0" aria-hidden="true" />
-          <div className="grid-field pointer-events-none absolute inset-0" aria-hidden="true" />
-          {/* Two very slowly drifting blurred orbs — 14s, ~3% travel. Ambient
-              motion at this amplitude is felt rather than seen; it stops the
-              hero reading as a static image without ever competing with the
-              content. Switched off entirely under prefers-reduced-motion. */}
-          <div
-            className="drift pointer-events-none absolute -left-24 -top-32 h-72 w-72 rounded-full bg-primary/20 blur-[90px]"
-            aria-hidden="true"
-          />
-          <div
-            className="drift pointer-events-none absolute -bottom-40 right-10 h-72 w-72 rounded-full bg-chart-1/15 blur-[90px]"
-            style={{ animationDelay: "-6s" }}
-            aria-hidden="true"
-          />
-          {/* items-center, not items-start (Part 04 convergence, Commit B):
-              the right column runs ~280px and the left ran ~159px, so
-              top-aligning them left a measured 142px of dead space — 44% of
-              the hero's height. Centring plus moving the CTAs below the
-              directive balances the two columns instead. */}
-          <CardContent className="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.45fr_auto] lg:items-center">
-            <div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <StatusPill variant={systemStatus.variant} label={systemStatus.label} />
-                <span className="num font-mono text-2xs text-muted-foreground">
-                  {clock.toLocaleTimeString([], { hour12: false })}
-                </span>
-              </div>
-
-              <p className="mt-5 text-sm text-muted-foreground">
-                {clock.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-              </p>
-
-              <PageHeader
-                className="mt-1"
-                title={`${greeting()}, ${user?.name?.split(" ")[0] ?? "there"} 👋`}
-                description={
-                  data && (
-                    <>
-                      This week's focus — <span className="font-medium text-primary">{data.directive}</span>.
-                    </>
-                  )
-                }
-              />
-              {!data && <Skeleton className="mt-3 h-5 w-72" />}
-
-              <div className="mt-6 max-w-md space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="eyebrow">Quarter progress</span>
-                  {data && (
-                    <span className="num text-2xs text-muted-foreground">
-                      {data.quarterProgress.weekLabel} · {data.quarterProgress.percent}%
-                    </span>
-                  )}
-                </div>
-                {data ? <Progress value={data.quarterProgress.percent} /> : <Skeleton className="h-2 w-full" />}
-              </div>
-
-              <div className="mt-7 flex flex-wrap gap-2.5">
-                <Button variant="outline" onClick={() => toast.info("Weekly review ships in a later part.")}>
-                  Begin weekly review
-                </Button>
-                <Button onClick={() => setCaptureOpen(true)}>
-                  <Plus /> Capture
-                </Button>
-              </div>
+    <div
+      className={cn("space-y-10 pb-8", cinemaEntry && "cinema-entry")}
+      data-cinema={cinemaEntry ? "entry" : undefined}
+    >
+      {/* ===== Mission Control (native scroll — no sticky scroll-stage) ===== */}
+      <div className="product-stage-track">
+        <div className="product-stage-sticky">
+          <header
+            className="product-hero mb-8 max-w-2xl space-y-4"
+            data-motion={motionAttr}
+          >
+            <div className="cinema-hero space-y-4">
+            <p className="text-sm font-medium text-primary/90">
+              {user?.companyName ?? "NexusOS"}
+            </p>
+            <DashboardGreeting firstName={firstName} />
+            <p className="max-w-[42ch] text-base text-muted-foreground sm:text-lg">
+              Operate your business from one intelligent system — CRM, projects,
+              finance, operations, and AI in a single workspace.
+            </p>
+            <DashboardMeta
+              roleLabel={roleLabel}
+              companySlug={user?.companySlug}
+            />
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <Button
+                onClick={() => setCaptureOpen(true)}
+                className="motion-respond hover:-translate-y-px"
+              >
+                <Plus /> Capture
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setCommandPaletteOpen(true)}
+                className="motion-respond hover:-translate-y-px"
+              >
+                Search workspace
+              </Button>
             </div>
+            </div>
+          </header>
 
-            <div className="flex flex-col items-center gap-5">
-              {data ? (
-                <RadialGauge score={data.health.score} scoreLabel="Health" segments={data.health.segments} />
-              ) : (
-                <Skeleton className="h-[220px] w-[220px] rounded-full" />
-              )}
-              <div className="grid w-full max-w-xs grid-cols-3 gap-2">
-                {(
-                  [
-                    ["runway", "Runway"],
-                    ["capacity", "Capacity"],
-                    ["quarterPlan", "Q3 plan"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <div
-                    key={key}
-                    className="rounded-xl border px-3 py-2.5 text-center"
-                    style={{ borderColor: "var(--line-soft)", backgroundColor: "hsl(var(--surface-1) / 0.6)" }}
+          <div className="product-stage-frame" data-motion={motionAttr}>
+            <div className="mission-primary cinema-stage space-y-4 rounded-[var(--r-panel)] border border-[rgb(160_190_255_/_0.14)] bg-[hsl(var(--surface-1)/0.78)] p-3 shadow-[0_1px_0_0_rgb(180_210_255_/_0.08)_inset] sm:p-4">
+              {/* Signal row */}
+              <section
+                aria-label="System signals"
+                className="cinema-signals grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+              >
+                <SignalPanel
+                  label="API"
+                  pending={probesPending}
+                  value={apiOk ? "Reachable" : isError ? "Unreachable" : "Unknown"}
+                  hint={data?.environment ?? "liveness probe"}
+                  tone={isError || (!probesPending && !apiOk) ? "bad" : apiOk ? "ok" : "muted"}
+                />
+                <SignalPanel
+                  label="Database"
+                  pending={probesPending}
+                  value={dbOk ? "Ready" : "Unavailable"}
+                  hint="readiness probe"
+                  tone={dbOk ? "ok" : isError ? "muted" : "warn"}
+                />
+                <SignalPanel
+                  label="Workspace"
+                  pending={false}
+                  value={user?.companyName ?? "—"}
+                  hint={user?.email}
+                  tone="ok"
+                />
+                <LocalTimeSignal />
+              </section>
+
+              {isError && (
+                <p className="text-small text-muted-foreground">
+                  Health probes did not respond.{" "}
+                  <button
+                    type="button"
+                    className="focus-ring rounded text-foreground underline-offset-4 transition-colors duration-fast hover:text-primary hover:underline"
+                    onClick={() => refetch()}
                   >
-                    {data ? (
-                      <p className="num font-mono text-lg font-semibold">{data.metrics[key]}</p>
-                    ) : (
-                      <Skeleton className="mx-auto h-6 w-10" />
-                    )}
-                    <p className="mt-0.5 text-2xs uppercase tracking-wider text-muted-foreground">{label}</p>
+                    Retry
+                  </button>
+                </p>
+              )}
+
+              {/* Primary + secondary panels */}
+              <section
+                aria-label="Operations"
+                className="cinema-ops grid gap-3 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]"
+              >
+                <Plane className="relative overflow-hidden p-5 sm:p-6">
+                  <div
+                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_70%_0%,hsl(var(--primary)/0.14),transparent_60%)]"
+                    aria-hidden="true"
+                  />
+                  <div className="relative flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Operations
+                      </p>
+                      <h2 className="mt-2 text-h3 text-foreground">
+                        No operational metrics yet
+                      </h2>
+                      <p className="mt-1.5 max-w-[48ch] text-body text-muted-foreground">
+                        Revenue, pipeline, tasks, and activity appear here when
+                        those modules have APIs. Nothing below is estimated.
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-line-soft bg-surface-3/80 px-2.5 py-1 text-xs text-muted-foreground">
+                      No metrics source
+                    </span>
                   </div>
-                ))}
-              </div>
+
+                  <AmbientWaveform />
+
+                  <div className="relative mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setCaptureOpen(true)}
+                      className="focus-ring text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground"
+                    >
+                      Capture
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommandPaletteOpen(true)}
+                      className="focus-ring text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground"
+                    >
+                      Search
+                    </button>
+                    <Link
+                      to={ROUTES.design}
+                      className="focus-ring text-sm font-medium text-muted-foreground transition-colors duration-fast hover:text-foreground"
+                    >
+                      Design system
+                    </Link>
+                  </div>
+                </Plane>
+
+                <Plane className="relative flex flex-col overflow-hidden p-5 sm:p-6">
+                  <div
+                    className="pointer-events-none absolute -right-8 top-0 h-40 w-40 rounded-full bg-[radial-gradient(circle,hsl(var(--accent-cyan)/0.18),transparent_70%)]"
+                    aria-hidden="true"
+                  />
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Readiness
+                  </p>
+                  <h2 className="mt-2 text-h3 text-foreground">Module field</h2>
+                  <p className="mt-1.5 text-body text-muted-foreground">
+                    Routes that exist today. Each opens an empty workspace until
+                    its part ships.
+                  </p>
+
+                  <div className="mt-5 flex items-center gap-5">
+                    <ReadinessRing
+                      value={MODULES.length}
+                      label="Configured"
+                      sublabel="modules"
+                    />
+                    <dl className="min-w-0 flex-1 space-y-3">
+                      <ReadinessRow
+                        label="Operational modules"
+                        value="0"
+                        hint="no module APIs yet"
+                      />
+                      <ReadinessRow
+                        label="Last probe"
+                        value={syncedLabel ?? (probesPending ? "…" : "—")}
+                        hint={
+                          data?.environment
+                            ? `env · ${data.environment}`
+                            : "health + ready"
+                        }
+                      />
+                      <ReadinessRow
+                        label="Signed in as"
+                        value={roleLabel ?? "—"}
+                        hint={user?.name}
+                      />
+                    </dl>
+                  </div>
+
+                  <div className="mt-auto flex items-center gap-2 border-t border-line-soft pt-5">
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        apiOk && dbOk
+                          ? "status-dot-alive bg-success text-success"
+                          : isError
+                            ? "bg-destructive text-destructive"
+                            : "bg-warning text-warning",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <p className="text-small text-muted-foreground">
+                      {apiOk && dbOk
+                        ? "System probes healthy"
+                        : isError
+                          ? "System probes unreachable"
+                          : "Waiting on probes"}
+                    </p>
+                  </div>
+                </Plane>
+              </section>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </div>
+        </div>
+      </div>
 
-      <motion.div variants={reveal.item}>
-        <KpiGrid kpis={data?.kpis} />
-      </motion.div>
+      {/* ===== Module grid ===== */}
+      <section
+        ref={modulesRef}
+        className="reveal-section space-y-4"
+        aria-labelledby="band-modules"
+      >
+        <div className="flex items-center gap-3">
+          <h2
+            id="band-modules"
+            className="text-sm font-semibold tracking-tight text-foreground"
+          >
+            Modules
+          </h2>
+          <span className="h-px flex-1 bg-line-soft" aria-hidden="true" />
+          <span className="text-xs text-muted-foreground">
+            {MODULES.length} routes
+          </span>
+        </div>
 
-      <motion.div variants={reveal.item} className="grid gap-4 lg:grid-cols-3">
-        <RevenueChart data={data?.revenue} />
-        <PipelineChart data={data?.pipeline} />
-      </motion.div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {MODULES.map((item) => {
+            const Icon = item.icon;
+            return (
+              <ModuleTile
+                key={item.to}
+                to={item.to}
+                label={item.label}
+                description={MODULE_SUMMARIES[item.to]}
+                icon={Icon}
+              />
+            );
+          })}
+        </div>
+      </section>
 
-      <motion.div variants={reveal.item} className="grid gap-4 lg:grid-cols-3">
-        <ActivityFeed items={data?.activity} />
-        <UpcomingMeetings meetings={data?.meetings} />
-        <AiInsights insights={data?.insights} />
-      </motion.div>
-    </motion.div>
+      {/* ===== Lower product story ===== */}
+      <section
+        ref={storyRef}
+        className="reveal-section space-y-6"
+        aria-labelledby="band-story"
+      >
+        <div className="max-w-xl space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-primary/80">
+            Platform
+          </p>
+          <h2
+            id="band-story"
+            className="text-2xl font-semibold tracking-tight text-foreground"
+          >
+            Built for unified operations
+          </h2>
+          <p className="text-muted-foreground">
+            NexusOS keeps available capabilities, coming modules, and system
+            truth clearly separated — so the product never invents progress.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          {CAPABILITY_SECTIONS.map((section) => (
+            <Plane key={section.id} className="p-5">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-control border border-line-soft bg-surface-3/80 text-primary">
+                {section.id === "ai" ? (
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                ) : section.id === "security" ? (
+                  <Shield className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                )}
+              </div>
+              <h3 className="text-sm font-semibold text-foreground">
+                {section.title}
+              </h3>
+              <p className="mt-2 text-small text-muted-foreground">
+                {section.body}
+              </p>
+            </Plane>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DashboardGreeting({ firstName }: { firstName: string }) {
+  const clock = useLiveClock();
+  return (
+    <h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
+      {greetingAt(clock)}, {firstName}
+    </h1>
+  );
+}
+
+function DashboardMeta({
+  roleLabel,
+  companySlug,
+}: {
+  roleLabel: string | null;
+  companySlug?: string | null;
+}) {
+  const clock = useLiveClock();
+  const dateLabel = clock.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
+  return (
+    <p className="text-sm text-muted-foreground">
+      {dateLabel}
+      {roleLabel ? ` · ${roleLabel}` : null}
+      {companySlug ? ` · ${companySlug}` : null}
+    </p>
+  );
+}
+
+function LocalTimeSignal() {
+  const clock = useLiveClock();
+  const timeLabel = clock.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const dateLabel = clock.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
+  return (
+    <SignalPanel
+      label="Local time"
+      pending={false}
+      value={timeLabel}
+      hint={dateLabel}
+      tone="ok"
+    />
+  );
+}
+
+function SignalPanel({
+  label,
+  value,
+  hint,
+  pending,
+  tone,
+}: {
+  label: string;
+  value?: string;
+  hint?: string;
+  pending: boolean;
+  tone: "ok" | "warn" | "bad" | "muted";
+}) {
+  return (
+    <Plane className="relative overflow-hidden p-4 sm:p-5">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
+        aria-hidden="true"
+      />
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="mt-3">
+        {pending ? (
+          <Skeleton className="h-7 w-28" />
+        ) : (
+          <p
+            className={cn(
+              "text-xl font-semibold tracking-tight",
+              tone === "ok" && "text-foreground",
+              tone === "warn" && "text-warning",
+              tone === "bad" && "text-destructive",
+              tone === "muted" && "text-muted-foreground",
+            )}
+          >
+            {value ?? "—"}
+          </p>
+        )}
+        {hint && !pending && (
+          <p className="mt-1 truncate text-small text-muted-foreground">{hint}</p>
+        )}
+      </div>
+    </Plane>
+  );
+}
+
+function ReadinessRow({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <div className="min-w-0">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        {hint && (
+          <p className="mt-0.5 truncate text-small text-disabled-foreground">
+            {hint}
+          </p>
+        )}
+      </div>
+      <dd className="shrink-0 text-sm font-medium tabular-nums text-foreground">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+/** Decorative readiness ring — count of configured routes, not analytics. */
+function ReadinessRing({
+  value,
+  label,
+  sublabel,
+}: {
+  value: number;
+  label: string;
+  sublabel: string;
+}) {
+  const circumference = 2 * Math.PI * 36;
+  const progress = Math.min(1, value / 12);
+  const dash = circumference * progress;
+
+  return (
+    <div className="relative h-[5.5rem] w-[5.5rem] shrink-0" aria-hidden="true">
+      <svg viewBox="0 0 88 88" className="h-full w-full -rotate-90">
+        <circle
+          cx="44"
+          cy="44"
+          r="36"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.1"
+          strokeWidth="7"
+          className="text-foreground"
+        />
+        <circle
+          cx="44"
+          cy="44"
+          r="36"
+          fill="none"
+          stroke="hsl(var(--primary))"
+          strokeWidth="7"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circumference}`}
+          className="drop-shadow-[0_0_8px_var(--glow-blue)]"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="text-lg font-semibold tabular-nums text-foreground">
+          {value}
+        </span>
+        <span className="text-[10px] leading-tight text-muted-foreground">
+          {label}
+          <br />
+          {sublabel}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ambient waveform — decorative only.
+ * Not a chart of business data. No axis labels implying metrics.
+ * Transform-only phase motion — no SVG feGaussianBlur (paint cost).
+ */
+function AmbientWaveform() {
+  return (
+    <div
+      className="relative mt-6 h-44 overflow-hidden rounded-[var(--r-surface)] border border-line-soft bg-surface-0/50 sm:h-52"
+      aria-hidden="true"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_50%_100%,hsl(var(--primary)/0.18),transparent_55%)]" />
+      <div className="ambient-wave-phase absolute inset-[-2%_-3%]">
+        <svg
+          viewBox="0 0 640 208"
+          className="h-full w-full"
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <linearGradient id="nx-wave-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[48, 88, 128, 168].map((y) => (
+            <line
+              key={y}
+              x1="24"
+              x2="616"
+              y1={y}
+              y2={y}
+              stroke="currentColor"
+              strokeOpacity="0.06"
+              className="text-foreground"
+            />
+          ))}
+          <path
+            d="M24 148 C 90 148, 110 72, 180 96 S 280 168, 340 120 S 440 48, 500 88 S 580 140, 616 112 V 190 H 24 Z"
+            fill="url(#nx-wave-fill)"
+          />
+          <path
+            d="M24 148 C 90 148, 110 72, 180 96 S 280 168, 340 120 S 440 48, 500 88 S 580 140, 616 112"
+            fill="none"
+            stroke="hsl(var(--primary-soft))"
+            strokeWidth="2.25"
+            strokeOpacity="0.85"
+            className="ambient-wave-sheen"
+            strokeDasharray="8 14"
+          />
+        </svg>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+        <div className="flex items-center gap-2 rounded-full border border-line-soft bg-surface-2/90 px-3 py-1.5">
+          <LayoutDashboard className="h-3.5 w-3.5 text-disabled-foreground" />
+          <span className="text-xs text-muted-foreground">
+            Ambient preview · not operational data
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModuleTile({
+  to,
+  label,
+  description,
+  icon: Icon,
+}: {
+  to: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <Link
+      to={to}
+      className="surface motion-respond group focus-ring block p-4 transition-[border-color,background-color,transform] duration-fast hover:-translate-y-px hover:border-line-strong hover:bg-surface-3"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-control border border-line-soft bg-surface-3/70">
+              <Icon
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-colors duration-fast group-hover:text-primary"
+                aria-hidden="true"
+              />
+            </span>
+            <span className="text-sm font-medium text-foreground">{label}</span>
+          </div>
+          <p className="mt-2.5 line-clamp-2 text-small text-muted-foreground">
+            {description}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-line-soft bg-surface-0/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Not operational
+        </span>
+      </div>
+    </Link>
   );
 }

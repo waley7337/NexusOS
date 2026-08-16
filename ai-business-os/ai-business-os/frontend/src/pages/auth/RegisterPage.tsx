@@ -190,7 +190,7 @@ export function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-control p-1.5 text-muted-foreground transition-colors duration-fast hover:text-foreground"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
@@ -249,7 +249,7 @@ export function RegisterPage() {
         Already have an account?{" "}
         <Link
           to={ROUTES.login}
-          className="font-medium text-primary transition-colors duration-fast hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+          className="font-medium text-primary transition-colors duration-fast hover:text-primary/80 focus-ring rounded-sm"
         >
           Sign in
         </Link>

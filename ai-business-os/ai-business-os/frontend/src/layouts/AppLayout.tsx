@@ -2,7 +2,7 @@
  * NexusOS shell — implements the Part 2 navigation wireframe:
  *   sidebar (collapsible) · top bar with global search · content · profile footer.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Search,
   Bell,
@@ -17,12 +17,13 @@ import {
   Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { transitionSpatial } from "@/lib/motion";
 import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/providers/theme-provider";
 import { useUiStore } from "@/stores/ui";
 import { useRouteFocus } from "@/hooks/useRouteFocus";
-import { useLiveClock } from "@/hooks/useLiveClock";
 import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { useCaptureActions } from "@/hooks/useCaptureActions";
 import { useLogout } from "@/features/auth";
@@ -33,12 +34,15 @@ import {
   MobileSidebar,
 } from "@/components/app-navigation";
 import { OfflineBanner } from "@/components/offline-banner";
+import { Atmosphere } from "@/components/atmosphere";
 import { LazyOutlet } from "@/routes/LazyOutlet";
 import { Button } from "@/components/ui/button";
+import { IconTooltip, TooltipProvider } from "@/components/ui/tooltip";
 import { ShellStatusBar } from "@/components/ui/shell-status-bar";
 import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Row, RowGroup } from "@/components/ui/structure";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -49,6 +53,13 @@ export function AppLayout() {
   const [companySlugCopied, setCompanySlugCopied] = useState(false);
 
   const { theme, setTheme } = useTheme();
+
+  const prefersReducedMotion = useReducedMotion();
+  // Same reasoning as app-navigation — Framer Motion bypasses the CSS
+  // reduced-motion backstop, so the brand crossfade and footer identity
+  // block need their own opt-out. Spatial band: this motion travels with
+  // the sidebar rail, not with a hover.
+  const shellCollapseTransition = prefersReducedMotion ? { duration: 0 } : transitionSpatial;
 
   const collapsed = useUiStore(
     (state) => state.isSidebarCollapsed,
@@ -77,12 +88,66 @@ export function AppLayout() {
   // the store, same shape as isNotificationPanelOpen above.
   const captureOpen = useUiStore((state) => state.isCaptureOpen);
   const setCaptureOpen = useUiStore((state) => state.setCaptureOpen);
+  const authEntryActive = useUiStore((state) => state.isAuthEntryActive);
+  const commandPaletteOpen = useUiStore((state) => state.isCommandPaletteOpen);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Was the auth cinematic already running when this shell mounted? If so
+   * THIS shell is the thing the cinematic is revealing, and it resolves out
+   * of the dark rather than simply appearing. Captured from the store at
+   * first render, not read reactively, because the answer must not change
+   * when the cinematic clears half a second later.
+   */
+  const revealFromCinematic = useRef(useUiStore.getState().isAuthEntryActive);
+
+  /**
+   * data-reveal is what drives the resolve animation, and it is removed
+   * once the cinematic settles so the shell is left with no residual
+   * transform. Kept DOM-only, like data-entry below.
+   */
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || !revealFromCinematic.current) return;
+    if (authEntryActive) {
+      el.dataset.reveal = "cinematic";
+    } else {
+      delete el.dataset.reveal;
+      revealFromCinematic.current = false;
+    }
+  }, [authEntryActive]);
+
+  /**
+   * data-entry is DOM-only (not React-prop) so clock rerenders cannot
+   * clobber the two-frame post-cinematic settle delay.
+   */
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+
+    if (authEntryActive) {
+      el.dataset.entry = "in";
+      return;
+    }
+
+    el.dataset.entry = "in";
+    let f2 = 0;
+    const f1 = window.requestAnimationFrame(() => {
+      f2 = window.requestAnimationFrame(() => {
+        el.dataset.entry = "settled";
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(f1);
+      window.cancelAnimationFrame(f2);
+    };
+  }, [authEntryActive]);
 
   useRouteFocus();
 
-  // Both feed ShellStatusBar, which now owns the "Synced N ago" formatting.
+  // Feeds ShellStatusBar probes. Clock ticks live inside ShellStatusBar
+  // so this layout tree is not re-rendered every second.
   const systemStatus = useSystemStatus();
-  const clock = useLiveClock();
 
   const captureActions = useCaptureActions();
 
@@ -124,9 +189,27 @@ export function AppLayout() {
     // status bar sit permanently at the foot of the shell instead of scrolling
     // away with the document. dvh rather than vh so mobile browser chrome
     // collapsing doesn't leave the bar off-screen.
-    <div className="flex h-dvh overflow-hidden">
+    <TooltipProvider delayDuration={150} skipDelayDuration={200}>
+    <div
+      ref={stageRef}
+      className="app-stage h-dvh overflow-hidden"
+      data-search={commandPaletteOpen ? "open" : "idle"}
+    >
+      <Atmosphere />
+      <div className="app-shell-frame">
+    <div className="chassis h-full overflow-hidden bg-transparent" data-collapsed={collapsed}>
       <CommandPalette />
-      <MobileSidebar />
+      <MobileSidebar
+        chrome={{
+          userName: user?.name ?? "Guest",
+          companyName: user?.companyName ?? "No company",
+          userInitial,
+          onAccount: () => setAccountOpen(true),
+          onNotifications: () => setNotificationPanelOpen(true),
+          onLogout: () => void handleLogout(),
+          logoutPending: logoutMutation.isPending,
+        }}
+      />
 
       <Drawer open={notificationPanelOpen} onOpenChange={setNotificationPanelOpen}>
         <DrawerContent>
@@ -143,7 +226,10 @@ export function AppLayout() {
 
       <Dialog open={captureOpen} onOpenChange={setCaptureOpen}>
         <DialogContent>
-          <DialogHeader title="Capture" description="Quick-create actions from anywhere in NexusOS." />
+          <DialogHeader
+            title="Capture"
+            description="Jump to a page or switch theme. Create actions appear here when modules ship."
+          />
           {captureActions.length === 0 ? (
             <EmptyState
               icon={Plus}
@@ -151,22 +237,28 @@ export function AppLayout() {
               description="Modules register their create actions here as they ship."
             />
           ) : (
-            <div className="max-h-80 space-y-1 overflow-y-auto">
+            /* V3: first production consumer of the V2 RowGroup/Row pair.
+               Hairline-separated rows with no container — the dialog is
+               already the bounded surface, so a second box inside it was
+               redundant. */
+            <RowGroup className="max-h-80 overflow-y-auto">
               {captureActions.map((action) => (
-                <button
+                <Row
                   key={action.id}
+                  as="button"
                   type="button"
+                  interactive
+                  marker={<action.icon className="h-4 w-4" aria-hidden="true" />}
+                  className="items-center rounded-control text-sm text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     setCaptureOpen(false);
                     action.onSelect();
                   }}
-                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary/60"
                 >
-                  <action.icon className="h-4 w-4 text-muted-foreground" />
-                  {action.label}
-                </button>
+                  <span className="block truncate">{action.label}</span>
+                </Row>
               ))}
-            </div>
+            </RowGroup>
           )}
         </DialogContent>
       </Dialog>
@@ -175,7 +267,7 @@ export function AppLayout() {
         <DialogContent>
           <DialogHeader
             title="Account"
-            description="Your personal and company information."
+            description="Signed-in identity for this workspace. Nothing here can be edited yet."
           />
 
           <div className="space-y-6">
@@ -198,33 +290,29 @@ export function AppLayout() {
             </div>
 
             <section className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Personal information
-              </h3>
+              <h3 className="text-caption">Personal information</h3>
 
-              <div className="divide-y rounded-lg border bg-surface-1">
-                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    Name
-                  </span>
+              {/* V3: RowGroup semantics — hairline rows, no container. The
+                  dialog is already the bounded surface; the box around
+                  these rows drew a second boundary to express the same
+                  grouping the rules already expressed. */}
+              <div className="divide-y divide-line-soft">
+                <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+                  <span className="text-machine">Name</span>
                   <span className="min-w-0 break-words text-sm font-medium">
                     {user?.name ?? "—"}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    Email
-                  </span>
+                <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+                  <span className="text-machine">Email</span>
                   <span className="min-w-0 break-all text-sm font-medium">
                     {user?.email ?? "—"}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    Email status
-                  </span>
+                <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+                  <span className="text-machine">Email status</span>
                   <span className="text-sm font-medium">
                     {user?.emailVerified ? "Verified" : "Not verified"}
                   </span>
@@ -233,24 +321,22 @@ export function AppLayout() {
             </section>
 
             <section className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Company
-              </h3>
+              <h3 className="text-caption">Company</h3>
 
-              <div className="divide-y rounded-lg border bg-surface-1">
-                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    Company
-                  </span>
+              {/* V3: RowGroup semantics — hairline rows, no container. The
+                  dialog is already the bounded surface; the box around
+                  these rows drew a second boundary to express the same
+                  grouping the rules already expressed. */}
+              <div className="divide-y divide-line-soft">
+                <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+                  <span className="text-machine">Company</span>
                   <span className="min-w-0 break-words text-sm font-medium">
                     {user?.companyName ?? "—"}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-[110px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    Company URL
-                  </span>
+                <div className="grid grid-cols-1 items-start gap-2 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-center sm:gap-3">
+                  <span className="text-machine">Company URL</span>
 
                   <code className="min-w-0 break-all text-sm text-foreground">
                     {user?.companySlug ?? "—"}
@@ -282,54 +368,67 @@ export function AppLayout() {
       {/* surface-1 (one step below the card level) + blur: the sidebar now
           reads as chrome sitting behind the content rather than as another
           card. Previously it was bg-card, byte-identical to every panel. */}
+      {/* V3: the sidebar no longer owns its own width or its own boundary.
+          Width comes from the chassis grid track, so it cannot desync from
+          the rail or the content origin; the border-r is gone because the
+          boundary is now the rail track, which spans the full chassis
+          height rather than stopping where the aside stops. */}
       <aside
         className={cn(
-          "hidden shrink-0 flex-col border-r bg-surface-1/95 backdrop-blur-xl transition-[width] duration-200 md:flex",
-          collapsed ? "w-16" : "w-[270px]",
+          "hidden min-w-0 flex-col overflow-hidden bg-surface-1 md:flex",
         )}
       >
-        <div
-          className={cn(
-            "nexusos-brand flex shrink-0 items-center",
-            collapsed
-              ? "h-14 justify-center"
-              : "h-[4.75rem] px-3",
-          )}
-        >
-          {collapsed ? (
-            <div
-              className="nexusos-brand-mark h-8 w-8"
-              aria-label="NexusOS"
-            >
+        {/* Fixed height in both states (previously h-14 vs h-[4.75rem]) so
+            the mark/wordmark swap is a pure crossfade — no simultaneous
+            height jump to desync from the width transition. Both marks stay
+            mounted and share the same left inset; only opacity moves. */}
+        <div className="nexusos-brand relative h-[4.75rem] shrink-0 px-4">
+          {/* Opacity is inverse of the wordmark: the wordmark PNG already
+              contains this glyph, so leaving the mark at opacity 1 while
+              expanded rendered the logo twice. left-4 centres the 32px
+              mark in the 64px collapsed rail (16+32+16) without moving
+              it on expand — same optical-anchor rule as the nav icons. */}
+          <motion.div
+            animate={{ opacity: collapsed ? 1 : 0 }}
+            transition={shellCollapseTransition}
+            className="nexusos-brand-mark absolute left-4 top-1/2 h-8 w-8 -translate-y-1/2"
+            aria-hidden={!collapsed}
+          >
+            <img
+              src="/nexusos-logo.png"
+              alt={collapsed ? "NexusOS" : ""}
+              width={32}
+              height={32}
+              draggable={false}
+            />
+          </motion.div>
+
+          <motion.div
+            animate={{ opacity: collapsed ? 0 : 1 }}
+            transition={shellCollapseTransition}
+            className="nexusos-brand-copy absolute left-14 top-1/2 min-w-0 -translate-y-1/2 overflow-hidden leading-tight"
+            aria-hidden={collapsed}
+          >
+            <div className="nexusos-wordmark-lockup">
               <img
-                src="/nexusos-logo.png"
-                alt=""
-                width={32}
-                height={32}
+                className="nexusos-wordmark-img"
+                src={
+                  theme === "dark"
+                    ? "/nexusos-wordmark.png"
+                    : "/nexusos-wordmark-light.png"
+                }
+                alt="NexusOS"
+                width={210}
+                height={37}
                 draggable={false}
               />
             </div>
-          ) : (
-            <div className="nexusos-brand-copy min-w-0 leading-tight">
-              <div className="nexusos-wordmark-lockup">
-                <img
-                  className="nexusos-wordmark-img"
-                  src={
-                    theme === "dark"
-                      ? "/nexusos-wordmark.png"
-                      : "/nexusos-wordmark-light.png"
-                  }
-                  alt="NexusOS"
-                  width={210}
-                  height={37}
-                  draggable={false}
-                />
-              </div>
-              <div className="truncate text-2xs text-muted-foreground">
-                Business Operating System
-              </div>
-            </div>
-          )}
+            {/* V3: the nameplate is machine register. It is the product's
+                own identity string sitting in the chassis, not a sentence
+                anyone wrote for a reader — and folding it into the register
+                removes a chassis type style that existed only here. */}
+            <div className="truncate text-xs text-muted-foreground">Business Operating System</div>
+          </motion.div>
         </div>
 
         <AppNavigation collapsed={collapsed} />
@@ -339,7 +438,7 @@ export function AppLayout() {
             place, so the two can never disagree. */}
         <div
           className={cn(
-            "mt-auto shrink-0 border-t p-3",
+            "mt-auto shrink-0 border-t border-line-soft p-3",
             collapsed && "flex flex-col items-center",
           )}
         >
@@ -349,55 +448,59 @@ export function AppLayout() {
               collapsed && "flex-col gap-2",
             )}
           >
+            <IconTooltip label="Account" side={collapsed ? "right" : "top"}>
             <button
               type="button"
               onClick={() => setAccountOpen(true)}
               aria-label="Open account"
-              title="Account"
               className={cn(
-                "focus-ring flex min-w-0 items-center rounded-lg text-left transition-colors hover:bg-secondary/60",
-                collapsed
-                  ? "h-9 w-9 justify-center"
-                  : "flex-1 gap-3 px-2 py-1.5",
+                // Fixed gap-3/px-2/py-1.5 regardless of collapsed — same
+                // optically-stable-icon reasoning as the nav rows. flex-1
+                // only controls how the button shares space with the
+                // bell/logout icons in the row↔column footer switch that
+                // 64px of rail requires.
+                "focus-ring flex min-w-0 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-secondary/60",
+                !collapsed && "flex-1",
               )}
             >
               <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-4 text-xs font-semibold"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-4 font-mono text-2xs font-medium"
                 aria-hidden="true"
               >
                 {userInitial}
               </div>
 
-              {!collapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {user?.name ?? "Guest"}
-                  </p>
+              <motion.div
+                animate={{ width: collapsed ? 0 : "auto", opacity: collapsed ? 0 : 1 }}
+                transition={shellCollapseTransition}
+                className="min-w-0 overflow-hidden whitespace-nowrap"
+                aria-hidden={collapsed}
+              >
+                <p className="truncate text-sm font-medium">
+                  {user?.name ?? "Guest"}
+                </p>
 
-                  <p className="truncate text-xs text-muted-foreground">
-                    {user?.companyName ?? "No company"}
-                  </p>
-                </div>
-              )}
+                <p className="text-machine truncate">
+                  {user?.companyName ?? "No company"}
+                </p>
+              </motion.div>
             </button>
+            </IconTooltip>
 
+            <IconTooltip label="Notifications" side={collapsed ? "right" : "top"}>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               aria-label="Notifications"
-              title="Notifications"
-              className="relative shrink-0"
+              className="shrink-0"
               onClick={toggleNotificationPanel}
             >
               <Bell />
-
-              <span
-                className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary"
-                aria-hidden="true"
-              />
             </Button>
+            </IconTooltip>
 
+            <IconTooltip label={logoutMutation.isPending ? "Logging out" : "Log out"} side={collapsed ? "right" : "top"}>
             <Button
               type="button"
               variant="ghost"
@@ -407,19 +510,33 @@ export function AppLayout() {
                   ? "Logging out"
                   : "Log out"
               }
-              title="Log out"
               className="shrink-0 text-muted-foreground hover:text-destructive"
               disabled={logoutMutation.isPending}
               onClick={handleLogout}
             >
               <LogOut />
             </Button>
+            </IconTooltip>
           </div>
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-surface-1/80 px-4 backdrop-blur-xl md:px-6">
+      {/* ---- THE STRUCTURAL RAIL ----
+          A real 1px grid track, full chassis height, from the top of the
+          header to the bottom of the system register. This is the product's
+          single continuity device and the object V7 will later transform
+          from the login seam. It is decorative to assistive tech. */}
+      <span className="chassis-rail hidden md:block" aria-hidden="true" />
+
+      <div className="flex min-w-0 flex-col overflow-hidden">
+        {/* V3: de-filled. The header was a second horizontal card
+            (bg-surface-1/80 + blur), so the chassis read as two stacked
+            bars. It is now controls ATTACHED to the chassis: no fill, a
+            single soft hairline beneath, and the rail to its left doing the
+            structural work. --line-soft deliberately, so the horizontal
+            separation stays weaker than the vertical rail. */}
+        <header className="flex h-shell-header shrink-0 items-center gap-2 border-b border-line-soft px-3 md:px-5">
+          <IconTooltip label="Open navigation">
           <Button
             type="button"
             variant="ghost"
@@ -430,7 +547,9 @@ export function AppLayout() {
           >
             <Menu />
           </Button>
+          </IconTooltip>
 
+          <IconTooltip label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
           <Button
             type="button"
             variant="ghost"
@@ -449,30 +568,59 @@ export function AppLayout() {
               <PanelLeftClose />
             )}
           </Button>
+          </IconTooltip>
 
+          <div className="hidden h-5 w-px shrink-0 bg-line-soft md:block" aria-hidden="true" />
+
+          {/* V3: progressive reduction, CSS only — no viewport JS.
+              The label was a single fixed string that wrapped to two lines
+              and overflowed its own field at 390px. Three representations
+              now share one control:
+
+                >=lg   icon + "Search pages and actions…" + ⌘K
+                >=sm   icon + "Search…"
+                <sm    icon only, square
+
+              The accessible name is a constant aria-label, so it stays
+              complete at every width regardless of which span is visible;
+              the visible copy is aria-hidden to avoid announcing it twice.
+              Recessed like every other control (V2), not a raised field. */}
           <button
             type="button"
             onClick={toggleCommandPalette}
-            className="focus-ring flex h-9 flex-1 items-center gap-2 rounded-lg border bg-surface-2 px-3 text-sm text-muted-foreground transition-colors duration-fast hover:border-line-strong hover:text-foreground md:max-w-md"
+            aria-label="Search pages and actions"
+            aria-keyshortcuts="Meta+K"
+            data-active={commandPaletteOpen ? "true" : undefined}
+            className="shell-search focus-ring group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-control border border-line-soft bg-surface-0 text-muted-foreground shadow-[inset_0_1px_2px_0_var(--edge-shade)] sm:w-auto sm:flex-1 sm:justify-start sm:px-3 md:max-w-sm lg:max-w-md"
           >
-            <Search className="h-4 w-4 shrink-0" />
+            <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
 
-            <span className="flex-1 text-left">
-              Search anything…
+            <span className="hidden flex-1 truncate text-left text-sm sm:inline lg:hidden" aria-hidden="true">
+              Search…
+            </span>
+            <span className="hidden flex-1 truncate text-left text-sm lg:inline" aria-hidden="true">
+              Search pages and actions…
             </span>
 
-            <span className="ml-2 hidden items-center gap-0.5 sm:flex">
+            <span className="ml-2 hidden shrink-0 items-center gap-0.5 lg:flex" aria-hidden="true">
               <kbd className="kbd">⌘</kbd>
               <kbd className="kbd">K</kbd>
             </span>
           </button>
 
-          <Button type="button" size="sm" onClick={() => setCaptureOpen(true)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="motion-respond hover:-translate-y-px"
+            onClick={() => setCaptureOpen(true)}
+          >
             <Plus />
             <span className="hidden sm:inline">Capture</span>
           </Button>
 
           <div className="ml-auto flex items-center gap-1">
+            <IconTooltip label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}>
             <Button
               type="button"
               variant="ghost"
@@ -486,6 +634,7 @@ export function AppLayout() {
             >
               {theme === "dark" ? <Sun /> : <Moon />}
             </Button>
+            </IconTooltip>
           </div>
         </header>
 
@@ -497,7 +646,7 @@ export function AppLayout() {
             useRouteFocus's fallback would otherwise paint around the whole
             content region — see the note in that hook. tabIndex={-1} means
             this is not Tab-reachable, so no keyboard affordance is lost. */}
-        <main className="flex-1 overflow-y-auto focus:outline-none" tabIndex={-1}>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto focus:outline-none" tabIndex={-1}>
           <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
             <LazyOutlet />
           </div>
@@ -506,11 +655,16 @@ export function AppLayout() {
         <ShellStatusBar
           variant={systemStatus.variant}
           label={systemStatus.label}
+          api={systemStatus.api}
+          db={systemStatus.db}
+          environment={systemStatus.environment}
           lastSyncedAt={systemStatus.lastSyncedAt}
-          now={clock}
           onCommandPalette={toggleCommandPalette}
         />
       </div>
     </div>
+      </div>
+    </div>
+    </TooltipProvider>
   );
 }

@@ -1,21 +1,19 @@
 /**
  * Command Palette — ⌘K / Ctrl+K, available everywhere in the app shell.
  *
- * "Go to" and "Toggle theme" are sourced from useCaptureActions() (Part 04,
- * Phase 6) — the same registry the shell's Capture button reads, so the two
- * "quick action" surfaces don't each hardcode their own copy. "New
- * customer" stays a palette-only stub (see useCaptureActions.ts for why).
- * Feature modules register entity search providers through
- * CommandPaletteProvider in Parts 7+.
+ * "Go to" and "Toggle theme" are sourced from useCaptureActions() — the
+ * same registry the shell's Capture button reads. Only actions that
+ * actually run are listed; unavailable modules do not appear as create
+ * stubs. Feature modules register entity search providers through
+ * CommandPaletteProvider when those APIs exist.
  */
 import { useMemo } from "react";
 import { Command } from "cmdk";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useCaptureActions } from "@/hooks/useCaptureActions";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
 import { useUiStore } from "@/stores/ui";
 import type { CommandPaletteProvider } from "@/components/command-palette-types";
-import { toast } from "sonner";
 
 export function CommandPalette() {
   const open = useUiStore((s) => s.isCommandPaletteOpen);
@@ -51,15 +49,8 @@ export function CommandPalette() {
       {
         id: "actions",
         group: "Actions",
-        search: () => [
-          {
-            id: "new-customer",
-            label: "New customer",
-            value: "new customer",
-            icon: Plus,
-            onSelect: () => run(() => toast.info("Customer creation ships with the CRM module.")),
-          },
-          ...(themeAction
+        search: () =>
+          themeAction
             ? [
                 {
                   id: themeAction.id,
@@ -69,8 +60,7 @@ export function CommandPalette() {
                   onSelect: () => run(themeAction.onSelect),
                 },
               ]
-            : []),
-        ],
+            : [],
       },
     ];
   }, [captureActions, setOpen]);
@@ -84,7 +74,7 @@ export function CommandPalette() {
     <Command.Dialog
       open={open}
       onOpenChange={setOpen}
-      label="Global search"
+      label="Page and action search"
       // Bug fix (Part 04 convergence, Commit C): the scrim used to be a
       // `fixed inset-0` div rendered *inside* the palette, and the palette
       // carries -translate-x-1/2 — a transform, which makes an element the
@@ -96,13 +86,13 @@ export function CommandPalette() {
       // overlay, and contentClassName is the positioned panel. Styling Content
       // rather than the inner Command also restores Radix's native
       // outside-click dismissal, which the old structure had shadowed.
-      overlayClassName="fixed inset-0 z-overlay bg-black/60 backdrop-blur-sm"
-      contentClassName="surface-raised fixed left-1/2 top-[14%] z-modal w-full max-w-xl -translate-x-1/2 overflow-hidden shadow-modal"
+      overlayClassName="overlay-scrim fixed inset-0 z-overlay data-[state=closed]:pointer-events-none"
+      contentClassName="surface-raised dialog-panel fixed left-1/2 top-[14%] z-modal w-full max-w-xl -translate-x-1/2 overflow-hidden shadow-modal duration-standard data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1"
     >
-      <div className="flex items-center gap-3 border-b px-4" style={{ borderColor: "var(--line-soft)" }}>
+      <div className="flex items-center gap-3 border-b border-line-soft px-4">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <Command.Input
-          placeholder="Search pages, actions…"
+          placeholder="Search pages and actions…"
           className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
         <kbd className="kbd">esc</kbd>
@@ -113,13 +103,17 @@ export function CommandPalette() {
           Nothing matches that. Try a page or action name.
         </Command.Empty>
 
-        {providers.map((provider) => (
+        {providers.map((provider) => {
+          const items = provider.search();
+          if (items.length === 0) return null;
+
+          return (
           <Command.Group
             key={provider.id}
             heading={provider.group}
             className="[&_[cmdk-group-heading]]:eyebrow [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2"
           >
-            {provider.search().map(({ id, label, value, icon: Icon, onSelect }) => (
+            {items.map(({ id, label, value, icon: Icon, onSelect }) => (
               // Selected row is a neutral raised fill with an accent icon —
               // the same language as the sidebar's active row, so "you are
               // here" and "this is selected" read as one system rather than
@@ -130,20 +124,24 @@ export function CommandPalette() {
                 onSelect={() => run(onSelect)}
                 className="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground data-[selected=true]:bg-surface-4 data-[selected=true]:text-foreground"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-4 text-muted-foreground group-data-[selected=true]:bg-primary/10 group-data-[selected=true]:text-primary">
-                  <Icon className="h-4 w-4" />
+                {/* V2: de-chipped. A 32px tinted rounded square behind every
+                    icon is the strongest single contributor to the generic
+                    SaaS read, and here it was doing no work — the row already
+                    has alignment, a selected fill and a label. The icon is now
+                    bare and rail-aligned; selection is carried by the row, and
+                    violet marks the selected icon only. */}
+                <span className="flex w-4 shrink-0 items-center justify-center text-disabled-foreground group-data-[selected=true]:text-primary">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <span className="flex-1 truncate">{label}</span>
               </Command.Item>
             ))}
           </Command.Group>
-        ))}
+          );
+        })}
       </Command.List>
 
-      <div
-        className="flex items-center justify-between border-t px-4 py-2 font-mono text-2xs text-muted-foreground"
-        style={{ borderColor: "var(--line-soft)" }}
-      >
+      <div className="flex items-center justify-between border-t border-line-soft px-4 py-2 font-mono text-2xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <kbd className="kbd">↑</kbd>
           <kbd className="kbd">↓</kbd>

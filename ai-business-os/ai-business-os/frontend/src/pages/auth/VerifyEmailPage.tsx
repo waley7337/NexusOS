@@ -25,7 +25,7 @@ export function VerifyEmailPage() {
         icon={<AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />}
         iconClassName="bg-destructive/10"
         title="Invalid verification link"
-        description="This link is missing or malformed. Sign in and request a new verification email from your account settings."
+        description="This link is missing or malformed. Sign in and request a new verification email."
         cta={{ label: "Go to sign in", to: ROUTES.login }}
       />
     );
@@ -48,7 +48,7 @@ export function VerifyEmailPage() {
         icon={<AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />}
         iconClassName="bg-destructive/10"
         title="This link is invalid or has expired"
-        description="Sign in and request a new verification email from your account settings."
+        description="Sign in and request a new verification email."
         cta={{ label: "Go to sign in", to: ROUTES.login }}
       />
     );
