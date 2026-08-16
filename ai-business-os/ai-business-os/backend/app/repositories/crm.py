@@ -121,6 +121,72 @@ class ContactRepository(BaseRepository[Contact]):
         "first_name": Contact.first_name,
     }
 
+    async def ensure_customer_in_tenant(self, customer_id: uuid.UUID) -> None:
+        """Reject customers that are missing, soft-deleted, or other-tenant.
+
+        Fail closed with ValidationError (422) — never reveal whether the
+        UUID exists in another company.
+        """
+        self._require_tenant_context()
+        stmt = select(Customer.id).where(
+            Customer.id == customer_id,
+            Customer.company_id == self.company_id,
+            Customer.deleted_at.is_(None),
+        )
+        found = (await self.db.execute(stmt)).scalar_one_or_none()
+        if found is None:
+            raise ValidationError("Customer must belong to the current company.")
+
+    async def list_filtered(
+        self,
+        *,
+        page: int = 1,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        sort_by: str | None = None,
+        sort_desc: bool = False,
+        search: str | None = None,
+        customer_id: uuid.UUID | None = None,
+    ) -> tuple[List[Contact], int]:
+        """Tenant-scoped list with CRM V1 search + customer filter.
+
+        Filters apply on `_base_query()` before count/offset/limit.
+        """
+        page, page_size = self._clamp_pagination(page, page_size)
+        stmt = self._base_query()
+
+        if customer_id is not None:
+            # customer_id alone cannot broaden scope — company_id remains in stmt
+            stmt = stmt.where(Contact.customer_id == customer_id)
+
+        if search:
+            term = search.strip()
+            if len(term) > _MAX_SEARCH_LEN:
+                raise ValidationError(
+                    f"Search query must be at most {_MAX_SEARCH_LEN} characters."
+                )
+            if term:
+                pattern = _ilike_contains(term)
+                stmt = stmt.where(
+                    or_(
+                        Contact.first_name.ilike(pattern, escape="\\"),
+                        Contact.last_name.ilike(pattern, escape="\\"),
+                        Contact.email.ilike(pattern, escape="\\"),
+                        Contact.phone.ilike(pattern, escape="\\"),
+                        Contact.position.ilike(pattern, escape="\\"),
+                    )
+                )
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = (await self.db.execute(count_stmt)).scalar_one()
+
+        resolved_order = self._safe_order_by(sort_by, sort_desc)
+        if resolved_order is not None:
+            stmt = stmt.order_by(resolved_order)
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all()), total
+
 
 class LeadRepository(BaseRepository[Lead]):
     model = Lead
