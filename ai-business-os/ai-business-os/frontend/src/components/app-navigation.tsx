@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Bell, ChevronDown, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { transitionSpatial, transitionStandard } from "@/lib/motion";
+import { transitionSpatial } from "@/lib/motion";
 import { NAV_ITEMS, type NavItem } from "@/constants/routes";
 import { prefetchRoute } from "@/routes/prefetch";
 import { useUiStore } from "@/stores/ui";
@@ -33,7 +33,6 @@ function NavLinkItem({
   const { to, label, icon: Icon, end } = item;
   const prefersReducedMotion = useReducedMotion();
   const collapseTransition = prefersReducedMotion ? { duration: 0 } : transitionSpatial;
-  const indicatorTransition = prefersReducedMotion ? { duration: 0 } : transitionStandard;
 
   const link = (
     <NavLink
@@ -52,22 +51,14 @@ function NavLinkItem({
       {({ isActive }) => (
         <>
           {isActive && (
-            // Shared layoutId: route changes FLIP this fill from the old row
-            // to the new one instead of popping it. -z-10 is load-bearing —
-            // an absolutely-positioned child with z-index:auto still paints
-            // above in-flow content, which would cover the icon and label.
-            <motion.span
-              layoutId="nav-active-surface"
+            <span
               className="nav-active-glow absolute inset-0 -z-10 rounded-lg bg-primary/10"
-              transition={indicatorTransition}
               aria-hidden="true"
             />
           )}
           {isActive && (
-            <motion.span
-              layoutId="nav-rail-marker"
+            <span
               className="nav-rail-alive absolute -right-3 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-primary"
-              transition={indicatorTransition}
               aria-hidden="true"
             />
           )}
@@ -77,17 +68,11 @@ function NavLinkItem({
               isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
             )}
           />
-          {/* Not flex-1: flex-basis:0 would out-rank the animated inline
-              width Framer Motion sets. Sized by content instead. */}
           <motion.span
             animate={{ width: collapsed ? 0 : "auto", opacity: collapsed ? 0 : 1 }}
             transition={collapseTransition}
             className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap"
           >
-            {/* V4: the trailing violet dot is gone. With the rail marker now
-                reporting position, a dot inside the row was a second active
-                indicator saying the same thing — and it was the weaker of the
-                two, since it cannot travel. */}
             <span className="min-w-0 truncate">{label}</span>
           </motion.span>
         </>
@@ -163,12 +148,7 @@ function NavItems({ collapsed = false, onNavigate }: AppNavigationProps) {
 export function AppNavigation({ collapsed = false }: AppNavigationProps) {
   return (
     <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-clip p-3 pr-4">
-      {/* Scoped so this list's layoutId cannot cross-match the mobile
-          drawer. The desktop aside is only CSS-hidden below md, not
-          unmounted, so both trees exist whenever the drawer is open. */}
-      <LayoutGroup id="sidebar-nav">
-        <NavItems collapsed={collapsed} />
-      </LayoutGroup>
+      <NavItems collapsed={collapsed} />
     </nav>
   );
 }
@@ -200,9 +180,7 @@ export function MobileSidebar({
       <DrawerContent side="left" className="max-w-[15rem] border-r p-0">
         <DrawerHeader title="NexusOS" />
         <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-clip p-3 pr-4">
-          <LayoutGroup id="mobile-nav">
-            <NavItems onNavigate={() => setOpen(false)} />
-          </LayoutGroup>
+          <NavItems onNavigate={() => setOpen(false)} />
         </nav>
         {chrome && (
           <div className="mt-auto shrink-0 border-t border-line-soft p-3">

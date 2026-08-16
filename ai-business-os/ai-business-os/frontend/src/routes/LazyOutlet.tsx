@@ -3,36 +3,23 @@ import { Outlet, useLocation } from "react-router-dom";
 import { RouteErrorBoundary } from "@/components/route-error-boundary";
 import { PageLoading } from "@/components/page-loading";
 
-/** Standard band (220ms) plus a short buffer. If the animation clock never
- *  advances, this is what forces the surface visible instead of leaving it
- *  at the from-keyframe. */
-const ROUTE_ENTER_SETTLE_MS = 340;
+/** Opacity enter (~160ms) + buffer. Forces visible if animationend never fires. */
+const ROUTE_ENTER_SETTLE_MS = 220;
 
 /**
  * Authenticated content boundary. AppLayout (sidebar, top bar, status)
  * stays mounted; only this surface transitions between routes.
  *
- * Enter-only CSS animation (`.route-enter`), not Framer. AnimatePresence,
- * a keyed motion.div, and animation controls all left the incoming page
- * at opacity 0 under rapid clicking — Framer applied the hidden target
- * and never ran the visible animation on the replacement instance.
- * CSS `animation-fill-mode: both` always lands on the finished state
- * when the document timeline is running; `route-enter-settled` is the
- * fail-visible backstop if it is not.
+ * Enter-only CSS opacity (`.route-enter`) — no translateY. Keyed by
+ * pathname so rapid navigation replaces the previous surface immediately
+ * (no animation queue). Cleanup cancels in-flight animations.
  *
- * The first paint of this outlet (login landing, session restore) skips
- * the enter so Phase C cannot impersonate the locked Phase F overlay.
- * playEnter is frozen on the keyed child: AppLayout re-renders every
- * second for the clock, and toggling the class on the same node would
- * replay the enter on a landing that should stay still.
+ * First paint skips enter so login cinematic is not doubled.
  */
 export function LazyOutlet() {
   const { pathname } = useLocation();
   const skipEnter = useRef(true);
 
-  // Inner <main> owns scroll, not the window. Resetting here prevents a new
-  // page from resolving at the previous page's scroll offset — which would
-  // read as a giant translated surface rather than a 8px settle.
   useLayoutEffect(() => {
     const main = document.querySelector("main");
     if (main) main.scrollTop = 0;
@@ -57,19 +44,15 @@ function RouteSurface({ playEnter, children }: { playEnter: boolean; children: R
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !play.current) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.classList.add("route-enter-settled");
+      return;
+    }
 
     let settled = false;
     const settle = () => {
       if (settled) return;
       settled = true;
-      el.getAnimations?.().forEach((animation) => {
-        try {
-          animation.finish();
-        } catch {
-          /* already finished or not finishable */
-        }
-      });
       el.classList.add("route-enter-settled");
     };
 
@@ -83,6 +66,13 @@ function RouteSurface({ playEnter, children }: { playEnter: boolean; children: R
     return () => {
       el.removeEventListener("animationend", onEnd);
       window.clearTimeout(id);
+      el.getAnimations?.().forEach((animation) => {
+        try {
+          animation.cancel();
+        } catch {
+          /* already finished */
+        }
+      });
     };
   }, []);
 

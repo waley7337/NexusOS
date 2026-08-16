@@ -1,6 +1,6 @@
 /**
- * Layered cinematic atmosphere.
- * Drift/parallax are CSS + parent CSS variables — no JS animation loops.
+ * Layered atmosphere — static gradients only.
+ * No grain, drift, or parallax (paint/compositor cost).
  */
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,6 @@ export function Atmosphere({ className }: { className?: string }) {
         <span className="atmosphere-layer atmosphere-layer--violet" />
       </div>
       <span className="atmosphere-vignette" />
-      <span className="atmosphere-grain" />
     </div>
   );
 }

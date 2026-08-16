@@ -2,7 +2,7 @@
  * NexusOS shell — implements the Part 2 navigation wireframe:
  *   sidebar (collapsible) · top bar with global search · content · profile footer.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Search,
   Bell,
@@ -24,7 +24,6 @@ import { useAuthStore } from "@/stores/auth";
 import { useTheme } from "@/providers/theme-provider";
 import { useUiStore } from "@/stores/ui";
 import { useRouteFocus } from "@/hooks/useRouteFocus";
-import { useLiveClock } from "@/hooks/useLiveClock";
 import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { useCaptureActions } from "@/hooks/useCaptureActions";
 import { useLogout } from "@/features/auth";
@@ -44,7 +43,6 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Row, RowGroup } from "@/components/ui/structure";
-import { useAmbientPresence } from "@/hooks/useAmbientPresence";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -92,13 +90,39 @@ export function AppLayout() {
   const setCaptureOpen = useUiStore((state) => state.setCaptureOpen);
   const authEntryActive = useUiStore((state) => state.isAuthEntryActive);
   const commandPaletteOpen = useUiStore((state) => state.isCommandPaletteOpen);
-  const stageRef = useAmbientPresence(!authEntryActive);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * data-entry is DOM-only (not React-prop) so clock rerenders cannot
+   * clobber the two-frame post-cinematic settle delay.
+   */
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+
+    if (authEntryActive) {
+      el.dataset.entry = "in";
+      return;
+    }
+
+    el.dataset.entry = "in";
+    let f2 = 0;
+    const f1 = window.requestAnimationFrame(() => {
+      f2 = window.requestAnimationFrame(() => {
+        el.dataset.entry = "settled";
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(f1);
+      window.cancelAnimationFrame(f2);
+    };
+  }, [authEntryActive]);
 
   useRouteFocus();
 
-  // Both feed ShellStatusBar, which now owns the "Synced N ago" formatting.
+  // Feeds ShellStatusBar probes. Clock ticks live inside ShellStatusBar
+  // so this layout tree is not re-rendered every second.
   const systemStatus = useSystemStatus();
-  const clock = useLiveClock();
 
   const captureActions = useCaptureActions();
 
@@ -144,7 +168,6 @@ export function AppLayout() {
     <div
       ref={stageRef}
       className="app-stage h-dvh overflow-hidden"
-      data-entry={authEntryActive ? "in" : "settled"}
       data-search={commandPaletteOpen ? "open" : "idle"}
     >
       <Atmosphere />
@@ -611,7 +634,6 @@ export function AppLayout() {
           db={systemStatus.db}
           environment={systemStatus.environment}
           lastSyncedAt={systemStatus.lastSyncedAt}
-          now={clock}
           onCommandPalette={toggleCommandPalette}
         />
       </div>

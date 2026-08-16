@@ -19,7 +19,6 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { useUiStore } from "@/stores/ui";
 import { useLiveClock } from "@/hooks/useLiveClock";
-import { useScrollProductStage } from "@/hooks/useScrollProductStage";
 import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
 import { useDashboard } from "@/features/dashboard";
 import { MODULE_SUMMARIES } from "@/features/dashboard/constants";
@@ -58,12 +57,10 @@ const CAPABILITY_SECTIONS = [
 
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const clock = useLiveClock();
   const { data, isPending, isError, dataUpdatedAt, refetch } = useDashboard();
   const setCaptureOpen = useUiStore((s) => s.setCaptureOpen);
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
   const prefersReducedMotion = useReducedMotion();
-  const stageRef = useScrollProductStage(!prefersReducedMotion);
   const storyRef = useRevealOnScroll<HTMLElement>();
   const modulesRef = useRevealOnScroll<HTMLElement>();
 
@@ -81,15 +78,6 @@ export function DashboardPage() {
   });
 
   const firstName = user?.name?.split(" ")[0] ?? "there";
-  const dateLabel = clock.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-  const timeLabel = clock.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
   const roleLabel = user?.role ? user.role.replace(/_/g, " ") : null;
 
   const apiOk = data?.apiStatus === "ok";
@@ -110,12 +98,8 @@ export function DashboardPage() {
       className={cn("space-y-10 pb-8", cinemaEntry && "cinema-entry")}
       data-cinema={cinemaEntry ? "entry" : undefined}
     >
-      {/* ===== Cinematic product stage ===== */}
-      <div
-        ref={stageRef}
-        className="product-stage-track"
-        style={{ minHeight: prefersReducedMotion ? undefined : "118vh" }}
-      >
+      {/* ===== Mission Control (native scroll — no sticky scroll-stage) ===== */}
+      <div className="product-stage-track">
         <div className="product-stage-sticky">
           <header
             className="product-hero mb-8 max-w-2xl space-y-4"
@@ -125,18 +109,15 @@ export function DashboardPage() {
             <p className="text-sm font-medium text-primary/90">
               {user?.companyName ?? "NexusOS"}
             </p>
-            <h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
-              {greetingAt(clock)}, {firstName}
-            </h1>
+            <DashboardGreeting firstName={firstName} />
             <p className="max-w-[42ch] text-base text-muted-foreground sm:text-lg">
               Operate your business from one intelligent system — CRM, projects,
               finance, operations, and AI in a single workspace.
             </p>
-            <p className="text-sm text-muted-foreground">
-              {dateLabel}
-              {roleLabel ? ` · ${roleLabel}` : null}
-              {user?.companySlug ? ` · ${user.companySlug}` : null}
-            </p>
+            <DashboardMeta
+              roleLabel={roleLabel}
+              companySlug={user?.companySlug}
+            />
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <Button
                 onClick={() => setCaptureOpen(true)}
@@ -156,7 +137,7 @@ export function DashboardPage() {
           </header>
 
           <div className="product-stage-frame" data-motion={motionAttr}>
-            <div className="mission-primary cinema-stage space-y-4 rounded-[var(--r-panel)] border border-[rgb(160_190_255_/_0.14)] bg-[hsl(var(--surface-1)/0.72)] p-3 shadow-[0_0_60px_-28px_var(--glow-blue),0_1px_0_0_rgb(180_210_255_/_0.08)_inset] sm:p-4">
+            <div className="mission-primary cinema-stage space-y-4 rounded-[var(--r-panel)] border border-[rgb(160_190_255_/_0.14)] bg-[hsl(var(--surface-1)/0.78)] p-3 shadow-[0_1px_0_0_rgb(180_210_255_/_0.08)_inset] sm:p-4">
               {/* Signal row */}
               <section
                 aria-label="System signals"
@@ -183,13 +164,7 @@ export function DashboardPage() {
                   hint={user?.email}
                   tone="ok"
                 />
-                <SignalPanel
-                  label="Local time"
-                  pending={false}
-                  value={timeLabel}
-                  hint={dateLabel}
-                  tone="ok"
-                />
+                <LocalTimeSignal />
               </section>
 
               {isError && (
@@ -409,6 +384,61 @@ export function DashboardPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function DashboardGreeting({ firstName }: { firstName: string }) {
+  const clock = useLiveClock();
+  return (
+    <h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
+      {greetingAt(clock)}, {firstName}
+    </h1>
+  );
+}
+
+function DashboardMeta({
+  roleLabel,
+  companySlug,
+}: {
+  roleLabel: string | null;
+  companySlug?: string | null;
+}) {
+  const clock = useLiveClock();
+  const dateLabel = clock.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
+  return (
+    <p className="text-sm text-muted-foreground">
+      {dateLabel}
+      {roleLabel ? ` · ${roleLabel}` : null}
+      {companySlug ? ` · ${companySlug}` : null}
+    </p>
+  );
+}
+
+function LocalTimeSignal() {
+  const clock = useLiveClock();
+  const timeLabel = clock.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const dateLabel = clock.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
+  return (
+    <SignalPanel
+      label="Local time"
+      pending={false}
+      value={timeLabel}
+      hint={dateLabel}
+      tone="ok"
+    />
   );
 }
 

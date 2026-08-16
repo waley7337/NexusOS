@@ -5,9 +5,7 @@
  * Never delays auth, navigation, prefetch, or authorization.
  * pointer-events: none; aria-hidden.
  *
- * Architecture (GPU-friendly):
- *   dark field → logo resolves → atmosphere opens → product shell
- *   scales toward camera → overlay fades onto real AppLayout.
+ * Lean stack (performance): field → one glow → logo → shell → fade.
  * Transform + opacity only. No animated filters / blur.
  */
 import { useEffect, useRef } from "react";
@@ -15,9 +13,9 @@ import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
 
 /** Cinematic band. Not a navigation delay. */
-export const AUTH_ENTRY_DURATION_MS = 1200;
+export const AUTH_ENTRY_DURATION_MS = 1000;
 /** Failsafe if animationend never fires. */
-export const AUTH_ENTRY_FAILSAFE_MS = 1600;
+export const AUTH_ENTRY_FAILSAFE_MS = 1400;
 
 export function AuthEntryOverlay() {
   const active = useUiStore((s) => s.isAuthEntryActive);
@@ -69,17 +67,8 @@ export function AuthEntryOverlay() {
       }}
     >
       <div className="auth-entry-field" />
-      <div className="auth-entry-glow auth-entry-glow--a" />
-      <div className="auth-entry-glow auth-entry-glow--b" />
+      <div className="auth-entry-glow" />
 
-      {/* Spatial fragments — atmospheric only, not operational UI */}
-      <div className="auth-entry-fragments" aria-hidden="true">
-        <span className="auth-entry-frag auth-entry-frag--a" />
-        <span className="auth-entry-frag auth-entry-frag--b" />
-        <span className="auth-entry-frag auth-entry-frag--c" />
-      </div>
-
-      {/* NexusOS identity — spatial anchor */}
       <div className="auth-entry-identity">
         <img
           className="auth-entry-symbol"
@@ -99,15 +88,12 @@ export function AuthEntryOverlay() {
         />
       </div>
 
-      {/* Product shell materializing toward camera */}
       <div className="auth-entry-shell">
         <div className="auth-entry-shell-chrome">
           <div className="auth-entry-shell-rail" />
           <div className="auth-entry-shell-stage" />
         </div>
       </div>
-
-      <div className="auth-entry-vignette" />
     </div>
   );
 }

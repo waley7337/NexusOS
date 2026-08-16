@@ -53,11 +53,12 @@ export const scaleIn: Variants = {
 
 /**
  * Authenticated route-content transition.
- * LazyOutlet plays CSS `.route-enter` (~260ms / 8px). Shell stays put.
+ * LazyOutlet plays CSS `.route-enter` (~160ms opacity). No translateY.
+ * Shell stays put. Keyed remount cancels prior enter (no queue).
  */
 export const routePageTransition: Variants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: transitionStandard },
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.16, ease: [0.22, 0.61, 0.36, 1] } },
 };
 
 export const routePageTransitionReduced: Variants = {
