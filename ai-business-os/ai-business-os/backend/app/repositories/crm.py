@@ -18,7 +18,7 @@ from sqlalchemy import func, or_, select
 
 from app.core.exceptions import ValidationError
 from app.models.crm import Contact, Customer, Deal, Lead
-from app.models.enums import CustomerStatus, PipelineStage
+from app.models.enums import CustomerStatus, DealStatus, PipelineStage
 from app.models.user import User
 from app.repositories.base import DEFAULT_PAGE_SIZE, BaseRepository
 
@@ -285,3 +285,68 @@ class DealRepository(BaseRepository[Deal]):
         "value": Deal.value,
         "status": Deal.status,
     }
+
+    async def ensure_lead_in_tenant(self, lead_id: uuid.UUID) -> None:
+        """Reject leads that are missing, soft-deleted, or other-tenant.
+
+        Fail closed with ValidationError (422) — never reveal whether the
+        UUID exists in another company.
+        """
+        self._require_tenant_context()
+        stmt = select(Lead.id).where(
+            Lead.id == lead_id,
+            Lead.company_id == self.company_id,
+            Lead.deleted_at.is_(None),
+        )
+        found = (await self.db.execute(stmt)).scalar_one_or_none()
+        if found is None:
+            raise ValidationError("Lead must belong to the current company.")
+
+    async def ensure_lead_available_for_deal(self, lead_id: uuid.UUID) -> None:
+        """Enforce one active Deal per Lead (matches ix_deals_lead_id_active_uq)."""
+        self._require_tenant_context()
+        stmt = select(Deal.id).where(
+            Deal.lead_id == lead_id,
+            Deal.company_id == self.company_id,
+            Deal.deleted_at.is_(None),
+        )
+        found = (await self.db.execute(stmt)).scalar_one_or_none()
+        if found is not None:
+            raise ValidationError("This lead already has an active deal.")
+
+    async def list_filtered(
+        self,
+        *,
+        page: int = 1,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        sort_by: str | None = None,
+        sort_desc: bool = False,
+        lead_id: uuid.UUID | None = None,
+        status: DealStatus | None = None,
+    ) -> tuple[List[Deal], int]:
+        """Tenant-scoped list with typed filters.
+
+        Search is intentionally omitted — Deal has no appropriate primary
+        searchable text field (only optional lost_reason).
+
+        Filters apply on `_base_query()` before count/offset/limit.
+        """
+        page, page_size = self._clamp_pagination(page, page_size)
+        stmt = self._base_query()
+
+        if lead_id is not None:
+            # lead_id alone cannot broaden scope — company_id remains in stmt
+            stmt = stmt.where(Deal.lead_id == lead_id)
+        if status is not None:
+            stmt = stmt.where(Deal.status == status)
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = (await self.db.execute(count_stmt)).scalar_one()
+
+        resolved_order = self._safe_order_by(sort_by, sort_desc)
+        if resolved_order is not None:
+            stmt = stmt.order_by(resolved_order)
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all()), total

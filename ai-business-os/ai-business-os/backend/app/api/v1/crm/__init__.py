@@ -1,6 +1,6 @@
 """CRM API package.
 
-Customers CRUD: 06.2. Contacts CRUD: 06.4. Leads CRUD: 06.6. Deals: later.
+Customers: 06.2. Contacts: 06.4. Leads: 06.6. Deals: 06.8.
 """
 
 from app.api.v1.crm.router import router
