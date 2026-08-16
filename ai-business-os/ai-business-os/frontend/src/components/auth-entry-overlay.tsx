@@ -16,6 +16,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
 import { NexusProductProxy } from "@/components/nexus-product-proxy";
+import { Starfield } from "@/components/starfield";
 
 /** Immersion band — product approach + lock. */
 export const AUTH_ENTRY_DURATION_MS = 1550;
@@ -98,6 +99,11 @@ export function AuthEntryOverlay() {
       }}
     >
       <div className="auth-immersion-field" />
+      {/* The same sky, still travelling — in warp, because this is the
+          moment the camera actually moves forward. Without it the stars
+          would vanish at the exact frame the world starts moving, which is
+          the one frame a viewer is guaranteed to be looking at them. */}
+      {reducedMotion ? null : <Starfield className="auth-immersion-stars" mode="warp" />}
       <div className="auth-immersion-light" />
       <div className="auth-immersion-light-edge" />
 

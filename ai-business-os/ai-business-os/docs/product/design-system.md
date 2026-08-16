@@ -431,6 +431,60 @@ insight. An unresolved probe renders `—`, never a guess, because *unknown* and
 the mock dashboard ever returns. **Treat them as load-bearing and do not
 weaken them.**
 
+## The pre-login sky (`Starfield`)
+
+The cinematic entrance is deep space, so it has a real sky: `components/
+starfield.tsx`, drawn into a device-pixel-backed `<canvas>` rather than
+assembled from CSS gradients.
+
+Why canvas. A CSS starfield has a fixed number of dots regardless of viewport,
+one brightness curve for all of them, no twinkle, and resampled soft edges on a
+high-DPI panel. The canvas gives per-star size, brightness, tint and twinkle
+phase, and it paints at the display's real resolution — measured at
+`3840x2160` backing pixels on a 1920x1080 CSS viewport at 2x.
+
+Two modes. `drift` is the sign-in sky: slow lateral parallax by depth, tuned to
+sit near the threshold of perception. `warp` is the immersion continuation:
+stars accelerate radially outward from the camera centre, so the sky and the
+camera agree about which way the shot is travelling. `Atmosphere
+variant="cinematic"` mounts the first; `AuthEntryOverlay` mounts the second.
+
+Cost contract, and it is the reason for every design choice in the file:
+
+- no React state and no layout reads per frame — refs and one `rAF` loop;
+- no `filter`, `backdrop-filter`, `box-shadow` or `blur` anywhere. The glow is
+  baked into pre-rendered sprites once and then blitted with `drawImage`, so a
+  frame is N textured quads and nothing else;
+- density is derived from viewport area, not a fixed count, and DPR is capped
+  at 2;
+- the loop stops on `visibilitychange` and on unmount.
+
+Measured at 1920x1080 @2x: median frame 16.7ms, p95 16.7ms, max 16.8ms — a
+locked 60fps with no dropped frames. Hidden-tab check: zero pixels change.
+
+`prefers-reduced-motion` paints exactly one static frame and never starts a
+loop — the sky is still there, it just isn't moving — and the overlay's warp
+field is not mounted at all. Verified: 5,556 lit pixels, 0 changed over 1.4s.
+
+## Product proxy (`NexusProductProxy`)
+
+The object the camera flies toward. It contains no text, no number and no data
+— it is the *shape* of the product at a distance where type would not be
+legible — which is what makes a shape proxy the honest way to show a product
+you have not signed into yet.
+
+It was rebuilt away from skeleton language, because uniform grey rounded bars
+in empty panels are not "a product seen from a distance", they are a loading
+state. Three rules keep it out of that reading: primitives vary (icon marks,
+chips, list rows, a plotted chart, an avatar); contrast is ranked (exactly one
+accented nav row, one dominant panel); and every panel carries structure at
+roughly the density the real product has.
+
+Every colour in its stylesheet is literal, never a token. The immersion overlay
+mounts above `RouterProvider`, outside the auth shell's forced-dark scope, so
+`hsl(var(--surface-1))` resolved to the *viewer's* theme: on light mode the
+chrome came back `#FFFFFF` and the entire immersion played as a white slab.
+
 ## Known debt
 
 - `progress.tsx` and `useCountUp.ts` trip `react-hooks/set-state-in-effect`
