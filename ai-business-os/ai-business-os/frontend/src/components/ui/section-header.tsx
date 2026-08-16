@@ -72,8 +72,8 @@ export function SectionHeader({
           aria-hidden="true"
         />
         <div className="min-w-0">
-          <Heading className="truncate text-sm font-semibold tracking-tight">{title}</Heading>
-          {subtitle && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{subtitle}</p>}
+          <Heading className="truncate text-h4">{title}</Heading>
+          {subtitle && <p className="mt-0.5 text-small leading-relaxed text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
       {action && <div className="shrink-0">{action}</div>}

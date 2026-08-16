@@ -26,7 +26,7 @@ export const DialogContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "dialog-panel fixed left-1/2 top-1/2 z-modal w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-dialog border border-line-soft bg-surface-2 p-6 shadow-modal",
+        "dialog-panel fixed left-1/2 top-1/2 z-modal w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-dialog border border-line-transient bg-surface-2 p-6 shadow-modal",
         "duration-standard data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
         className,
       )}

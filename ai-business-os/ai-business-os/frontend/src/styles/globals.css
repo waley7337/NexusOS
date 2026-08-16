@@ -225,12 +225,17 @@
 
     --surface-inset: 0 1px 0 0 var(--edge-light) inset;
     --surface-inset-strong: 0 1px 0 0 rgb(255 255 255 / 1) inset;
-    --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
-    --shadow-md: 0 2px 8px -2px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
-    --shadow-lg: 0 8px 24px -6px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.05);
-    --shadow-hover: 0 4px 12px -2px rgb(15 23 42 / 0.10);
-    --shadow-dropdown: 0 8px 30px -4px rgb(15 23 42 / 0.16);
-    --shadow-modal: 0 24px 64px -12px rgb(15 23 42 / 0.28);
+    /* V2: the transient set is now derived from the same occlusion
+       ladder as planes, so a dropdown and a dialog differ by DEPTH rather
+       than by having been authored separately. V1 rederived --shadow-surface
+       and --shadow-lift but left these five as legacy literals, which meant
+       floating surfaces were still lit by a different light than the room. */
+    --shadow-sm: var(--occlusion-1);
+    --shadow-md: var(--occlusion-1), var(--occlusion-2);
+    --shadow-lg: var(--occlusion-2), var(--occlusion-3);
+    --shadow-hover: var(--occlusion-2);
+    --shadow-dropdown: var(--occlusion-2), var(--occlusion-3);
+    --shadow-modal: var(--occlusion-3);
     /* Composed from the occlusion set, so a plane and a dialog cast the
        same light differently by DEGREE, not by a different recipe.
        The violet halo that used to ride on --shadow-lift is gone: an
@@ -418,12 +423,17 @@
 
     --surface-inset: 0 1px 0 0 var(--edge-light) inset;
     --surface-inset-strong: 0 1px 0 0 rgb(255 255 255 / 0.07) inset;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.6);
-    --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.7);
-    --shadow-lg: 0 8px 30px -12px rgb(0 0 0 / 0.7);
-    --shadow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.6);
-    --shadow-dropdown: 0 12px 40px -8px rgb(0 0 0 / 0.8);
-    --shadow-modal: 0 24px 64px -12px rgb(0 0 0 / 0.85);
+    /* V2: the transient set is now derived from the same occlusion
+       ladder as planes, so a dropdown and a dialog differ by DEPTH rather
+       than by having been authored separately. V1 rederived --shadow-surface
+       and --shadow-lift but left these five as legacy literals, which meant
+       floating surfaces were still lit by a different light than the room. */
+    --shadow-sm: var(--occlusion-1);
+    --shadow-md: var(--occlusion-1), var(--occlusion-2);
+    --shadow-lg: var(--occlusion-2), var(--occlusion-3);
+    --shadow-hover: var(--occlusion-2);
+    --shadow-dropdown: var(--occlusion-2), var(--occlusion-3);
+    --shadow-modal: var(--occlusion-3);
     /* Same composition as light mode, different occlusion values. The
        violet halo is removed here too — it was the largest single source
        of ambient purple in the product. */
@@ -480,12 +490,10 @@
     --border: 0 0% 15%;              /* #262626 hairline */
     --input: 0 0% 15%;
 
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.6);
-    --shadow-md: 0 2px 10px -2px rgb(0 0 0 / 0.7);
-    --shadow-lg: 0 24px 60px -16px rgb(0 0 0 / 0.85);
-    --shadow-hover: 0 4px 16px -2px rgb(0 0 0 / 0.7);
-    --shadow-dropdown: 0 8px 30px -4px rgb(0 0 0 / 0.8);
-    --shadow-modal: 0 32px 80px -20px rgb(0 0 0 / 0.9);
+    /* V2: the auth shell no longer overrides the shadow set. It kept a
+       third set of literals, so a dialog on /login was lit by a different
+       light than the same dialog in the workspace. It now inherits the
+       occlusion-derived values from .dark — one light position product-wide. */
   }
 
   * { @apply border-border; }
@@ -821,8 +829,13 @@
       border-color var(--duration-fast) var(--ease-out-quart),
       box-shadow var(--duration-fast) var(--ease-out-quart);
   }
+  /* V2: no translate. A universal hover-lift makes a page of surfaces
+     jitter under the pointer and says nothing about what is actually
+     actionable — it is movement standing in for information. The response
+     is now material: the edge lights and the occlusion deepens, which
+     reads as the surface catching more of the key light without the
+     object leaving its position. RESPOND class, local, no layout cost. */
   .card-lift:hover {
-    transform: translateY(-2px);
     border-color: var(--line-strong);
     box-shadow: var(--shadow-lift);
   }
@@ -1016,10 +1029,16 @@
     0 0 0 1px var(--line-focus),
     0 0 0 3px hsl(var(--primary) / 0.16);
 }
+/* --focus-base is the control's OWN material, preserved underneath the
+   focus energy. It defaults to the raised lip (buttons, tabs), and a
+   recessed control — an input is cut into the chassis, not sitting on it —
+   overrides it with its inset shade. Without this indirection, focusing a
+   field replaced its recess with a lip and the control appeared to pop out
+   of the surface at the exact moment it became active. */
 .focus-edge:focus-visible {
   outline: none;
   box-shadow:
-    var(--surface-inset),
+    var(--focus-base, var(--surface-inset)),
     0 0 0 1px var(--line-focus),
     0 0 0 3px hsl(var(--primary) / 0.16);
 }

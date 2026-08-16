@@ -186,7 +186,10 @@ export function AppLayout() {
                   }}
                   className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-4 hover:text-foreground focus-ring"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-4 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
+                  {/* V2: de-chipped, matching the command palette. The row's
+                      own hover fill already carries the interaction; a tinted
+                      square behind the icon just added a second one. */}
+                  <span className="flex w-4 shrink-0 items-center justify-center text-disabled-foreground group-hover:text-primary">
                     <action.icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="flex-1 truncate">{action.label}</span>

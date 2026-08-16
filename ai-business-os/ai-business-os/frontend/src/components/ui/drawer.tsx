@@ -18,7 +18,7 @@ export const DrawerContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "drawer-panel fixed inset-y-0 z-modal flex w-full max-w-md flex-col border-line-soft bg-surface-2 shadow-modal duration-spatial ease-in-out-quint",
+        "drawer-panel fixed inset-y-0 z-modal flex w-full max-w-md flex-col border-line-transient bg-surface-2 shadow-modal duration-spatial ease-in-out-quint",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         side === "right"
           ? "right-0 border-l data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right"

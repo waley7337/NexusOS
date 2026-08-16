@@ -124,7 +124,13 @@ export function CommandPalette() {
                 onSelect={() => run(onSelect)}
                 className="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground data-[selected=true]:bg-surface-4 data-[selected=true]:text-foreground"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-4 text-muted-foreground group-data-[selected=true]:bg-primary/10 group-data-[selected=true]:text-primary">
+                {/* V2: de-chipped. A 32px tinted rounded square behind every
+                    icon is the strongest single contributor to the generic
+                    SaaS read, and here it was doing no work — the row already
+                    has alignment, a selected fill and a label. The icon is now
+                    bare and rail-aligned; selection is carried by the row, and
+                    violet marks the selected icon only. */}
+                <span className="flex w-4 shrink-0 items-center justify-center text-disabled-foreground group-data-[selected=true]:text-primary">
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <span className="flex-1 truncate">{label}</span>
