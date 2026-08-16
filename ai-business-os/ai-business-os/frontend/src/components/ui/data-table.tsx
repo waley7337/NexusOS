@@ -200,7 +200,7 @@ export function DataTable<TData>({
                     >
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <button
-                          className="inline-flex items-center gap-1.5 rounded transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="inline-flex items-center gap-1.5 rounded transition-colors duration-fast hover:text-foreground focus-ring"
                           onClick={header.column.getToggleSortingHandler()}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}

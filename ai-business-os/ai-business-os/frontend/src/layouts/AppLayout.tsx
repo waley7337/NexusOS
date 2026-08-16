@@ -184,7 +184,7 @@ export function AppLayout() {
                     setCaptureOpen(false);
                     action.onSelect();
                   }}
-                  className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-4 hover:text-foreground focus-ring"
                 >
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-4 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
                     <action.icon className="h-4 w-4" aria-hidden="true" />

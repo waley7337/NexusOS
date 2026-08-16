@@ -68,11 +68,32 @@
     --surface-4: 0 0% 96%;    /* #F5F5F5 control fill */
     --surface-5: 0 0% 92.5%;  /* #ECECEC control hover */
 
-    /* --- Hairlines (light): near-black at low alpha, so a border reads
-       as a shadow-edge over whatever surface is beneath it. --- */
-    --line: rgb(15 23 42 / 0.10);
+    /* ================================================================
+       LINE / RAIL SYSTEM (V1) — five roles, deliberately unequal.
+
+       The failure this replaces: three tokens covering five jobs meant
+       every boundary was drawn at roughly the same weight, so hierarchy
+       had to be expressed by wrapping things in more borders. Nineteen
+       bordered elements were measured on one dashboard using only three
+       distinct colours.
+
+         --rail            structural divider. The strongest line in the
+                           product and the ONLY one allowed to run the
+                           full height or width of a region.
+         --line-soft       normal surface edge. The default. Quietest.
+         --line            interactive edge — this thing can be operated.
+         --line-strong     interactive, engaged (hover / emphasis).
+         --line-focus      focused edge. The one line that carries violet.
+         --line-transient  edge of something floating above the room.
+
+       Rule: a boundary gets the WEAKEST role that still communicates.
+       ================================================================ */
     --line-soft: rgb(15 23 42 / 0.06);
+    --line: rgb(15 23 42 / 0.10);
     --line-strong: rgb(15 23 42 / 0.16);
+    --rail: rgb(15 23 42 / 0.13);
+    --line-focus: hsl(var(--primary) / 0.55);
+    --line-transient: rgb(15 23 42 / 0.14);
 
     /* --- Neutral aliases → ladder. Kept so every existing consumer of
        bg-background / bg-card / bg-muted / bg-secondary / bg-accent
@@ -135,18 +156,74 @@
 
     --ring: var(--primary);             /* focus = accent violet */
 
-    /* --- Radius (§4.7) --- */
-    --radius-btn: 10px;
-    --radius-input: 10px;
-    --radius-card: 12px;
-    --radius-dialog: 16px;
-    --radius-surface: 18px;             /* LifeOS convergence: elevated panels */
+    /* ================================================================
+       RADIUS — one family (V1).
 
-    /* --- Shadows (§4.8). --surface-inset is the top "lip" highlight
-       that makes an elevated panel read as catching light from above;
-       --shadow-surface and --shadow-lift compose it with the drop
-       shadow so .surface / .card-lift are one-token recipes. --- */
-    --surface-inset: 0 1px 0 0 rgb(255 255 255 / 0.9) inset;
+       Measured before: six distinct radii rendering simultaneously on the
+       dashboard (4/6/8/10/12/9999px across 42 elements). Six radii is not
+       a vocabulary, it is noise — nothing reads as belonging to the same
+       manufactured object.
+
+       Two structural values, plus one reserved:
+
+         --r-surface  4px   planes, panels, dialogs, drawers, regions
+         --r-control  6px   buttons, inputs, chips, menu items
+         --r-full     pill  RESERVED: status dots and avatars only
+
+       Regions are SQUARER than controls, which inverts the usual web
+       default on purpose. A 500px panel at 4px reads as a machined plate
+       (0.8% of its width); a 32px button at 6px reads as a key (19% of
+       its height). Rounding proportional to the object is what makes the
+       set feel engineered rather than bubbly.
+
+       The legacy --radius-* names are kept as aliases so ~40 components
+       inherit the family through var() with zero edits. Tailwind's own
+       rounded-sm/md/lg/xl scale is remapped in tailwind.config.ts for the
+       same reason — raw `rounded-lg` bypassed these tokens entirely and
+       was the single largest source of the old spread.
+       ================================================================ */
+    --r-surface: 4px;
+    --r-control: 6px;
+    --r-full: 9999px;
+
+    --radius-btn: var(--r-control);
+    --radius-input: var(--r-control);
+    --radius-card: var(--r-surface);
+    --radius-dialog: var(--r-surface);
+    --radius-surface: var(--r-surface);
+
+    /* ================================================================
+       MATERIAL / DEPTH (V1).
+
+       Five roles, and they are NOT five brightnesses:
+
+         ENVIRONMENT  the room. --surface-0. No edge, no shadow.
+         CHASSIS      fixed shell furniture. Edge-light + occlusion below,
+                      almost no fill change — it is part of the room.
+         PLANE        content sitting IN the room. Fill + directional edge
+                      (lit top, shaded bottom) + cast shadow.
+         CONTROL      operable. Same fill family as PLANE; separated by
+                      edge luminance and interaction response, not colour.
+         TRANSIENT    above everything. Occlusion is the cue — the scrim
+                      dims the room — plus a long shadow.
+
+       DIRECTIONAL EDGE LIGHT is the mechanism the old system lacked. One
+       key light, upper-left, consistent everywhere: a surface catches it
+       on the top edge (--edge-light) and loses it on the bottom
+       (--edge-shade). That pair is what makes an element read as a solid
+       plate rather than a filled rectangle, and it is why depth no longer
+       requires making things brighter.
+       ================================================================ */
+    --edge-light: rgb(255 255 255 / 0.75);
+    --edge-shade: rgb(15 23 42 / 0.05);
+
+    /* Occlusion — how much of the room a layer blocks. One light position,
+       so every shadow falls the same way and the set composites. */
+    --occlusion-1: 0 1px 2px -1px rgb(15 23 42 / 0.10);
+    --occlusion-2: 0 4px 12px -4px rgb(15 23 42 / 0.14);
+    --occlusion-3: 0 24px 56px -20px rgb(15 23 42 / 0.26);
+
+    --surface-inset: 0 1px 0 0 var(--edge-light) inset;
     --surface-inset-strong: 0 1px 0 0 rgb(255 255 255 / 1) inset;
     --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
     --shadow-md: 0 2px 8px -2px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
@@ -154,8 +231,13 @@
     --shadow-hover: 0 4px 12px -2px rgb(15 23 42 / 0.10);
     --shadow-dropdown: 0 8px 30px -4px rgb(15 23 42 / 0.16);
     --shadow-modal: 0 24px 64px -12px rgb(15 23 42 / 0.28);
-    --shadow-surface: var(--surface-inset), 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 8px 24px -14px rgb(15 23 42 / 0.14);
-    --shadow-lift: var(--surface-inset-strong), 0 12px 32px -12px rgb(15 23 42 / 0.18), 0 0 32px -20px hsl(var(--primary) / 0.35);
+    /* Composed from the occlusion set, so a plane and a dialog cast the
+       same light differently by DEGREE, not by a different recipe.
+       The violet halo that used to ride on --shadow-lift is gone: an
+       always-on accent glow under every hovered card is exactly the
+       "violet as atmosphere" this system rejects. */
+    --shadow-surface: var(--surface-inset), var(--occlusion-1), var(--occlusion-2);
+    --shadow-lift: var(--surface-inset-strong), var(--occlusion-2), var(--occlusion-3);
 
     /* --- Motion (§4.23) — banded by how far an element travels, not by
        which component it belongs to. A checkbox and a drawer must never
@@ -227,8 +309,10 @@
     --glow-primary: var(--primary);
     --glow-success: var(--success);
     --glow-warning: var(--warning);
-    --glow-ambient-1: rgb(91 81 232 / 0.05);
-    --glow-ambient-2: rgb(11 132 184 / 0.035);
+    /* Ambient field (light) — neutral as of V1, same reasoning as dark:
+       luminance, no hue. */
+    --glow-ambient-1: rgb(15 23 42 / 0.030);
+    --glow-ambient-2: rgb(15 23 42 / 0.018);
 
     /* --- Surface: glass (Part 04, Phase 1) — floating/elevated surfaces
        only (hero headers, command palette, notification panel), never
@@ -262,9 +346,17 @@
 
     /* --- Hairlines (dark): white at low alpha, so every border is a lit
        edge whose apparent brightness tracks the surface under it. --- */
+    /* Line/rail roles (dark). White at low alpha, so each border is a lit
+       edge whose apparent brightness tracks the surface beneath it.
+       --rail is brighter than the interactive edge on purpose: structure
+       should be the most confident line in the room, and it is what lets
+       hierarchy be drawn with one rule instead of a box. */
+    --line-soft: rgb(255 255 255 / 0.05);
     --line: rgb(255 255 255 / 0.09);
-    --line-soft: rgb(255 255 255 / 0.055);
-    --line-strong: rgb(255 255 255 / 0.14);
+    --line-strong: rgb(255 255 255 / 0.16);
+    --rail: rgb(255 255 255 / 0.12);
+    --line-focus: hsl(var(--primary) / 0.55);
+    --line-transient: rgb(255 255 255 / 0.11);
 
     --background: var(--surface-0);
     --card: var(--surface-2);
@@ -314,19 +406,39 @@
 
     --ring: var(--primary);
 
-    --surface-inset: 0 1px 0 0 rgb(255 255 255 / 0.03) inset;
-    --surface-inset-strong: 0 1px 0 0 rgb(255 255 255 / 0.05) inset;
+    /* Directional edge light (dark). The key is upper-left, so a plane
+       catches a faint highlight on its top edge and the room swallows its
+       bottom edge. --edge-shade is pure black rather than a tinted
+       navy: on a true-black canvas any tint reads as colour contamination. */
+    --edge-light: rgb(255 255 255 / 0.045);
+    --edge-shade: rgb(0 0 0 / 0.55);
+    --occlusion-1: 0 1px 2px -1px rgb(0 0 0 / 0.7);
+    --occlusion-2: 0 6px 16px -8px rgb(0 0 0 / 0.75);
+    --occlusion-3: 0 28px 60px -24px rgb(0 0 0 / 0.9);
+
+    --surface-inset: 0 1px 0 0 var(--edge-light) inset;
+    --surface-inset-strong: 0 1px 0 0 rgb(255 255 255 / 0.07) inset;
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.6);
     --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.7);
     --shadow-lg: 0 8px 30px -12px rgb(0 0 0 / 0.7);
     --shadow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.6);
     --shadow-dropdown: 0 12px 40px -8px rgb(0 0 0 / 0.8);
     --shadow-modal: 0 24px 64px -12px rgb(0 0 0 / 0.85);
-    --shadow-surface: var(--surface-inset), 0 8px 30px -12px rgb(0 0 0 / 0.7);
-    --shadow-lift: var(--surface-inset-strong), 0 22px 50px -22px rgb(0 0 0 / 0.9), 0 0 40px -20px hsl(var(--primary) / 0.4);
+    /* Same composition as light mode, different occlusion values. The
+       violet halo is removed here too — it was the largest single source
+       of ambient purple in the product. */
+    --shadow-surface: var(--surface-inset), var(--occlusion-1), var(--occlusion-2);
+    --shadow-lift: var(--surface-inset-strong), var(--occlusion-2), var(--occlusion-3);
 
-    --glow-ambient-1: rgb(124 116 255 / 0.06);
-    --glow-ambient-2: rgb(56 189 248 / 0.04);
+    /* Ambient field (dark) — NEUTRAL as of V1. These were violet 6% and
+       cyan 4%: a page-wide two-hue wash, i.e. exactly "violet as
+       atmosphere" plus the blue contamination this system rejects. The
+       room now gets luminance only — a faint key from upper-left and a
+       weaker fill from upper-right — so depth still exists but the
+       environment has no hue of its own and violet is free to mean
+       something. */
+    --glow-ambient-1: rgb(255 255 255 / 0.030);
+    --glow-ambient-2: rgb(255 255 255 / 0.016);
 
     /* --- Chart palette (dark) — brightened for AA legibility on
        near-black, same hue family as light mode. --glow-*, --ring and
@@ -435,15 +547,61 @@
      convergence, Commit B). The old size was larger than the reference's
      hero heading while carrying less information, which is what made the
      greeting read as oversized rather than confident. */
-  .text-display { @apply text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] sm:text-[34px]; } /* 28→34/600 */
-  .text-h1      { @apply text-2xl font-semibold leading-[1.25] tracking-[-0.015em]; } /* 24/600 */
-  .text-h2      { @apply text-xl  font-semibold leading-[1.3]  tracking-[-0.01em]; }  /* 20/600 */
-  .text-h3      { @apply text-lg  font-semibold leading-[1.4]; }                      /* 18/600 */
-  .text-h4      { @apply text-base font-semibold leading-[1.5]; }                     /* 16/600 */
-  .text-body-lg { @apply text-base font-normal  leading-[1.6]; }                      /* 16/400 */
-  .text-body    { @apply text-sm  font-normal  leading-[1.55]; }                      /* 14/400 */
-  .text-small   { @apply text-xs  font-normal  leading-[1.5]; }                       /* 12/400 */
-  .text-caption { @apply text-xs  font-medium  uppercase tracking-[0.06em] text-muted-foreground; }
+  /* ================================================================
+     TYPOGRAPHY REGISTERS (V1).
+
+     Two voices, and which one a string gets is a semantic decision:
+
+       SANS (Inter)          human/product language — greetings, page
+                             titles, actions, explanation, module names.
+       MONO (JetBrains)      machine/system language — API status,
+                             environment, slugs, timestamps, IDs, counts,
+                             technical metadata.
+
+     Reading a mono string should tell you, before you parse it, that a
+     machine produced it. That is the whole point, and it is why mono
+     must stay rare: over-used it becomes decoration and stops signalling.
+
+     Measured before: 12 distinct size/weight pairs on one dashboard, the
+     top three being 14/500, 12/400 and 11/400 — i.e. three flavours of
+     "small grey text" doing different jobs with no visible distinction.
+     The roles below are separated by WEIGHT and TRACKING as well as size,
+     so two 11px strings can still read as different registers.
+
+     The .text-* names are unchanged so every existing consumer inherits
+     the retune with no edit.
+     ================================================================ */
+
+  /* display — one per screen, maximum. */
+  .text-display { @apply text-[30px] font-semibold leading-[1.1] tracking-[-0.028em] sm:text-[38px]; }
+  /* page title */
+  .text-h1      { @apply text-[22px] font-semibold leading-[1.2] tracking-[-0.02em]; }
+  /* section title */
+  .text-h2      { @apply text-[17px] font-semibold leading-[1.3] tracking-[-0.012em]; }
+  .text-h3      { @apply text-[15px] font-semibold leading-[1.4] tracking-[-0.008em]; }
+  .text-h4      { @apply text-sm    font-semibold leading-[1.5] tracking-[-0.005em]; }
+  /* body */
+  .text-body-lg { @apply text-[15px] font-normal leading-[1.6]; }
+  .text-body    { @apply text-sm  font-normal leading-[1.55]; }
+  /* metadata */
+  .text-small   { @apply text-xs  font-normal leading-[1.5]; }
+  /* label — in-content, sentence-scale */
+  .text-caption { @apply text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground; }
+
+  /* MACHINE REGISTER. The system's own voice: mono, tight, tabular.
+     Anything a machine emitted — status, environment, slug, probe result
+     — should wear this rather than being dressed as prose. */
+  .text-machine {
+    @apply font-mono text-2xs font-medium uppercase text-muted-foreground;
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Machine register at reading size, for values rather than labels. */
+  .text-machine-value {
+    @apply font-mono text-sm font-medium text-foreground;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
 
   /* Dense chrome label — 11px, heavy tracking. Distinct from .text-caption
      (12px/+0.06em), which stays the in-content label. This is the shell's
@@ -461,12 +619,48 @@
     letter-spacing: -0.01em;
   }
 
+  /* ================================================================
+     MOTION GRAMMAR (V1) — four classes, and every animation in NexusOS
+     must be able to name which one it is. If it cannot, it should not
+     move.
+
+       TRAVEL    a persistent object changes location or state.
+                 The nav indicator moving between rows. The sidebar
+                 collapsing. Duration: spatial (340ms), symmetric ease.
+       RESOLVE   new content establishes itself in a frame that already
+                 exists. Route content. Duration: standard (220ms).
+       RESPOND   direct reaction to the user's own input, at the point of
+                 contact. Hover, press, focus. Duration: fast (150ms).
+       BREATHE   ambient system state. Deliberately near-extinct: one per
+                 view, and only where a live system signal justifies it.
+
+     These are the timing/easing contracts only — they set no transform,
+     because WHAT moves is the consuming component's decision. That is
+     what stops the grammar becoming a pile of animation presets.
+
+     Motion coverage is explicitly NOT a goal. An interface where twenty
+     elements move for a reason is better than one where a hundred move
+     because a utility existed.
+     ================================================================ */
+  /* The three classes are defined UNLAYERED near the bottom of this file,
+     not here. Tailwind tree-shakes @layer components rules that no source
+     file references, and V1 deliberately ships the grammar before its
+     consumers exist — defined here they were silently purged, while their
+     reduced-motion overrides (a plain @media block, never purged) survived.
+     Measured: transition-duration 0s normally, 0.15s under reduced motion,
+     i.e. exactly backwards. A foundation that only exists once something
+     uses it is not a foundation. */
+
   /* Shared focus treatment for chrome controls that aren't Buttons.
      focus-visible only, so a pointer click never paints a ring but a
      keyboard user always gets one. */
+  /* V1: LOCAL energy. The ring-offset-2 halo drew a detached second
+     outline two pixels off the control — a shadcn default that reads as
+     a sticker rather than as the control itself becoming live. Focus now
+     sits ON the edge: the violet focus line plus a tight contained
+     ring. This is the one place violet is unconditionally correct. */
   .focus-ring {
-    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
-    --tw-ring-offset-color: hsl(var(--surface-0));
+    @apply outline-none;
   }
 
   /* Keycap. */
@@ -578,11 +772,16 @@
      panel read as a physical layer. Card adopts it in Commit C; it is
      defined here so the recipe lives with the tokens it composes.
      ---------------------------------------------------------------- */
+  /* PLANE. V1: the edge drops to --line-soft (the "normal surface edge"
+     role) and the directional pair does the separating instead. A plane
+     is not interactive, so it should not wear the interactive edge —
+     that was a large part of why 19 bordered elements on one screen all
+     shouted equally. */
   .surface {
     border-radius: var(--radius-surface);
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-soft);
     background-color: hsl(var(--surface-2));
-    box-shadow: var(--shadow-surface);
+    box-shadow: var(--shadow-surface), 0 1px 0 0 var(--edge-shade);
   }
 
   /* Raised variant — one step up the ladder, for surfaces that sit on
@@ -640,19 +839,22 @@
     border-radius: inherit;
     opacity: 0;
     transition: opacity 400ms ease;
+    /* V1: neutral, not violet. This is a LIGHT response — the pointer
+       reveals the material — so it belongs to luminance, not to the
+       accent. Violet here made every hovered card glow purple, which is
+       the clearest example of accent used as atmosphere. */
     background: radial-gradient(
       340px 340px at var(--mx, 50%) var(--my, 0%),
-      hsl(var(--primary) / 0.10),
+      rgb(255 255 255 / 0.045),
       transparent 70%
     );
   }
   .spotlight:hover::before { opacity: 1; }
 
-  /* Glow banner — one dominant focal point per screen (Constitution
-     principle 2). Dialled from 0.18 to 0.10: with the ambient page
-     field now carrying the atmosphere, the hero glow only needs to
-     mark focus, not supply the mood. */
-  .glow-banner { background: radial-gradient(680px circle at 50% -10%, hsl(var(--glow-primary) / 0.10), transparent 60%); }
+  /* Glow banner. V1: neutral. A hero region is marked by composition,
+     type and rail — not by a coloured haze behind it. Kept as a very
+     faint luminance lift so the region still reads as lit from above. */
+  .glow-banner { background: radial-gradient(680px circle at 50% -10%, rgb(255 255 255 / 0.035), transparent 60%); }
 
   /* Faint structural grid for hero/branded panels. */
   .grid-field {
@@ -688,7 +890,9 @@
     position: relative;
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 8px;
+    /* V1: joins the family. This was a hand-written 8px and the only
+       element on the dashboard still rendering a fifth radius. */
+    border-radius: var(--r-control);
     isolation: isolate;
   }
 
@@ -774,6 +978,52 @@
 /* Authenticated route content (Phase C). Shell stays still; only the
    surface inside <main> resolves. 8px / standard band — not the 14px
    blur reveal, which is for first-paint sections, not navigation. */
+/* ------------------------------------------------------------------
+   FOCUS INDICATION (V1) — deliberately UNLAYERED.
+
+   Both recipes sit outside @layer so no utility can outrank them.
+   Button composes `shadow-inset` on three of its six variants, and a
+   box-shadow utility in @layer utilities beats a components-layer rule
+   regardless of specificity — so the focus indicator would be at the
+   mercy of class order. Unlayered removes that whole class of failure.
+   Focus is the one treatment that must never lose a cascade argument.
+
+   Verified by keyboard on all six Button variants plus links and nav
+   rows. Note when re-measuring: these controls transition box-shadow
+   over --duration-fast, so a probe that reads computed style in the
+   same tick as the Tab keypress sees the mid-interpolation value and
+   will report a ring that is actually painting as absent. Let it settle.
+
+   Two recipes, one visual language:
+     .focus-ring  bare controls (links, icon buttons, nav rows)
+     .focus-edge  controls that own a box-shadow, so the material's own
+                  inset lip survives underneath the focus energy.
+   ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   MOTION GRAMMAR (V1) — the timing/easing contracts. Unlayered so they
+   ship before their consumers exist (see the note in @layer components).
+   Each sets duration + easing only; WHAT moves stays the consuming
+   component's decision, which is what keeps the grammar from degrading
+   into a pile of animation presets.
+   ------------------------------------------------------------------ */
+.motion-travel  { transition-duration: var(--duration-spatial);  transition-timing-function: var(--ease-in-out-quint); }
+.motion-resolve { transition-duration: var(--duration-standard); transition-timing-function: var(--ease-out-quart); }
+.motion-respond { transition-duration: var(--duration-fast);     transition-timing-function: var(--ease-out-quart); }
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--line-focus),
+    0 0 0 3px hsl(var(--primary) / 0.16);
+}
+.focus-edge:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--surface-inset),
+    0 0 0 1px var(--line-focus),
+    0 0 0 3px hsl(var(--primary) / 0.16);
+}
+
 @keyframes route-enter {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -980,8 +1230,20 @@
     stroke-dashoffset: 0 !important;
   }
 
-  /* Continuous ambient motion carries no information — stop it entirely
-     rather than running it once very fast. */
+  /* Motion grammar (V1) — reduced-motion equivalents.
+     TRAVEL and RESOLVE both carry spatial meaning, so they collapse to
+     the RESPOND duration rather than to zero: state, focus, hierarchy
+     and orientation all still change visibly, only the journey is
+     removed. Killing them outright would lose the "something changed"
+     signal, which is not what the preference asks for. */
+  .motion-travel,
+  .motion-resolve {
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out-quart);
+  }
+
+  /* BREATHE is ambient by definition and carries no state the user needs.
+     Stop it entirely rather than running it once very fast. */
   .drift,
   .pulse-live,
   .animate-ping {

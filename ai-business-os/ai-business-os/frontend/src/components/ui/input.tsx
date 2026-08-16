@@ -8,7 +8,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const base =
-  "w-full rounded-input border border-line-soft bg-surface-2 px-3 text-sm text-foreground transition-colors duration-fast placeholder:text-muted-foreground hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line-soft aria-[invalid=true]:border-destructive aria-[invalid=true]:hover:border-destructive aria-[invalid=true]:ring-destructive";
+  "w-full rounded-input border border-line-soft bg-surface-2 px-3 text-sm text-foreground transition-colors duration-fast placeholder:text-muted-foreground hover:border-line-strong focus-edge disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line-soft aria-[invalid=true]:border-destructive aria-[invalid=true]:hover:border-destructive aria-[invalid=true]:ring-destructive";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (

@@ -27,11 +27,16 @@ export default {
         },
         // Translucent hairlines. Complete rgb() values (not HSL triplets),
         // so a border composites over whatever surface is beneath it.
+        // Five line roles (V1). Weakest that still communicates wins.
         line: {
-          DEFAULT: "var(--line)",
-          soft: "var(--line-soft)",
-          strong: "var(--line-strong)",
+          DEFAULT: "var(--line)",       // interactive edge
+          soft: "var(--line-soft)",     // normal surface edge — the default
+          strong: "var(--line-strong)", // interactive, engaged
+          focus: "var(--line-focus)",   // the one line carrying violet
+          transient: "var(--line-transient)",
         },
+        // Structural divider. The only line allowed to span a whole region.
+        rail: "var(--rail)",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           // Deep violet for filled controls carrying white labels
@@ -68,12 +73,34 @@ export default {
           6: "hsl(var(--chart-6))",
         },
       },
+      // ONE radius family (V1). Semantic aliases first, then a REMAP of
+      // Tailwind's own scale. The remap is the load-bearing half: measured
+      // on the dashboard, six radii rendered at once (4/6/8/10/12/9999px)
+      // and the widest spread came from raw `rounded-lg` / `rounded-xl` /
+      // `rounded-md` in ~40 components, which never touched --radius-*.
+      // Pointing the default scale at the same two values means the whole
+      // product inherits the family without editing those components.
+      // `full` is deliberately NOT remapped — it stays a real pill, but is
+      // reserved for status dots and avatars.
       borderRadius: {
-        btn: "var(--radius-btn)",         // 10px — buttons
-        input: "var(--radius-input)",     // 10px — inputs
-        card: "var(--radius-card)",       // 12px — cards
-        dialog: "var(--radius-dialog)",   // 16px — dialogs
-        surface: "var(--radius-surface)", // 18px — elevated panels
+        // semantic
+        btn: "var(--radius-btn)",         // 6px  — controls
+        input: "var(--radius-input)",     // 6px  — controls
+        card: "var(--radius-card)",       // 4px  — planes
+        dialog: "var(--radius-dialog)",   // 4px  — regions
+        surface: "var(--radius-surface)", // 4px  — planes
+        // family
+        control: "var(--r-control)",
+        plane: "var(--r-surface)",
+        // remapped Tailwind defaults
+        none: "0px",
+        sm: "var(--r-surface)",
+        DEFAULT: "var(--r-surface)",
+        md: "var(--r-control)",
+        lg: "var(--r-control)",
+        xl: "var(--r-surface)",
+        "2xl": "var(--r-surface)",
+        "3xl": "var(--r-surface)",
       },
       boxShadow: {
         sm: "var(--shadow-sm)",

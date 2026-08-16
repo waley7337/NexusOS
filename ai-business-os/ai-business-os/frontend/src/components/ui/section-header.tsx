@@ -16,13 +16,27 @@ import { cn } from "@/lib/utils";
 
 export type SectionTone = "primary" | "success" | "warning" | "danger" | "info" | "neutral";
 
+/**
+ * V1: the decorative rainbow is gone.
+ *
+ * `tone` is documented above as decorative — it never encodes state. A
+ * decorative six-hue palette on structural furniture is precisely the
+ * "rainbow visual language in product surfaces" the visual system rejects:
+ * measured on the dashboard it painted a violet tick and a CYAN tick on two
+ * adjacent section headers, neither of which meant anything.
+ *
+ * The type keeps all six names so no caller needs editing, but the four
+ * state-coloured ones now resolve to neutral. Anything that genuinely
+ * communicates status belongs in a Badge or StatusPill, where it gets a
+ * text equivalent — which is what the component doc already said.
+ */
 const TONE_CLASSES: Record<SectionTone, string> = {
-  primary: "bg-primary/70",
-  success: "bg-success/70",
-  warning: "bg-warning/70",
-  danger: "bg-destructive/70",
-  info: "bg-info/70",
-  neutral: "bg-muted-foreground/40",
+  primary: "bg-primary/60",
+  neutral: "bg-muted-foreground/35",
+  success: "bg-muted-foreground/35",
+  warning: "bg-muted-foreground/35",
+  danger: "bg-muted-foreground/35",
+  info: "bg-muted-foreground/35",
 };
 
 interface SectionHeaderProps {
@@ -42,7 +56,11 @@ export function SectionHeader({
   title,
   subtitle,
   action,
-  tone = "primary",
+  // V1: neutral by default. The tick was violet on every section header,
+  // which put the accent on a purely structural element several times per
+  // screen — accent as decoration, not as signal. Violet is now opt-in via
+  // tone="primary" for a section that genuinely is the focal one.
+  tone = "neutral",
   as: Heading = "h2",
   className,
 }: SectionHeaderProps) {
