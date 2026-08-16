@@ -81,7 +81,7 @@ function page(
   };
 }
 
-function renderPage(initialEntry = "/crm", permissions: string[] = [
+function renderPage(initialEntry = "/crm/customers", permissions: string[] = [
   "customers.read",
   "customers.create",
   "customers.update",
@@ -111,7 +111,7 @@ function renderPage(initialEntry = "/crm", permissions: string[] = [
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[initialEntry]}>
         <Routes>
-          <Route path="/crm" element={<CustomersPage />} />
+          <Route path="/crm/customers" element={<CustomersPage />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -277,7 +277,7 @@ describe("CustomersPage", () => {
     mockGetCustomer.mockResolvedValue(existing);
     mockUpdateCustomer.mockResolvedValue({ ...existing, companyName: "Nordic Widgets AS" });
 
-    renderPage("/crm?customer=c1");
+    renderPage("/crm/customers?customer=c1");
     expect(await screen.findByRole("heading", { name: "Nordic Widgets" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
@@ -302,7 +302,7 @@ describe("CustomersPage", () => {
     mockGetCustomer.mockResolvedValue(existing);
     mockArchiveCustomer.mockResolvedValue(undefined);
 
-    renderPage("/crm?customer=c1");
+    renderPage("/crm/customers?customer=c1");
     await screen.findByRole("heading", { name: "Nordic Widgets" });
 
     await user.click(screen.getByRole("button", { name: "Archive" }));
@@ -323,7 +323,7 @@ describe("CustomersPage", () => {
   it("hides mutation actions without permissions", async () => {
     mockListCustomers.mockResolvedValue(page([customerFixture()]));
     mockGetCustomer.mockResolvedValue(customerFixture());
-    renderPage("/crm?customer=c1", ["customers.read"]);
+    renderPage("/crm/customers?customer=c1", ["customers.read"]);
 
     expect(await screen.findByRole("heading", { name: "Nordic Widgets" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New customer" })).not.toBeInTheDocument();

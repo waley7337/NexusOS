@@ -31,6 +31,7 @@ import { useAuthStore } from "@/stores/auth";
 import { CustomerDetail } from "@/features/crm/components/CustomerDetail";
 import { CustomerForm } from "@/features/crm/components/CustomerForm";
 import { CustomersTable } from "@/features/crm/components/CustomersTable";
+import { CrmSubnav } from "@/features/crm/components/CrmSubnav";
 import type { CustomerFormValues } from "@/features/crm/schemas/customerSchema";
 import { emptyToNull } from "@/features/crm/schemas/customerSchema";
 import {
@@ -228,6 +229,8 @@ export function CustomersPage() {
           </Can>
         }
       />
+
+      <CrmSubnav />
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-52 flex-1 sm:max-w-xs">

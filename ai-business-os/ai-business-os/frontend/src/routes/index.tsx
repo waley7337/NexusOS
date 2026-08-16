@@ -37,6 +37,14 @@ const NotFoundPage = lazy(() =>
 const CustomersPage = lazy(() =>
   import("@/pages/crm/CustomersPage").then((m) => ({ default: m.CustomersPage })),
 );
+const ContactsPage = lazy(() =>
+  import("@/pages/crm/ContactsPage").then((m) => ({ default: m.ContactsPage })),
+);
+const CrmIndexRedirect = lazy(() =>
+  import("@/features/crm/pages/CrmIndexRedirect").then((m) => ({
+    default: m.CrmIndexRedirect,
+  })),
+);
 const ProjectsPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.ProjectsPlaceholder })),
 );
@@ -128,8 +136,18 @@ export const router = createBrowserRouter([
           { path: ROUTES.home, element: <DashboardPage /> },
           { path: ROUTES.design, element: <DesignSystemPage /> },
           {
-            element: <PermissionRoute permission="customers.read" />,
-            children: [{ path: ROUTES.crm, element: <CustomersPage /> }],
+            path: ROUTES.crm,
+            children: [
+              { index: true, element: <CrmIndexRedirect /> },
+              {
+                element: <PermissionRoute permission="customers.read" />,
+                children: [{ path: "customers", element: <CustomersPage /> }],
+              },
+              {
+                element: <PermissionRoute permission="contacts.read" />,
+                children: [{ path: "contacts", element: <ContactsPage /> }],
+              },
+            ],
           },
           { path: ROUTES.projects, element: <ProjectsPlaceholder /> },
           { path: ROUTES.tasks, element: <TasksPlaceholder /> },

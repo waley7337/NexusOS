@@ -13,6 +13,8 @@ export const ROUTES = {
   verifyEmail: "/verify-email",
   design: "/design",
   crm: "/crm",
+  crmCustomers: "/crm/customers",
+  crmContacts: "/crm/contacts",
   projects: "/projects",
   tasks: "/tasks",
   hr: "/hr",

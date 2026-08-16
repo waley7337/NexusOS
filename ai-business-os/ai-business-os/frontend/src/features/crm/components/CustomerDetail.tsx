@@ -1,9 +1,12 @@
 import { type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Can } from "@/components/can";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
+import { ROUTES } from "@/constants/routes";
+import { cn } from "@/lib/utils";
 import type { Customer, CustomerStatus } from "../types";
 
 const STATUS_LABEL: Record<CustomerStatus, string> = {
@@ -96,6 +99,14 @@ export function CustomerDetail({
           </Badge>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Can permission="contacts.read">
+            <Link
+              to={`${ROUTES.crmContacts}?customerId=${customer.id}`}
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+            >
+              View contacts
+            </Link>
+          </Can>
           <Can permission="customers.update">
             <Button variant="outline" size="sm" onClick={onEdit}>
               Edit

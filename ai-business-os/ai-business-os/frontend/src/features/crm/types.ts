@@ -1,4 +1,4 @@
-/** CRM Customers — wire types matching backend CustomerResponse / list params. */
+/** CRM Customers + Contacts — wire types matching backend contracts. */
 
 export const CUSTOMER_STATUSES = ["lead", "active", "inactive", "churned"] as const;
 export type CustomerStatus = (typeof CUSTOMER_STATUSES)[number];
@@ -57,3 +57,51 @@ export interface CustomerCreatePayload {
 
 /** Partial update body — only business fields. */
 export type CustomerUpdatePayload = Partial<CustomerCreatePayload>;
+
+// ---------------------------------------------------------------------------
+// Contacts
+// ---------------------------------------------------------------------------
+
+export const CONTACT_SORT_FIELDS = ["created_at", "last_name", "first_name"] as const;
+export type ContactSortField = (typeof CONTACT_SORT_FIELDS)[number];
+
+export interface Contact {
+  id: string;
+  companyId: string;
+  customerId: string;
+  firstName: string;
+  lastName: string;
+  position: string | null;
+  email: string | null;
+  phone: string | null;
+  linkedin: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedAt: string | null;
+}
+
+export interface ContactListParams {
+  page?: number;
+  pageSize?: number;
+  sortBy?: ContactSortField;
+  sortDesc?: boolean;
+  search?: string;
+  customerId?: string;
+}
+
+export interface ContactCreatePayload {
+  customerId: string;
+  firstName: string;
+  lastName: string;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  linkedin?: string | null;
+  notes?: string | null;
+}
+
+export type ContactUpdatePayload = Partial<ContactCreatePayload>;

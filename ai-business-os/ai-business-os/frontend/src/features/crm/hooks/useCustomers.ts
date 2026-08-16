@@ -35,6 +35,7 @@ export function useCreateCustomer() {
     mutationFn: (payload: CustomerCreatePayload) => createCustomer(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.crm.customers.lists() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.crm.customers.options() });
     },
   });
 }
@@ -47,6 +48,7 @@ export function useUpdateCustomer() {
     onSuccess: (customer: Customer) => {
       queryClient.setQueryData(queryKeys.crm.customers.detail(customer.id), customer);
       void queryClient.invalidateQueries({ queryKey: queryKeys.crm.customers.lists() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.crm.customers.options() });
     },
   });
 }
@@ -58,6 +60,7 @@ export function useArchiveCustomer() {
     onSuccess: (_data, id) => {
       queryClient.removeQueries({ queryKey: queryKeys.crm.customers.detail(id) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.crm.customers.lists() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.crm.customers.options() });
     },
   });
 }
