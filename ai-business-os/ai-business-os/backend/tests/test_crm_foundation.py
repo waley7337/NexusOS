@@ -155,24 +155,23 @@ def test_deal_create_normalizes_currency():
     assert payload.status is DealStatus.OPEN
 
 
-def test_crm_router_shell_has_no_operational_routes():
-    """06.1 mounts an empty /crm shell — no Customers CRUD yet."""
+def test_crm_router_mounts_customers_only_so_far():
+    """06.2 adds Customers; Contacts/Leads/Deals remain unmounted."""
     assert crm_router.prefix == "/crm"
-    assert list(crm_router.routes) == []
+    paths = [getattr(route, "path", "") for route in crm_router.routes]
+    assert any(p.endswith("/customers") or p == "/crm/customers" or "/customers" in p for p in paths)
+    assert not any("/contacts" in p for p in paths)
+    assert not any("/leads" in p for p in paths)
+    assert not any("/deals" in p for p in paths)
 
-    crm_paths = [
-        getattr(route, "path", "")
-        for route in api_router.routes
-        if "/customers" in getattr(route, "path", "")
-        or "/contacts" in getattr(route, "path", "")
-        or "/leads" in getattr(route, "path", "")
-        or "/deals" in getattr(route, "path", "")
-    ]
-    assert crm_paths == []
+    api_paths = [getattr(route, "path", "") for route in api_router.routes]
+    assert not any("/contacts" in p for p in api_paths)
+    assert not any("/leads" in p for p in api_paths)
+    assert not any("/deals" in p for p in api_paths)
 
 
 def test_crm_package_exports_router():
-    """CRM package must be importable and re-export the shell router."""
+    """CRM package must be importable and re-export the aggregate router."""
     from app.api.v1 import crm as crm_pkg
 
     assert crm_pkg.router is crm_router
