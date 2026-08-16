@@ -161,24 +161,28 @@ export function DashboardPage() {
           title="No operational metrics yet"
           description="Revenue, pipeline, tasks, and activity will appear here when those modules have APIs. Nothing below is estimated."
         >
+          {/* V8: -my-1.5 py-1.5 lifts these from a 16px hit target to 28px
+                without moving a pixel of layout. WCAG 2.2 SC 2.5.8 wants
+                24x24 for standalone controls; these are not inline in a
+                sentence, so the text-link exception does not apply. */}
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
             <button
               type="button"
               onClick={() => setCaptureOpen(true)}
-              className="focus-ring text-machine rounded transition-colors duration-fast hover:text-foreground"
+              className="focus-ring text-machine -my-1.5 rounded py-1.5 transition-colors duration-fast hover:text-foreground"
             >
               Capture
             </button>
             <button
               type="button"
               onClick={() => setCommandPaletteOpen(true)}
-              className="focus-ring text-machine rounded transition-colors duration-fast hover:text-foreground"
+              className="focus-ring text-machine -my-1.5 rounded py-1.5 transition-colors duration-fast hover:text-foreground"
             >
               Search
             </button>
             <Link
               to={ROUTES.design}
-              className="focus-ring text-machine rounded transition-colors duration-fast hover:text-foreground"
+              className="focus-ring text-machine -my-1.5 rounded py-1.5 transition-colors duration-fast hover:text-foreground"
             >
               Design system
             </Link>

@@ -63,8 +63,11 @@ const DOT: Record<StatusPillVariant, string> = {
 function Segment({ name, state }: { name: string; state: ProbeState }) {
   return (
     <span className="hidden items-center gap-1 sm:inline-flex">
-      <span className="text-disabled-foreground">{name}</span>
-      <span className="text-disabled-foreground">/</span>
+      {/* V8: muted, not disabled. --disabled-foreground measured 3.94:1
+          against the chassis here — below AA. The register is quiet by
+          being small and mono, not by being dim to the point of failing. */}
+      <span className="text-muted-foreground">{name}</span>
+      <span className="text-muted-foreground">/</span>
       <span className={cn(state === "down" ? "text-destructive" : "text-muted-foreground")}>
         {PROBE_TEXT[state]}
       </span>
@@ -113,8 +116,8 @@ export function ShellStatusBar({
           <Segment name="DB" state={db} />
           {environment && (
             <span className="hidden items-center gap-1 lg:inline-flex">
-              <span className="text-disabled-foreground">ENV</span>
-              <span className="text-disabled-foreground">/</span>
+              <span className="text-muted-foreground">ENV</span>
+              <span className="text-muted-foreground">/</span>
               <span className="text-muted-foreground">{environment.toUpperCase()}</span>
             </span>
           )}
@@ -133,7 +136,7 @@ export function ShellStatusBar({
         <button
           type="button"
           onClick={onCommandPalette}
-          className="focus-ring rounded transition-colors duration-fast hover:text-foreground"
+          className="focus-ring -mx-1.5 -my-1.5 rounded px-1.5 py-1.5 transition-colors duration-fast hover:text-foreground"
         >
           <span aria-hidden="true">⌘K</span>
           <span className="sr-only">Open the command palette</span>
