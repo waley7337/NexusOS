@@ -93,6 +93,31 @@ export function AppLayout() {
   const stageRef = useRef<HTMLDivElement>(null);
 
   /**
+   * Was the auth cinematic already running when this shell mounted? If so
+   * THIS shell is the thing the cinematic is revealing, and it resolves out
+   * of the dark rather than simply appearing. Captured from the store at
+   * first render, not read reactively, because the answer must not change
+   * when the cinematic clears half a second later.
+   */
+  const revealFromCinematic = useRef(useUiStore.getState().isAuthEntryActive);
+
+  /**
+   * data-reveal is what drives the resolve animation, and it is removed
+   * once the cinematic settles so the shell is left with no residual
+   * transform. Kept DOM-only, like data-entry below.
+   */
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || !revealFromCinematic.current) return;
+    if (authEntryActive) {
+      el.dataset.reveal = "cinematic";
+    } else {
+      delete el.dataset.reveal;
+      revealFromCinematic.current = false;
+    }
+  }, [authEntryActive]);
+
+  /**
    * data-entry is DOM-only (not React-prop) so clock rerenders cannot
    * clobber the two-frame post-cinematic settle delay.
    */

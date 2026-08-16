@@ -777,686 +777,250 @@
     );
   }
 
-  /* ---- STARFIELD ----
-     The canvas owns every pixel it draws; CSS only places it and states
-     that it must never take a pointer event or be resampled. Deliberately
-     no filter, no transform animation and no opacity animation here — the
-     motion is inside the canvas, where it costs one texture blit per star
-     instead of a compositor layer per element. */
-  .starfield {
-    position: absolute;
+  /* ================================================================
+     THE SPATIAL ENVIRONMENT
+
+     One fixed layer, mounted outside the router (see SpaceField), that
+     serves BOTH the sign-in route and the auth-success cinematic. It is
+     one object in two phases rather than two objects that resemble each
+     other, because the phases are separated by a route change and any
+     seam there is a visible cut.
+
+       [data-space-stage="idle"]    behind the sign-in surface
+       [data-space-stage="travel"]  the camera move
+       [data-elevated="true"]       now above the application
+
+     Everything below animates transform and opacity only. No filter, no
+     backdrop-filter, no animated box-shadow, no layout properties. Five
+     animated elements total, plus one canvas.
+     ================================================================ */
+  .space-field {
+    position: fixed;
     inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
+    z-index: 0;
+    overflow: hidden;
     pointer-events: none;
-    /* Stars are point sources; letting the browser smooth them on a
-       high-DPI panel is what makes CSS starfields look soft at 4K. */
-    image-rendering: auto;
+    contain: strict;
+  }
+  /* The lift above the application. Discrete, and it happens exactly when
+     the sign-in route unmounts — earlier would bury the card while it is
+     still receding, later would expose the mounting shell. */
+  .space-field[data-elevated="true"] {
+    z-index: 60;
   }
 
-  /* Beneath the light volumes: near light washes out far stars. */
-  .atmosphere-stars {
-    z-index: 0;
-    /* A slow fade-in on mount only — the sky resolves as your eyes adjust,
-       rather than snapping on with the page. One-shot, not a loop. */
-    animation: starfield-in 1400ms var(--ease-standard) both;
+  /* Opaque ground. On the sign-in route it is simply the page background;
+     during travel it is what keeps the mounting shell out of sight, and it
+     dissolves as the shell resolves. */
+  .space-base {
+    position: absolute;
+    inset: 0;
+    background: #010308;
   }
-  @keyframes starfield-in {
+
+  .space-stars {
+    position: absolute;
+    inset: 0;
+    /* A slow fade-in on first mount only — the sky resolves as your eyes
+       adjust rather than snapping on with the page. One-shot, not a loop. */
+    animation: space-stars-in 1400ms var(--ease-standard) both;
+  }
+  @keyframes space-stars-in {
     from { opacity: 0; }
     to   { opacity: 1; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    .atmosphere-stars { animation: none; opacity: 1; }
-  }
 
-  /* Cinematic auth atmosphere — large offscreen light volumes (not blobs). */
-  .atmosphere--cinematic .atmosphere-parallax {
-    inset: -18%;
+  /* Three light volumes with their sources outside the frame. Offscreen
+     illumination, not blobs on the page. */
+  .space-lights {
+    position: absolute;
+    inset: -14%;
+    transform: translate3d(0, 0, 0) scale(1);
   }
-  .atmosphere--cinematic .atmosphere-layer--cobalt {
+  .space-light {
+    position: absolute;
+    inset: 0;
+  }
+  .space-light--cobalt {
     background: radial-gradient(
-      ellipse 110% 70% at 50% 110%,
-      rgb(37 99 235 / 0.38),
-      transparent 55%
+      ellipse 105% 65% at 50% 112%,
+      rgb(37 99 235 / 0.42),
+      transparent 56%
     );
   }
-  .atmosphere--cinematic .atmosphere-layer--cyan {
+  .space-light--cyan {
     background: radial-gradient(
-      ellipse 70% 55% at 88% -5%,
-      rgb(56 189 248 / 0.16),
+      ellipse 65% 52% at 88% -8%,
+      rgb(56 189 248 / 0.17),
       transparent 58%
     );
   }
-  .atmosphere--cinematic .atmosphere-layer--violet {
+  .space-light--violet {
     background: radial-gradient(
-      ellipse 40% 35% at 8% 40%,
+      ellipse 42% 36% at 8% 42%,
       rgb(99 102 241 / 0.08),
       transparent 60%
     );
   }
-  .atmosphere-layer--sweep {
+  .space-vignette {
+    position: absolute;
+    inset: 0;
     background: radial-gradient(
-      ellipse 90% 40% at 30% 60%,
-      rgb(56 189 248 / 0.07),
-      transparent 55%
-    );
-    transform: rotate(-12deg) scale(1.2);
-    opacity: 0.85;
-  }
-  .atmosphere-layer--depth {
-    background: radial-gradient(
-      ellipse 60% 50% at 70% 30%,
-      rgb(37 99 235 / 0.1),
-      transparent 50%
-    );
-  }
-  .atmosphere--cinematic .atmosphere-vignette {
-    background: radial-gradient(
-      ellipse 95% 75% at 50% 45%,
+      ellipse 96% 76% at 50% 46%,
       transparent 30%,
-      rgb(1 3 8 / 0.78) 100%
+      rgb(1 3 8 / 0.8) 100%
     );
   }
 
-  /* ------------------------------------------------------------------
-     AUTH CINEMATIC WORLD — product already exists before sign-in.
-     Product is the centered spatial hero; auth UI floats in the same
-     world. Immersion continues from this same center locus.
-     ------------------------------------------------------------------ */
-  .auth-cinematic {
-    background: #010308;
+  /* ---- TRAVEL ----
+     The camera move. The stars carry the actual sense of motion (they are
+     the only thing with real parallax); these layers carry scale and
+     depth. Timings are the ones in lib/auth-cinematic.ts. */
+  .space-field[data-space-stage="travel"] .space-lights {
+    animation: space-travel-lights 1500ms var(--ease-cinematic) both;
   }
-  .auth-cinematic-world {
-    position: relative;
-    z-index: 1;
-    min-height: 100dvh;
-    display: grid;
-    grid-template-rows: auto auto 1fr;
-    align-items: start;
-    justify-items: center;
-    gap: 1.25rem;
-    padding: 1.5rem 1rem 2rem;
-    box-sizing: border-box;
+  @keyframes space-travel-lights {
+    0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+    45%  { transform: translate3d(0, -1.5%, 0) scale(1.16); opacity: 1; }
+    62%  { transform: translate3d(0, -2.4%, 0) scale(1.24); opacity: 1; }
+    96%  { transform: translate3d(0, -3.8%, 0) scale(1.34); opacity: 0; }
+    100% { transform: translate3d(0, -4%, 0) scale(1.36); opacity: 0; }
+  }
+  .space-field[data-space-stage="travel"] .space-vignette {
+    animation: space-travel-vignette 1500ms var(--ease-cinematic) both;
+  }
+  @keyframes space-travel-vignette {
+    0%   { opacity: 1; transform: scale(1); }
+    62%  { opacity: 1; transform: scale(1.09); }
+    96%  { opacity: 0; transform: scale(1.15); }
+    100% { opacity: 0; transform: scale(1.16); }
+  }
+  /* HANDOFF, NOT A CROSS-DISSOLVE.
+     The space clears between 62% and 96% of the timeline (930ms → 1440ms),
+     and by 930ms the real shell underneath has finished painting. So this
+     fade IS the reveal: one fade, over a complete interface, rather than
+     several stacked fades over a half-painted one.
+
+     Two earlier attempts are worth recording. Fading the space out over a
+     shell still at opacity 0 exposed the workspace's own background, which
+     is WHITE in the light theme — the cinematic went to mid-grey on its
+     way in. Stacking a second dark layer inside the shell to hide that
+     left the shell ~90% covered three-quarters of the way through its own
+     reveal. Ordering the two (shell first, space second) is what actually
+     solves it. */
+  .space-field[data-space-stage="travel"] .space-base,
+  .space-field[data-space-stage="travel"] .space-stars {
+    animation: space-travel-handoff 1500ms linear both;
+  }
+  @keyframes space-travel-handoff {
+    0%   { opacity: 1; }
+    62%  { opacity: 1; }
+    96%  { opacity: 0; }
+    100% { opacity: 0; }
   }
 
-  .auth-cinematic-identity {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    z-index: 3;
-    justify-self: start;
-    width: 100%;
-    max-width: 26rem;
-  }
-  .auth-cinematic-tagline {
-    font-size: 0.8125rem;
-    color: hsl(var(--muted-foreground));
-  }
-
-  .auth-cinematic-panel {
-    width: 100%;
-    max-width: 26rem;
-    z-index: 4;
-    justify-self: start;
-    transition:
-      opacity 220ms var(--ease-standard),
-      transform 280ms var(--ease-cinematic);
-  }
-  .auth-cinematic[data-auth-stage="immersion"] .auth-cinematic-panel,
-  .auth-cinematic[data-auth-stage="immersion"] .auth-cinematic-identity {
-    opacity: 0;
-    transform: translate3d(0, 6px, 0) scale(0.985);
-    pointer-events: none;
-  }
-
-  /* Distant product — centered hero object (immersion starts here). */
-  .auth-cinematic-product {
-    width: min(720px, 92vw);
-    z-index: 2;
-    transform-origin: 50% 50%;
-    animation: auth-product-idle 14s var(--ease-standard) infinite alternate;
-    justify-self: center;
-  }
-  .auth-cinematic[data-auth-stage="immersion"] .auth-cinematic-product {
-    /* Keep visible until overlay veil covers — avoid 1-frame hole.
-       Overlay mounts same tick; product stays under opaque field. */
+  /* Reduced motion: the environment is still there, it just does not
+     travel. A short cross-dissolve replaces the camera move. */
+  .space-field--reduce .space-stars,
+  .space-field--reduce[data-space-stage="travel"] .space-lights,
+  .space-field--reduce[data-space-stage="travel"] .space-vignette,
+  .space-field--reduce[data-space-stage="travel"] .space-stars {
     animation: none;
+    transform: none;
+    opacity: 1;
   }
-  @keyframes auth-product-idle {
-    from { transform: translate3d(0, 0, 0); }
-    to   { transform: translate3d(0, -2.5px, 0); }
+  .space-field--reduce[data-space-stage="travel"] .space-base {
+    animation: space-reduced-out 220ms linear both;
   }
-
-  /* ---- DESKTOP COMPOSITION ----
-     Previously: everything absolutely positioned inside a `display: block`
-     world. Two problems came out of that. The product was pinned to a
-     fixed 58vw at the centre of the viewport, so the sign-in panel — also
-     absolute, also on the left — sat ON TOP of it and read as if the
-     product were cropped; and because nothing in the world had a height,
-     the frame carried large empty bands above and below the product.
-
-     Now the world is a real two-column grid. The panel owns column one,
-     the product owns column two and stretches into it, and vertical
-     centring is done by the grid rather than by percentage guesses. The
-     two objects cannot collide, the product gets the larger share of the
-     frame — which is what makes it the hero — and the dead space is
-     absorbed by the track instead of left over at the edges. */
-  @media (min-width: 1024px) {
-    .auth-cinematic-world {
-      display: grid;
-      grid-template-columns: minmax(19rem, 26vw) minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr);
-      align-items: center;
-      justify-items: stretch;
-      gap: clamp(1.75rem, 3.5vw, 4rem);
-      /* Top padding clears the absolutely-placed identity block and
-         nothing more; the rest of the frame belongs to the product. */
-      padding: max(4.75rem, 9vh) max(2.5rem, 4vw) max(1.5rem, 4vh);
-    }
-    .auth-cinematic-product {
-      grid-column: 2;
-      position: static;
-      width: 100%;
-      justify-self: stretch;
-      transform: translate3d(0, 0, 0);
-      animation: auth-product-idle 16s var(--ease-standard) infinite alternate;
-    }
-    .auth-cinematic[data-auth-stage="immersion"] .auth-cinematic-product {
-      animation: none;
-      transform: translate3d(0, 0, 0);
-    }
-    .auth-cinematic-identity {
-      position: absolute;
-      left: max(2.5rem, 4vw);
-      top: max(1.75rem, 3.5vh);
-      width: auto;
-      max-width: 22rem;
-    }
-    .auth-cinematic-panel {
-      grid-column: 1;
-      grid-row: 1;
-      position: static;
-      transform: translate3d(0, 0, 0);
-      width: 100%;
-      max-width: 24rem;
-      justify-self: start;
-    }
-    .auth-cinematic[data-auth-stage="immersion"] .auth-cinematic-panel {
-      transform: translate3d(0, 8px, 0) scale(0.985);
-    }
+  @keyframes space-reduced-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
   }
-
   @media (prefers-reduced-motion: reduce) {
-    .auth-cinematic-product { animation: none !important; }
-    .auth-cinematic[data-auth-stage="immersion"] .auth-cinematic-panel,
-    .auth-cinematic[data-auth-stage="immersion"] .auth-cinematic-identity {
-      transition: opacity 180ms linear;
+    .space-stars { animation: none; opacity: 1; }
+    .space-field[data-space-stage="travel"] .space-lights,
+    .space-field[data-space-stage="travel"] .space-vignette,
+    .space-field[data-space-stage="travel"] .space-stars {
+      animation: none;
       transform: none;
+      opacity: 1;
+    }
+    .space-field[data-space-stage="travel"] .space-base {
+      animation: space-reduced-out 220ms linear both;
     }
   }
-  @media (max-width: 1023.98px) {
-    .auth-cinematic-product {
-      width: min(100%, 26rem);
-      order: 3;
-      opacity: 0.94;
-      margin-top: 0;
-    }
-    .auth-cinematic-world {
-      /* All three rows sized by content and centred as a block, so a
-         phone gets one balanced column instead of a 1fr track pushing
-         everything to the top with a gap under it. */
-      grid-template-rows: auto auto auto;
-      align-content: center;
-      gap: 0.875rem;
-      padding: 1.25rem 1rem 1.5rem;
-    }
+
+  /* The canvas itself. CSS only places it — every pixel is drawn in JS. */
+  .starfield {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
   /* ================================================================
-     PRODUCT PROXY GEOMETRY (auth idle + immersion handoff).
+     THE SIGN-IN ROUTE
 
-     Rebuilt away from skeleton language. Three rules govern everything
-     below, and each one is a direct fix for why the old version read as
-     a loading state:
-
-       - PRIMITIVES VARY. Icon marks are square-ish, labels are hairline
-         bars, chips are pill-shaped, plots are real vector paths. A wall
-         of identical rounded rectangles is the definition of a skeleton.
-       - CONTRAST IS RANKED. Exactly one nav row is accented, one panel
-         dominates, and everything else sits below it. Uniform grey has
-         no focal point, and a hero with no focal point is not a hero.
-       - PANELS ARE FULL. Every surface contains structure at roughly the
-         density the real product has, so the empty areas that read as
-         "still loading" no longer exist.
-
-     No text, no numbers, no data — see the component file.
+     One centred column in an empty environment: identity, then the
+     surface. There is no second column and no product mock — the space
+     is the composition. The page paints no background of its own; the
+     environment behind it does.
      ================================================================ */
-  .nexus-product-proxy {
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    max-height: min(62vh, 560px);
+  .auth-world {
+    background: transparent;
+    display: grid;
+    place-items: center;
+    padding: max(2rem, 6vh) 1rem max(2rem, 6vh);
   }
-  @media (min-width: 1024px) {
-    .nexus-product-proxy {
-      /* The product is the hero, so it takes the frame. The old 58vh cap
-         is what produced the dead bands above and below it. */
-      max-height: min(74vh, 760px);
-      aspect-ratio: 16 / 9.6;
+  .auth-column {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(1.75rem, 5vh, 3.25rem);
+  }
+  .auth-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    transition:
+      opacity 260ms var(--ease-standard),
+      transform 320ms var(--ease-cinematic);
+  }
+  .auth-tagline {
+    font-size: 0.8125rem;
+    color: hsl(var(--muted-foreground));
+  }
+  .auth-panel {
+    width: 100%;
+    transition:
+      opacity 260ms var(--ease-standard),
+      transform 320ms var(--ease-cinematic);
+  }
+
+  /* The exit. This is why the navigate is deferred: the surface can only
+     recede while its route is still mounted. */
+  .auth-world[data-auth-stage="leaving"] .auth-panel {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.965);
+    pointer-events: none;
+  }
+  .auth-world[data-auth-stage="leaving"] .auth-identity {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.985);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-world[data-auth-stage="leaving"] .auth-panel,
+    .auth-world[data-auth-stage="leaving"] .auth-identity {
+      transition: opacity 160ms linear;
+      transform: none;
     }
   }
-  .nexus-product-chrome {
-    width: 100%;
-    height: 100%;
-    border-radius: var(--r-shell);
-    border: 1px solid rgb(160 190 255 / 0.16);
-    /* NOT hsl(var(--surface-1)). The proxy is a picture of the product
-       inside the cinematic world, and that world is dark in every theme.
-       The overlay mounts above RouterProvider, OUTSIDE the auth shell's
-       forced-dark scope, so a token here resolved to the viewer's own
-       theme: on a light theme the chrome came back #FFFFFF and the whole
-       immersion played out as a white slab with grey panels. Every colour
-       in this block is therefore literal. */
-    background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 26%),
-      hsl(222 61% 4%);
-    box-shadow:
-      0 1px 0 0 rgb(180 210 255 / 0.09) inset,
-      0 34px 90px -30px rgb(0 4 12 / 0.94),
-      0 0 120px -46px rgb(37 99 235 / 0.42);
-    display: grid;
-    grid-template-columns: var(--sidebar-w) 1fr;
-    overflow: hidden;
-    /* Everything inside scales with the shell, so one proxy serves both
-       the distant sign-in view and the full-bleed immersion lock. */
-    container-type: inline-size;
-  }
-
-  /* ---- rail ---- */
-  .nexus-product-rail {
-    border-right: 1px solid rgb(160 190 255 / 0.1);
-    background: hsl(225 67% 2.4%);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px 10px;
-    min-height: 0;
-  }
-  .nexus-product-brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 4px 6px;
-  }
-  .nexus-product-brand-mark {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    border-radius: 6px;
-    /* The one place the product's own violet appears, at brand scale. */
-    background: linear-gradient(140deg, rgb(139 124 255 / 0.9), rgb(59 91 232 / 0.75));
-    box-shadow: 0 0 14px -3px rgb(124 116 255 / 0.55);
-  }
-  .nexus-product-brand-word {
-    height: 7px;
-    width: 62px;
-    border-radius: 3px;
-    background: rgb(196 214 255 / 0.34);
-  }
-  .nexus-product-navgroup {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-  /* Section label above each nav group — the real rail groups its routes,
-     and the grouping is visible from a distance even when the words are
-     not. */
-  .nexus-product-grouplabel {
-    height: 4px;
-    width: 34px;
-    margin: 2px 0 1px 8px;
-    border-radius: 2px;
-    background: rgb(178 202 255 / 0.11);
-  }
-  .nexus-product-nav {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 26px;
-    padding: 0 8px;
-    border-radius: 7px;
-  }
-  .nexus-product-nav.is-active {
-    background: rgb(120 150 255 / 0.1);
-  }
-  .nexus-product-nav-marker {
-    position: absolute;
-    left: -10px;
-    top: 50%;
-    width: 2px;
-    height: 14px;
-    margin-top: -7px;
-    border-radius: 2px;
-    background: rgb(139 124 255 / 0.95);
-  }
-  .nexus-product-nav-icon {
-    width: 11px;
-    height: 11px;
-    flex-shrink: 0;
-    border-radius: 3px;
-    border: 1px solid rgb(178 202 255 / 0.24);
-  }
-  .nexus-product-nav.is-active .nexus-product-nav-icon {
-    border-color: rgb(160 168 255 / 0.6);
-    background: rgb(139 124 255 / 0.28);
-  }
-  .nexus-product-nav-label {
-    height: 5px;
-    border-radius: 3px;
-    background: rgb(178 202 255 / 0.16);
-  }
-  .nexus-product-nav.is-active .nexus-product-nav-label {
-    background: rgb(214 226 255 / 0.5);
-  }
-  .nexus-product-railrule {
-    height: 1px;
-    margin: 2px 6px;
-    background: rgb(160 190 255 / 0.09);
-  }
-  .nexus-product-railfoot {
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 8px 0;
-    border-top: 1px solid rgb(160 190 255 / 0.08);
-  }
-  .nexus-product-avatar {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    border-radius: 999px;
-    background: linear-gradient(150deg, rgb(150 178 255 / 0.4), rgb(90 110 190 / 0.28));
-  }
-  .nexus-product-avatar--sm {
-    width: 16px;
-    height: 16px;
-  }
-
-  /* ---- body ---- */
-  .nexus-product-body {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    background:
-      radial-gradient(ellipse 70% 45% at 68% 0%, rgb(37 99 235 / 0.13), transparent 55%);
-  }
-  .nexus-product-bar {
-    height: var(--shell-header-h, 56px);
-    flex-shrink: 0;
-    border-bottom: 1px solid rgb(160 190 255 / 0.09);
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 0 14px;
-  }
-  .nexus-product-crumbs {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-  .nexus-product-crumb {
-    height: 6px;
-    width: 34px;
-    border-radius: 3px;
-    background: rgb(178 202 255 / 0.2);
-  }
-  .nexus-product-crumb--sep {
-    width: 4px;
-    background: rgb(178 202 255 / 0.12);
-  }
-  .nexus-product-crumb--long {
-    width: 54px;
-    background: rgb(214 226 255 / 0.34);
-  }
-  .nexus-product-search {
-    height: 28px;
-    flex: 1;
-    max-width: 300px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 9px;
-    border-radius: 8px;
-    border: 1px solid rgb(160 190 255 / 0.11);
-    background: hsl(220 61% 7% / 0.75);
-  }
-  .nexus-product-search-glyph {
-    width: 9px;
-    height: 9px;
-    flex-shrink: 0;
-    border-radius: 999px;
-    border: 1px solid rgb(178 202 255 / 0.3);
-  }
-  .nexus-product-search-line {
-    height: 5px;
-    flex: 1;
-    max-width: 96px;
-    border-radius: 3px;
-    background: rgb(178 202 255 / 0.15);
-  }
-  .nexus-product-search-key {
-    width: 16px;
-    height: 12px;
-    flex-shrink: 0;
-    margin-left: auto;
-    border-radius: 3px;
-    border: 1px solid rgb(178 202 255 / 0.16);
-  }
-  /* The control cluster is attached to the bar's end as one group; the
-     previous single pill floating at the far right read as debris. */
-  .nexus-product-cluster {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    flex-shrink: 0;
-  }
-  .nexus-product-iconbtn {
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
-    border: 1px solid rgb(178 202 255 / 0.13);
-  }
-  .nexus-product-cta {
-    width: 54px;
-    height: 22px;
-    border-radius: 7px;
-    background: linear-gradient(180deg, rgb(74 122 255 / 0.95), rgb(43 88 226 / 0.9));
-    box-shadow: 0 0 18px -6px rgb(59 130 246 / 0.75);
-  }
-
-  /* ---- stage ---- */
-  .nexus-product-stage {
-    flex: 1;
-    min-height: 0;
-    padding: 14px 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .nexus-product-title {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    flex-shrink: 0;
-  }
-  .nexus-product-title-line {
-    height: 13px;
-    width: 34%;
-    border-radius: 5px;
-    background: rgb(219 230 255 / 0.34);
-  }
-  .nexus-product-title-sub {
-    height: 6px;
-    width: 26%;
-    border-radius: 3px;
-    background: rgb(178 202 255 / 0.16);
-  }
-
-  .nexus-product-signals {
-    flex-shrink: 0;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .nexus-product-tile {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-height: 62px;
-    padding: 9px 10px;
-    border-radius: 10px;
-    border: 1px solid rgb(160 190 255 / 0.09);
-    background: hsl(220 61% 6% / 0.66);
-    overflow: hidden;
-  }
-  .nexus-product-tile-label {
-    height: 5px;
-    width: 46%;
-    border-radius: 3px;
-    background: rgb(178 202 255 / 0.18);
-  }
-  .nexus-product-tile-value {
-    height: 11px;
-    width: 62%;
-    border-radius: 4px;
-    background: rgb(219 230 255 / 0.38);
-  }
-  .nexus-product-spark {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 42%;
-    opacity: 0.85;
-  }
-  .nexus-product-spark path {
-    fill: none;
-    stroke: rgb(96 150 255 / 0.55);
-    stroke-width: 1.4;
-    stroke-linecap: round;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .nexus-product-ops {
-    flex: 1;
-    min-height: 90px;
-    display: grid;
-    grid-template-columns: 1.75fr 1fr;
-    gap: 10px;
-  }
-  .nexus-product-wave,
-  .nexus-product-side {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 11px;
-    border-radius: 12px;
-    border: 1px solid rgb(160 190 255 / 0.09);
-    overflow: hidden;
-  }
-  .nexus-product-wave {
-    background: hsl(220 61% 5% / 0.72);
-  }
-  .nexus-product-side {
-    background: hsl(220 61% 6% / 0.6);
-  }
-  .nexus-product-panelhead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-  .nexus-product-panelhead-title {
-    height: 6px;
-    width: 84px;
-    border-radius: 3px;
-    background: rgb(214 226 255 / 0.32);
-  }
-  .nexus-product-panelhead-tag {
-    height: 12px;
-    width: 34px;
-    border-radius: 999px;
-    border: 1px solid rgb(178 202 255 / 0.14);
-  }
-  /* The one dominant object on the stage. A drawn plot, not an empty box:
-     this is what gives the proxy a focal point at any distance. */
-  .nexus-product-plot {
-    flex: 1;
-    width: 100%;
-    min-height: 0;
-  }
-  .nexus-product-plot-grid {
-    stroke: rgb(178 202 255 / 0.07);
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke;
-  }
-  .nexus-product-plot-area {
-    fill: rgb(59 130 246 / 0.11);
-    stroke: none;
-  }
-  .nexus-product-plot-line {
-    fill: none;
-    stroke: rgb(112 162 255 / 0.85);
-    stroke-width: 1.6;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    vector-effect: non-scaling-stroke;
-  }
-  .nexus-product-listrow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 15px;
-    flex-shrink: 0;
-  }
-  .nexus-product-dot {
-    width: 5px;
-    height: 5px;
-    flex-shrink: 0;
-    border-radius: 999px;
-    background: rgb(150 180 255 / 0.4);
-  }
-  .nexus-product-listline {
-    height: 5px;
-    border-radius: 3px;
-    background: rgb(178 202 255 / 0.15);
-  }
-
-  /* Narrow shells: drop the rail and the secondary panel rather than
-     letting either compress into unreadable slivers. */
-  @container (max-width: 620px) {
-    .nexus-product-signals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .nexus-product-ops { grid-template-columns: 1fr; }
-    .nexus-product-side { display: none; }
-    .nexus-product-crumbs { display: none; }
-  }
-  @media (max-width: 767.98px) {
-    .nexus-product-chrome {
-      grid-template-columns: 1fr;
-    }
-    .nexus-product-rail { display: none; }
-    .nexus-product-signals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .nexus-product-ops { grid-template-columns: 1fr; }
-    .nexus-product-side { display: none; }
-  }
-
   /* Floating authentication surface — opaque, no animated blur. */
   .auth-surface {
     width: 100%;
@@ -2004,251 +1568,6 @@ html:not(.dark) .app-stage > .atmosphere {
   border-color: rgb(160 190 255 / 0.16);
 }
 
-/* ------------------------------------------------------------------
-   PRODUCT IMMERSION — continuation of pre-login cinematic (~1550ms).
-
-   Distant product (already seen on sign-in) → camera approach →
-   scale to AppLayout shell geometry → soft settle → proxy fade.
-   No logo hero. No black splash. Transform + opacity only.
-   ------------------------------------------------------------------ */
-.auth-immersion {
-  --auth-entry-duration: 1550ms;
-  --auth-ease: var(--ease-cinematic);
-  --auth-ease-accel: cubic-bezier(0.33, 0, 0.18, 1);
-  position: fixed;
-  inset: 0;
-  z-index: 55;
-  overflow: hidden;
-  pointer-events: none;
-  background: transparent;
-  animation: auth-immersion-root var(--auth-entry-duration) var(--ease-exit) both;
-  contain: strict;
-}
-
-/* Soft spatial veil — continues navy world, not a cut-to-black.
-   Fully opaque until lock so real AppLayout never flashes underneath. */
-.auth-immersion-field {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(
-      ellipse 95% 75% at 50% 48%,
-      #020610 0%,
-      #010308 72%
-    );
-  animation: auth-immersion-field var(--auth-entry-duration) var(--auth-ease) both;
-}
-
-/* The travelling sky. Stacking is DOM order on purpose — no z-index — so it
-   lands above the opaque field and below the light volumes and the camera,
-   exactly like the sign-in sky sits below the atmosphere's light volumes.
-   It rides the overlay's own exit, so it needs no animation of its own:
-   the canvas loop stops when the component unmounts. */
-.auth-immersion-stars {
-  position: absolute;
-  inset: 0;
-}
-
-.auth-immersion-light {
-  position: absolute;
-  left: 50%;
-  top: 52%;
-  width: 130%;
-  height: 85%;
-  margin-left: -65%;
-  margin-top: -38%;
-  background: radial-gradient(
-    ellipse 48% 40% at 50% 55%,
-    rgb(37 99 235 / 0.26),
-    rgb(8 18 40 / 0.1) 45%,
-    transparent 70%
-  );
-  opacity: 0.55;
-  transform: scale(0.94);
-  animation: auth-immersion-light var(--auth-entry-duration) var(--auth-ease) both;
-}
-.auth-immersion-light-edge {
-  position: absolute;
-  right: -10%;
-  top: 8%;
-  width: 58%;
-  height: 52%;
-  background: radial-gradient(
-    ellipse 50% 45% at 35% 50%,
-    rgb(56 189 248 / 0.12),
-    transparent 68%
-  );
-  opacity: 0.4;
-  animation: auth-immersion-light-edge var(--auth-entry-duration) var(--auth-ease) both;
-}
-
-/* Camera approach — slow commit → controlled accel → soft lock. */
-.auth-immersion-camera {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  box-sizing: border-box;
-  transform-origin: 50% 48%;
-  animation: auth-immersion-camera var(--auth-entry-duration) var(--auth-ease-accel) both;
-}
-
-/* Product fills shell frame; scale simulates camera distance. */
-.auth-immersion-product {
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  transform-origin: 50% 50%;
-  animation: auth-immersion-product var(--auth-entry-duration) var(--auth-ease-accel) both;
-}
-.auth-immersion-product .nexus-product-proxy {
-  width: 100%;
-  height: 100%;
-  max-height: none;
-  aspect-ratio: auto;
-}
-.auth-immersion-product .nexus-product-chrome {
-  height: 100%;
-  grid-template-columns: var(--sidebar-w) 1fr;
-}
-
-@media (max-width: 767.98px) {
-  .auth-immersion-camera {
-    padding: 0;
-  }
-  .auth-immersion-product .nexus-product-chrome {
-    grid-template-columns: 1fr;
-  }
-  @keyframes auth-immersion-product {
-    0% {
-      opacity: 1;
-      transform: translate3d(0, 8px, 0) scale(0.78);
-    }
-    40% {
-      opacity: 1;
-      transform: translate3d(0, 2px, 0) scale(0.92);
-    }
-    78% {
-      opacity: 1;
-      transform: translate3d(0, 0, 0) scale(1);
-    }
-    100% {
-      opacity: 0;
-      transform: translate3d(0, 0, 0) scale(1);
-    }
-  }
-}
-
-/*
-  Timeline (% of 1550ms):
-  0–12%   continuity — product present (distant scale), veil holds
-  12–35%  reveal / dominance
-  35–62%  camera approach accelerates
-  62–88%  product locks to shell geometry
-  88–100% proxy + veil fade → real AppLayout
-*/
-@keyframes auth-immersion-root {
-  0%, 88% { opacity: 1; }
-  100%    { opacity: 0; }
-}
-@keyframes auth-immersion-field {
-  0%   { opacity: 1; }
-  70%  { opacity: 1; }
-  88%  { opacity: 0.55; }
-  100% { opacity: 0; }
-}
-@keyframes auth-immersion-light {
-  0%   { opacity: 0.5; transform: scale(0.94); }
-  28%  { opacity: 0.85; transform: scale(1); }
-  65%  { opacity: 0.55; transform: scale(1.06); }
-  100% { opacity: 0.12; transform: scale(1.12); }
-}
-@keyframes auth-immersion-light-edge {
-  0%   { opacity: 0.35; }
-  30%  { opacity: 0.55; }
-  70%  { opacity: 0.28; }
-  100% { opacity: 0.06; }
-}
-@keyframes auth-immersion-camera {
-  0%   { transform: scale(1) translate3d(0, 0, 0); }
-  22%  { transform: scale(1.01) translate3d(0, -0.3%, 0); }
-  48%  { transform: scale(1.03) translate3d(0, -0.6%, 0); }
-  78%  { transform: scale(1.01) translate3d(0, -0.2%, 0); }
-  100% { transform: scale(1) translate3d(0, 0, 0); }
-}
-@keyframes auth-immersion-product {
-  0% {
-    opacity: 1;
-    transform: translate3d(
-        var(--immersion-from-x, 0px),
-        var(--immersion-from-y, 14px),
-        0
-      )
-      scale(var(--immersion-from-scale, 0.58));
-  }
-  18% {
-    opacity: 1;
-    transform: translate3d(
-        calc(var(--immersion-from-x, 0px) * 0.7),
-        calc(var(--immersion-from-y, 14px) * 0.6),
-        0
-      )
-      scale(0.68);
-  }
-  42% {
-    opacity: 1;
-    transform: translate3d(
-        calc(var(--immersion-from-x, 0px) * 0.28),
-        calc(var(--immersion-from-y, 14px) * 0.18),
-        0
-      )
-      scale(0.84);
-  }
-  68% {
-    opacity: 1;
-    transform: translate3d(0, -2px, 0) scale(0.97);
-  }
-  86% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@keyframes auth-immersion-reduce {
-  0%   { opacity: 1; }
-  100% { opacity: 0; }
-}
-.auth-immersion--reduce {
-  animation: auth-immersion-reduce 300ms var(--ease-standard) both;
-}
-.auth-immersion--reduce .auth-immersion-field,
-.auth-immersion--reduce .auth-immersion-light,
-.auth-immersion--reduce .auth-immersion-light-edge,
-.auth-immersion--reduce .auth-immersion-camera,
-.auth-immersion--reduce .auth-immersion-product {
-  animation: none !important;
-  transform: none !important;
-}
-.auth-immersion--reduce .auth-immersion-field {
-  opacity: 0.85 !important;
-}
-.auth-immersion--reduce .auth-immersion-product {
-  opacity: 1 !important;
-  width: 100% !important;
-  height: 100% !important;
-  transform: none !important;
-}
-.auth-immersion--reduce .auth-immersion-light,
-.auth-immersion--reduce .auth-immersion-light-edge {
-  opacity: 0.2 !important;
-}
-
 /* Login CTA confirmation flash — only while submit is pending. */
 .auth-cta-confirm {
   position: relative;
@@ -2272,14 +1591,51 @@ html:not(.dark) .app-stage > .atmosphere {
   to { transform: translateX(120%); }
 }
 
-/* Real shell stays put during cinema — opacity only handoff (no chassis transform). */
-.app-stage[data-entry="in"] .app-shell-frame {
-  opacity: 1;
-  transition: none;
-}
+/* ------------------------------------------------------------------
+   THE REAL SHELL RESOLVING OUT OF THE DARK.
+
+   This is the payoff of the auth cinematic, and the reason there is no
+   longer a proxy: the first product interface the user sees IS the
+   product. The shell mounts underneath the space at opacity 0 while the
+   camera is still travelling, and resolves through it.
+
+   data-reveal is set ONLY when this shell mounted during a cinematic
+   (see AppLayout). An ordinary page load or a refresh never carries it,
+   so a normal visit has no entrance animation and no frame at opacity 0.
+
+   Delay and duration are CINEMATIC_REVEAL_DELAY_MS / _REVEAL_MS from
+   lib/auth-cinematic.ts; the space's own ground clears across the same
+   window, so the two cross-dissolve instead of queueing.
+
+   Transform lands on .app-shell-frame rather than .app-stage; overlays
+   (dialog, drawer, command palette) are portalled to document.body, so
+   nothing that needs position: fixed is inside this containing block.
+   ------------------------------------------------------------------ */
+.app-stage[data-entry="in"] .app-shell-frame,
 .app-stage[data-entry="settled"] .app-shell-frame {
   opacity: 1;
   transition: none;
+}
+/* ANCHORING. This animation starts when the SHELL MOUNTS, not when the
+   cinematic starts — a CSS delay here would be measured from the wrong
+   zero. The first version used a 980ms delay as if it were measured from
+   sign-in; in reality the shell mounts ~600ms in, so its reveal was still
+   running when the cinematic cleared, and the shell snapped from opacity 0
+   to 1 in a single frame. The delay is now a short settle only, and the
+   sequencing against the space is handled where it belongs: the space
+   waits for the shell, rather than the shell predicting the space. */
+.app-stage[data-reveal="cinematic"] .app-shell-frame {
+  animation: app-shell-resolve 460ms var(--ease-cinematic) 120ms both;
+}
+@keyframes app-shell-resolve {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(1.015);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 @keyframes draw { to { stroke-dashoffset: 0; } }
@@ -2332,34 +1688,6 @@ html:not(.dark) .app-stage > .atmosphere {
     filter: none;
   }
 
-  /* Immersion overlay: opacity continuity only. No spatial travel. */
-  .auth-immersion {
-    animation-name: auth-immersion-reduce !important;
-    animation-duration: 300ms !important;
-    animation-timing-function: var(--ease-standard) !important;
-    animation-iteration-count: 1 !important;
-  }
-  .auth-immersion .auth-immersion-field,
-  .auth-immersion .auth-immersion-light,
-  .auth-immersion .auth-immersion-light-edge,
-  .auth-immersion .auth-immersion-camera,
-  .auth-immersion .auth-immersion-product {
-    animation: none !important;
-    transform: none !important;
-  }
-  .auth-immersion .auth-immersion-field {
-    opacity: 0.85 !important;
-  }
-  .auth-immersion .auth-immersion-product {
-    opacity: 1 !important;
-    width: 100% !important;
-    height: 100% !important;
-  }
-  .auth-immersion .auth-immersion-light,
-  .auth-immersion .auth-immersion-light-edge {
-    opacity: 0.2 !important;
-  }
-
   .atmosphere-layer--cobalt,
   .atmosphere-layer--cyan,
   .atmosphere-layer--violet,
@@ -2370,11 +1698,20 @@ html:not(.dark) .app-stage > .atmosphere {
     animation: none !important;
   }
 
+  /* Reduced motion: the shell fades in, it does not travel. */
   .app-stage[data-entry="in"] .app-shell-frame,
   .app-stage[data-entry="settled"] .app-shell-frame {
     opacity: 1 !important;
     transition: none !important;
     animation: none !important;
+  }
+  .app-stage[data-reveal="cinematic"] .app-shell-frame {
+    animation: app-shell-fade 200ms linear both !important;
+    transform: none !important;
+  }
+  @keyframes app-shell-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
   /* Overlay panels: skip travel, keep the finished geometry

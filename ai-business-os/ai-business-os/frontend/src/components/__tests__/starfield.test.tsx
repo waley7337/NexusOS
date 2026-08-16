@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Starfield } from "@/components/starfield";
-import { Atmosphere } from "@/components/atmosphere";
+import { useUiStore } from "@/stores/ui";
 
 /**
  * What is worth asserting here, and what is not.
@@ -11,13 +11,13 @@ import { Atmosphere } from "@/components/atmosphere";
  * faked context would only assert that our own stub was called. What CAN be
  * pinned down — and what would actually break the product if it regressed —
  * is the contract around the canvas: it is decorative, it never becomes a
- * pointer or accessibility target, it appears only where the cinematic world
- * exists, and it degrades to inert rather than throwing when the environment
- * cannot draw.
+ * pointer or accessibility target, and it degrades to inert rather than
+ * throwing when the environment cannot draw.
  */
 describe("Starfield", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    useUiStore.getState().setSpaceStage("off");
   });
 
   it("renders an inert decorative canvas", () => {
@@ -29,14 +29,6 @@ describe("Starfield", () => {
     expect(canvas).toHaveClass("starfield");
   });
 
-  it("exposes its mode so the immersion sky is distinguishable from the idle sky", () => {
-    const { container, rerender } = render(<Starfield />);
-    expect(container.querySelector("canvas")).toHaveAttribute("data-starfield", "drift");
-
-    rerender(<Starfield mode="warp" />);
-    expect(container.querySelector("canvas")).toHaveAttribute("data-starfield", "warp");
-  });
-
   it("contributes nothing to the accessibility tree", () => {
     render(
       <div>
@@ -44,7 +36,6 @@ describe("Starfield", () => {
         <p>Sign in</p>
       </div>,
     );
-    // The canvas is aria-hidden, so the only thing a reader sees is the copy.
     expect(screen.getByText("Sign in")).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
@@ -58,33 +49,20 @@ describe("Starfield", () => {
     expect(raf).not.toHaveBeenCalled();
   });
 
+  it("tracks the space stage without re-rendering", () => {
+    // The canvas must never remount when the camera speeds up — a remount
+    // reseeds the sky, which is the visible cut this architecture exists to
+    // avoid. Identity of the canvas node is the observable proof.
+    const { container } = render(<Starfield />);
+    const before = container.querySelector("canvas");
+
+    useUiStore.getState().setSpaceStage("travel");
+
+    expect(container.querySelector("canvas")).toBe(before);
+  });
+
   it("unmounts cleanly", () => {
-    const { unmount } = render(<Starfield mode="warp" />);
+    const { unmount } = render(<Starfield stage="travel" />);
     expect(() => unmount()).not.toThrow();
-  });
-});
-
-describe("Atmosphere", () => {
-  it("carries the starfield only in the cinematic variant", () => {
-    const { container: plain } = render(<Atmosphere />);
-    expect(plain.querySelector("canvas")).toBeNull();
-
-    const { container: cinematic } = render(<Atmosphere variant="cinematic" />);
-    expect(cinematic.querySelector("canvas")).toBeInTheDocument();
-  });
-
-  it("paints the sky beneath the light volumes", () => {
-    const { container } = render(<Atmosphere variant="cinematic" />);
-    const root = container.querySelector(".atmosphere");
-    const children = Array.from(root?.children ?? []);
-    const starsIndex = children.findIndex((el) => el.tagName === "CANVAS");
-    const parallaxIndex = children.findIndex((el) =>
-      el.classList.contains("atmosphere-parallax"),
-    );
-
-    // DOM order is the stacking order here — see globals.css. If the stars
-    // ever move above the parallax layers they stop reading as distance.
-    expect(starsIndex).toBeGreaterThanOrEqual(0);
-    expect(starsIndex).toBeLessThan(parallaxIndex);
   });
 });

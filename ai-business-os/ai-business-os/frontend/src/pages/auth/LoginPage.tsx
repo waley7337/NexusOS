@@ -16,6 +16,7 @@ import { useLogin, loginSchema, type LoginFormValues } from "@/features/auth";
 import { ApiRequestError } from "@/api/client";
 import { prefetchRoute } from "@/routes/prefetch";
 import { useUiStore } from "@/stores/ui";
+import { CINEMATIC_CARD_EXIT_MS, prefersReducedMotion } from "@/lib/auth-cinematic";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -69,9 +70,26 @@ export function LoginPage() {
       toast.success("Signed in.");
       const state = location.state as LocationState | null;
       const destination = state?.from?.pathname ?? ROUTES.home;
+      // Arm the presentational cinematic and START THE ROUTE FETCH NOW.
+      // Neither of these waits on anything: the session is already stored,
+      // and prefetch is what makes the shell ready by the time the camera
+      // arrives.
       useUiStore.getState().armAuthEntry();
       prefetchRoute(destination);
-      navigate(destination, { replace: true });
+
+      if (prefersReducedMotion()) {
+        navigate(destination, { replace: true });
+        return;
+      }
+
+      // The navigate is deferred by exactly the length of the sign-in
+      // surface's exit. This is not a delay added to authentication —
+      // authentication finished above — it is the difference between the
+      // card RECEDING and the card being deleted mid-animation when its
+      // route unmounts. The workspace is already being fetched during it.
+      window.setTimeout(() => {
+        navigate(destination, { replace: true });
+      }, CINEMATIC_CARD_EXIT_MS);
     } catch (err) {
       const message = err instanceof ApiRequestError ? err.message : "Something went wrong. Try again.";
       toast.error(message);

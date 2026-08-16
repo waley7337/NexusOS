@@ -1,106 +1,108 @@
 /**
- * Starfield — the deep-space layer of the pre-login cinematic.
+ * Starfield — the sky of the spatial environment, and the only thing on
+ * screen that tells you the camera is moving.
  *
- * WHY A CANVAS AND NOT CSS
- * A CSS starfield is a handful of `radial-gradient` dots on a translated
- * layer. It reads as "dots on a div": the star count is fixed regardless of
- * viewport, every star is the same brightness curve, nothing twinkles, and
- * on a 4K panel the dots are resampled and go soft. This draws into a
- * device-pixel-backed canvas instead, so each star is rendered at the
- * display's real resolution — crisp at 1x, crisp at 2x, crisp at 4K — with a
- * per-star size, brightness, tint and twinkle phase.
+ * ONE FIELD, TWO SPEEDS
+ * There is no "login starfield" and "transition starfield". There is one
+ * canvas, mounted once by SpaceField, that never unmounts between the
+ * sign-in route and the workspace. `stage` changes the CAMERA VELOCITY it
+ * is easing toward; it does not change what is drawn or reseed anything.
+ * That is deliberate: a second field, however identical in style, would
+ * produce a visible cut at exactly the frame the user is watching most
+ * closely.
  *
- * PERFORMANCE CONTRACT (this is the whole reason it is built this way)
- *  - Zero React state per frame. The animation lives entirely in refs and a
- *    single requestAnimationFrame loop; React re-renders exactly never
- *    during playback.
- *  - Zero layout reads per frame. Dimensions come from one ResizeObserver,
- *    not from getBoundingClientRect() in the loop.
- *  - No `filter`, no `backdrop-filter`, no `box-shadow`, no `blur` — the
- *    glow is baked into pre-rendered sprites once, then blitted with
- *    drawImage. Per frame the GPU does N textured quads and nothing else.
- *  - The loop stops when the tab is hidden and when the component unmounts.
- *  - prefers-reduced-motion renders ONE static frame and never starts a
- *    loop. The sky is still there; it just isn't moving.
+ * Motion is always radial from the centre of the frame, at every speed —
+ * idle is the same forward travel as the cinematic, roughly three hundred
+ * times slower. So acceleration is a change of magnitude, never a change
+ * of direction, and the transition has nothing to snap.
  *
- * TWO MODES
- *  "drift" — the sign-in sky. Slow lateral parallax by depth. This is the
- *            resting state of the world, so it is deliberately near the
- *            threshold of perception: you notice it after a few seconds,
- *            not immediately.
- *  "warp"  — the immersion continuation. Stars accelerate radially outward
- *            from the camera centre, which is what forward motion actually
- *            looks like. Used while the product proxy approaches, so the
- *            sky and the camera agree about which way we are travelling.
+ * WHAT IT IS NOT
+ * Not hyperspace. The radial stretch is capped (see MAX_STRETCH) at a
+ * value that reads as a fast exposure, not as a streak: at peak velocity a
+ * star gains about a third of its own width. No tunnel, no rays, no
+ * particles thrown at the lens.
  *
- * Decorative. aria-hidden, pointer-events: none, no semantics.
+ * PERFORMANCE CONTRACT
+ *  - Zero React state per frame; one rAF loop over refs.
+ *  - Zero layout reads per frame; size comes from a ResizeObserver.
+ *  - No filter, blur, backdrop-filter or box-shadow anywhere. Every star
+ *    is a pre-rendered sprite blitted with drawImage, so a frame is N
+ *    textured quads and nothing else.
+ *  - Star count is derived from viewport area and hard-capped, so a 4K
+ *    panel gets a denser sky, not an unbounded one.
+ *  - The loop stops on hidden tab and on unmount.
+ *  - prefers-reduced-motion draws ONE static frame and starts no loop.
+ *
+ * Decorative: aria-hidden, pointer-events none, no semantics.
  */
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useUiStore } from "@/stores/ui";
 
-export type StarfieldMode = "drift" | "warp";
+export type StarfieldStage = "idle" | "travel";
 
 interface StarfieldProps {
   className?: string;
-  mode?: StarfieldMode;
+  stage?: StarfieldStage;
 }
 
-/** One star. Plain object in a flat array — no allocation during playback. */
 interface Star {
   x: number;
   y: number;
-  /** Depth 0..1. Drives parallax speed, size and brightness together. */
+  /** Depth 0..1 — drives parallax speed, size and brightness together. */
   z: number;
   /** Core radius in CSS px. */
   r: number;
   /** Resting alpha before twinkle. */
   a: number;
-  /** Twinkle angular speed (rad/s). 0 means this star does not twinkle. */
+  /** Twinkle angular speed (rad/s). 0 = this star does not twinkle. */
   tw: number;
-  /** Twinkle phase offset so the field never pulses in unison. */
   tp: number;
-  /** Index into TINTS. */
-  t: number;
-  /** Pre-resolved sprite for this star. */
   sprite: HTMLCanvasElement;
+  /** Sprite's bucketed radius, so draw size can be derived without a map. */
+  bucket: number;
 }
 
 /**
- * Star colours. Real skies are not uniformly white — the variation is what
- * stops a starfield reading as noise. Kept subtle: at these alphas the tint
- * is felt more than seen, and none of it is the product's accent violet.
+ * Star colours. A real sky is not uniformly white, and the variation is
+ * what stops a procedural field reading as noise. None of this is the
+ * product's accent violet.
  */
 const TINTS: Array<[number, number, number]> = [
-  [255, 255, 255], // neutral — the majority
-  [202, 222, 255], // cool blue-white
-  [255, 233, 209], // warm
+  [255, 255, 255],
+  [202, 222, 255],
+  [255, 233, 209],
 ];
-
-/** Chance of drawing each tint. Must sum to 1. */
 const TINT_WEIGHTS = [0.72, 0.21, 0.07];
 
-/**
- * One star per this many CSS px². Density is area-derived, not a fixed
- * count, so a 13" laptop and a 4K panel get the same sky rather than the
- * same number of dots spread thinner.
- */
-const AREA_PER_STAR = 3500;
-// A phone viewport is small in area but held close, so the floor is set
-// above what pure area would give it — otherwise the sky reads as empty.
-const MIN_STARS = 165;
-const MAX_STARS = 1400;
+/** One star per this many CSS px², then hard-capped. */
+const AREA_PER_STAR = 4200;
+const MIN_STARS = 90;
+const MAX_STARS = 700;
 
-/** Device pixel ratio is capped: past 2x the extra fill rate buys nothing. */
+/** Past 2x the extra fill rate buys nothing visible. */
 const MAX_DPR = 2;
 
 /**
- * Pre-render one star sprite: a tight opaque core with a soft halo, baked
- * once into an offscreen canvas. Drawing 400 of these with drawImage is
- * cheap; drawing 400 radial gradients per frame is not.
+ * Camera velocity, as a fraction of distance-from-centre travelled per
+ * second. Idle is a crawl you notice only after several seconds; travel is
+ * a deliberate forward move. Nothing in between is ever set directly — the
+ * loop eases from one to the other.
  */
+const V_IDLE = 0.004;
+const V_TRAVEL = 1.25;
+/** Seconds for velocity to reach travel speed. Matches the camera ease. */
+const V_RAMP_S = 1.1;
+/**
+ * Hard ceiling on radial elongation. This is the anti-hyperspace clamp: at
+ * this value a star at peak velocity gains about a third of its own width
+ * along the radial axis, which reads as a fast exposure. Anything much
+ * above it starts drawing streaks.
+ */
+const MAX_STRETCH = 0.3;
+
 function makeSprite(radiusPx: number, tint: [number, number, number], dpr: number) {
   const c = document.createElement("canvas");
-  // The halo reaches ~3.6x the core radius; anything beyond is invisible.
   const half = Math.max(2, Math.ceil(radiusPx * 3.6 * dpr));
   c.width = half * 2;
   c.height = half * 2;
@@ -126,10 +128,9 @@ function makeSprite(radiusPx: number, tint: [number, number, number], dpr: numbe
 }
 
 /**
- * The few brightest stars get a faint anamorphic cross. This is the single
- * detail that separates "dots" from "photographed sky" — but it is a lens
- * artefact, so it belongs to a handful of stars only. More than that and it
- * stops reading as optics and starts reading as decoration.
+ * The brightest few stars get a faint cross. It is a lens artefact, so it
+ * belongs to a handful of stars only — past that it stops reading as
+ * optics and starts reading as decoration.
  */
 function addFlare(sprite: HTMLCanvasElement, tint: [number, number, number]) {
   const ctx = sprite.getContext("2d");
@@ -168,8 +169,27 @@ function pickTint(): number {
   return 0;
 }
 
-export function Starfield({ className, mode = "drift" }: StarfieldProps) {
+export function Starfield({ className, stage }: StarfieldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /**
+   * The stage the loop reads. Written by a store subscription rather than
+   * passed through React render, so a stage change is one ref write and
+   * never a re-render of a component that owns a canvas.
+   */
+  const stageRef = useRef<StarfieldStage>(stage ?? "idle");
+
+  useEffect(() => {
+    if (stage) stageRef.current = stage;
+  }, [stage]);
+
+  useEffect(() => {
+    if (stage) return undefined;
+    const read = () => {
+      stageRef.current = useUiStore.getState().spaceStage === "travel" ? "travel" : "idle";
+    };
+    read();
+    return useUiStore.subscribe(read);
+  }, [stage]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -186,13 +206,16 @@ export function Starfield({ className, mode = "drift" }: StarfieldProps) {
     let raf = 0;
     let running = false;
     let last = 0;
-    /** Seconds since the field started — twinkle clock and warp ramp. */
+    /** Seconds of playback — twinkle clock. */
     let clock = 0;
+    /** Seconds spent in "travel" — drives the velocity ramp. */
+    let travelClock = 0;
+    /** Current camera velocity, eased. Never assigned from stage directly. */
+    let velocity = V_IDLE;
 
     const spriteCache = new Map<string, HTMLCanvasElement>();
-    const spriteFor = (radius: number, tintIndex: number, flare: boolean) => {
-      // Bucket the radius so a few hundred stars share a dozen textures.
-      const bucket = Math.max(0.25, Math.round(radius * 4) / 4);
+    const bucketOf = (radius: number) => Math.max(0.25, Math.round(radius * 4) / 4);
+    const spriteFor = (bucket: number, tintIndex: number, flare: boolean) => {
       const key = `${tintIndex}|${bucket}|${flare ? "f" : "p"}|${dpr}`;
       const hit = spriteCache.get(key);
       if (hit) return hit;
@@ -208,19 +231,16 @@ export function Starfield({ className, mode = "drift" }: StarfieldProps) {
       // genuinely bright stars, not an even spread of medium dots.
       const r = 0.32 + Math.pow(Math.random(), 3) * 2.05 * (0.55 + z * 0.45);
       const t = pickTint();
-      const flare = r > 1.85;
-      // Brightness rides depth but is not determined by it — a real sky has
-      // faint near stars and bright far ones, and locking the two together
-      // is what makes procedural fields look like a gradient of dots.
+      const bucket = bucketOf(r);
       const a = Math.min(1, (0.3 + Math.pow(Math.random(), 1.5) * 0.68) * (0.6 + z * 0.55));
 
       let x: number;
       let y: number;
       if (spawnNearCentre) {
-        // Warp respawn: reappear close to the vanishing point, so stars
-        // stream outward from where the camera is heading.
+        // Reappear near the vanishing point, so stars stream outward from
+        // where the camera is heading rather than popping in at the edges.
         const angle = Math.random() * Math.PI * 2;
-        const dist = Math.pow(Math.random(), 0.6) * Math.min(width, height) * 0.16;
+        const dist = Math.pow(Math.random(), 0.6) * Math.min(width, height) * 0.14;
         x = width / 2 + Math.cos(angle) * dist;
         y = height / 2 + Math.sin(angle) * dist;
       } else {
@@ -234,12 +254,12 @@ export function Starfield({ className, mode = "drift" }: StarfieldProps) {
         z,
         r,
         a,
-        // Roughly half the field twinkles; a fully twinkling sky shimmers
+        // Roughly half the field twinkles. A fully twinkling sky shimmers
         // and reads as an effect rather than as depth.
         tw: Math.random() < 0.52 ? 0.35 + Math.random() * 0.9 : 0,
         tp: Math.random() * Math.PI * 2,
-        t,
-        sprite: spriteFor(r, t, flare),
+        sprite: spriteFor(bucket, t, r > 1.85),
+        bucket,
       };
     };
 
@@ -259,14 +279,36 @@ export function Starfield({ className, mode = "drift" }: StarfieldProps) {
       // holes in each other, which is what makes dense regions glow.
       ctx.globalCompositeOperation = "lighter";
 
+      const cx = width / 2;
+      const cy = height / 2;
+      // Elongation is a function of velocity alone, and clamped. This is
+      // the line that keeps the effect on the right side of tasteful.
+      const stretch = Math.min(MAX_STRETCH, Math.max(0, (velocity - 0.2) * 0.5));
+
       for (let i = 0; i < stars.length; i += 1) {
         const s = stars[i];
         const twinkle = s.tw === 0 ? 1 : 0.74 + 0.26 * Math.sin(clock * s.tw + s.tp);
         const alpha = s.a * twinkle;
         if (alpha <= 0.01) continue;
-        const size = (s.sprite.width / dpr) * (s.r / Math.max(0.25, Math.round(s.r * 4) / 4));
+
+        const size = (s.sprite.width / dpr) * (s.r / s.bucket);
+        let w = size;
+        let h = size;
+
+        if (stretch > 0.001) {
+          // Elongate along the radial direction, scaled by depth so near
+          // stars smear more than far ones — which is what parallax at
+          // speed actually looks like.
+          const dx = s.x - cx;
+          const dy = s.y - cy;
+          const d = Math.hypot(dx, dy) || 1;
+          const k = stretch * (0.35 + s.z);
+          w = size * (1 + (k * Math.abs(dx)) / d);
+          h = size * (1 + (k * Math.abs(dy)) / d);
+        }
+
         ctx.globalAlpha = alpha;
-        ctx.drawImage(s.sprite, s.x - size / 2, s.y - size / 2, size, size);
+        ctx.drawImage(s.sprite, s.x - w / 2, s.y - h / 2, w, h);
       }
 
       ctx.globalAlpha = 1;
@@ -279,43 +321,34 @@ export function Starfield({ className, mode = "drift" }: StarfieldProps) {
       const dt = Math.min(dtRaw, 0.05);
       clock += dt;
 
-      if (mode === "warp") {
-        // Ramp: the camera commits slowly, then accelerates. Matches the
-        // ease of the product approach it plays underneath.
-        const ramp = Math.min(1, clock / 1.15);
-        const k = 0.1 + Math.pow(ramp, 2.1) * 1.35;
-        const cx = width / 2;
-        const cy = height / 2;
-        const margin = Math.max(width, height) * 0.12;
+      const travelling = stageRef.current === "travel";
+      if (travelling) travelClock += dt;
+      else travelClock = 0;
 
-        for (let i = 0; i < stars.length; i += 1) {
-          const s = stars[i];
-          const dx = s.x - cx;
-          const dy = s.y - cy;
-          const speed = k * (0.35 + s.z);
-          s.x += dx * speed * dt;
-          s.y += dy * speed * dt;
-          // Approaching stars get brighter and larger, as they would.
-          s.a = Math.min(1, s.a + dt * 0.06 * s.z);
-          if (
-            s.x < -margin ||
-            s.x > width + margin ||
-            s.y < -margin ||
-            s.y > height + margin
-          ) {
-            stars[i] = makeStar(true);
-          }
-        }
-      } else {
-        // Drift: slow lateral parallax, up and to the left. Depth sets
-        // speed, so the near layer visibly leads the far one.
-        for (let i = 0; i < stars.length; i += 1) {
-          const s = stars[i];
-          const v = 0.9 + s.z * 3.4;
-          s.x -= v * 0.82 * dt;
-          s.y -= v * 0.34 * dt;
-          if (s.x < -6) s.x = width + 6;
-          if (s.y < -6) s.y = height + 6;
+      // Target velocity: idle crawl, or the ramped travel speed.
+      const ramp = travelling ? Math.min(1, travelClock / V_RAMP_S) : 0;
+      const target = travelling ? V_IDLE + Math.pow(ramp, 2.1) * (V_TRAVEL - V_IDLE) : V_IDLE;
+      // Ease toward it rather than snapping, so even an abrupt stage flip
+      // reads as the camera spinning up.
+      velocity += (target - velocity) * Math.min(1, dt * 6);
+
+      const cx = width / 2;
+      const cy = height / 2;
+      const margin = Math.max(width, height) * 0.1;
+
+      for (let i = 0; i < stars.length; i += 1) {
+        const s = stars[i];
+        const speed = velocity * (0.35 + s.z);
+        s.x += (s.x - cx) * speed * dt;
+        s.y += (s.y - cy) * speed * dt;
+
+        if (
+          s.x < -margin ||
+          s.x > width + margin ||
+          s.y < -margin ||
+          s.y > height + margin
+        ) {
+          stars[i] = makeStar(true);
         }
       }
     };
@@ -389,14 +422,17 @@ export function Starfield({ className, mode = "drift" }: StarfieldProps) {
       motionQuery.removeEventListener("change", applyMotion);
       spriteCache.clear();
     };
-  }, [mode]);
+    // The loop reads `stage` through stageRef, never through this closure,
+    // so it is intentionally set up once for the life of the canvas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <canvas
       ref={canvasRef}
       className={cn("starfield", className)}
       aria-hidden="true"
-      data-starfield={mode}
+      data-starfield=""
     />
   );
 }

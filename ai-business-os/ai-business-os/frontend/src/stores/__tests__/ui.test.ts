@@ -5,11 +5,13 @@ describe("useUiStore auth-entry presentation flag", () => {
   beforeEach(() => {
     useUiStore.getState().clearAuthEntry();
     useUiStore.getState().clearCinematicReveal();
+    useUiStore.getState().setSpaceStage("off");
   });
 
   it("defaults inactive", () => {
     expect(useUiStore.getState().isAuthEntryActive).toBe(false);
     expect(useUiStore.getState().pendingCinematicReveal).toBe(false);
+    expect(useUiStore.getState().spaceStage).toBe("off");
   });
 
   it("can arm and clear", () => {
@@ -18,37 +20,19 @@ describe("useUiStore auth-entry presentation flag", () => {
     expect(useUiStore.getState().pendingCinematicReveal).toBe(true);
     useUiStore.getState().clearAuthEntry();
     expect(useUiStore.getState().isAuthEntryActive).toBe(false);
-    expect(useUiStore.getState().immersionOrigin).toBeNull();
+    expect(useUiStore.getState().spaceStage).toBe("off");
     expect(useUiStore.getState().pendingCinematicReveal).toBe(true);
     useUiStore.getState().clearCinematicReveal();
     expect(useUiStore.getState().pendingCinematicReveal).toBe(false);
   });
 
-  it("captures immersion origin from the auth product when present", () => {
-    const host = document.createElement("div");
-    host.setAttribute("data-auth-product", "");
-    Object.defineProperty(host, "getBoundingClientRect", {
-      value: () => ({
-        left: 100,
-        top: 80,
-        width: 640,
-        height: 400,
-        right: 740,
-        bottom: 480,
-        x: 100,
-        y: 80,
-        toJSON: () => ({}),
-      }),
-    });
-    document.body.appendChild(host);
+  it("arming hands the space over to the camera, without remounting it", () => {
+    // The sky is already running on the sign-in route. Arming must only
+    // change its phase — anything that reset it to "off" first would
+    // unmount the canvas and reseed the field mid-transition.
+    useUiStore.getState().setSpaceStage("idle");
     useUiStore.getState().armAuthEntry();
-    expect(useUiStore.getState().immersionOrigin).toEqual({
-      left: 100,
-      top: 80,
-      width: 640,
-      height: 400,
-    });
-    host.remove();
+    expect(useUiStore.getState().spaceStage).toBe("travel");
   });
 
   it("is not written to localStorage", () => {

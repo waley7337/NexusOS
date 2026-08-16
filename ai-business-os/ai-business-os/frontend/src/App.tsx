@@ -1,7 +1,7 @@
 import { MotionConfig } from "framer-motion";
 import { RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
-import { AuthEntryOverlay } from "@/components/auth-entry-overlay";
+import { SpaceField } from "@/components/space-field";
 import { QueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { router } from "@/routes";
@@ -17,8 +17,12 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <ThemeProvider>
         <QueryProvider>
+          {/* Before the router in DOM order on purpose: at rest the space
+              sits at z-index 0 and the sign-in surface paints over it. It
+              raises itself above the application only during the auth
+              cinematic. See SpaceField. */}
+          <SpaceField />
           <RouterProvider router={router} />
-          <AuthEntryOverlay />
           <Toaster
             position="top-right"
             richColors
