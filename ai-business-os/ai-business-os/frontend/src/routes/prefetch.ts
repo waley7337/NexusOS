@@ -6,7 +6,8 @@ const prefetchRegistry: Partial<Record<string, PrefetchFn>> = {
   [ROUTES.home]: () => void import("@/pages/dashboard/DashboardPage"),
   [ROUTES.login]: () => void import("@/pages/auth/LoginPage"),
   [ROUTES.design]: () => void import("@/pages/design/DesignSystemPage"),
-  [ROUTES.crm]: () => void import("@/features/crm/pages/CrmIndexRedirect"),
+  // /crm index is eager (CrmIndexRedirect); prefetch the default landing page.
+  [ROUTES.crm]: () => void import("@/pages/crm/CustomersPage"),
   [ROUTES.crmCustomers]: () => void import("@/pages/crm/CustomersPage"),
   [ROUTES.crmContacts]: () => void import("@/pages/crm/ContactsPage"),
   [ROUTES.crmLeads]: () => void import("@/pages/crm/LeadsPage"),

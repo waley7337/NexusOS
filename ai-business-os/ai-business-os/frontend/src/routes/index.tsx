@@ -8,6 +8,8 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { PermissionRoute } from "@/routes/PermissionRoute";
 import { RouteErrorBoundary } from "@/components/route-error-boundary";
 import { PageLoading } from "@/components/page-loading";
+import { CrmIndexRedirect } from "@/features/crm/pages/CrmIndexRedirect";
+import { CrmSectionLayout } from "@/features/crm/pages/CrmSectionLayout";
 
 const LoginPage = lazy(() =>
   import("@/pages/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
@@ -45,11 +47,6 @@ const LeadsPage = lazy(() =>
 );
 const DealsPage = lazy(() =>
   import("@/pages/crm/DealsPage").then((m) => ({ default: m.DealsPage })),
-);
-const CrmIndexRedirect = lazy(() =>
-  import("@/features/crm/pages/CrmIndexRedirect").then((m) => ({
-    default: m.CrmIndexRedirect,
-  })),
 );
 const ProjectsPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.ProjectsPlaceholder })),
@@ -143,7 +140,10 @@ export const router = createBrowserRouter([
           { path: ROUTES.design, element: <DesignSystemPage /> },
           {
             path: ROUTES.crm,
+            element: <CrmSectionLayout />,
             children: [
+              // Eager: a lazy index redirect can leave Dashboard mounted at /crm
+              // while the chunk loads (RR concurrent navigation + Suspense).
               { index: true, element: <CrmIndexRedirect /> },
               {
                 element: <PermissionRoute permission="customers.read" />,
