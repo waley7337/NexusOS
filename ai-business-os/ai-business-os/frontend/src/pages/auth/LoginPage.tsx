@@ -151,7 +151,7 @@ export function LoginPage() {
         variant="primary"
         size="lg"
         loading={pending}
-        className="h-11 w-full"
+        className={cn("h-11 w-full", pending && "auth-cta-confirm")}
       >
         {pending ? "Signing in…" : "Sign in"}
       </Button>

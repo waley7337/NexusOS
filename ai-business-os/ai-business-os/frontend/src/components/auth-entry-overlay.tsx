@@ -1,19 +1,20 @@
 /**
- * Signature login -> workspace transition (V7).
+ * Signature login → workspace transition.
  *
- * Presentational AuthLayout -> AppLayout bridge.
+ * Presentational bridge only. Mounted above RouterProvider.
+ * Armed AFTER successful authentication (LoginPage). Never delays auth,
+ * navigation, prefetch, or authorization.
  *
- * Mounted above RouterProvider. Authentication, navigation, prefetch, and
- * authorization do not read this component. pointer-events: none; aria-hidden.
+ * pointer-events: none; aria-hidden.
  */
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
 
-/** Visual sequence length. Not a navigation delay. */
-export const AUTH_ENTRY_DURATION_MS = 820;
+/** Full cinematic sequence length. Not a navigation delay. */
+export const AUTH_ENTRY_DURATION_MS = 1650;
 /** Defensive escape hatch if animationend never fires. */
-export const AUTH_ENTRY_FAILSAFE_MS = 1800;
+export const AUTH_ENTRY_FAILSAFE_MS = 2400;
 
 export function AuthEntryOverlay() {
   const active = useUiStore((s) => s.isAuthEntryActive);
@@ -54,21 +55,48 @@ export function AuthEntryOverlay() {
       data-testid="auth-entry-overlay"
       data-auth-entry=""
       data-motion={reducedMotion ? "reduce" : "full"}
-      className={cn("auth-entry-overlay", reducedMotion && "auth-entry-overlay--reduce")}
+      className={cn(
+        "auth-entry-overlay",
+        reducedMotion && "auth-entry-overlay--reduce",
+      )}
       aria-hidden="true"
       style={{
         pointerEvents: "none",
         ["--auth-entry-duration" as string]: `${AUTH_ENTRY_DURATION_MS}ms`,
       }}
     >
-      {/* V7: the login room leaves, the seam stays. See the SIGNATURE
-          TRANSITION block in globals.css — the seam sits at var(--sidebar-w),
-          which is the chassis rail's own track position, so the line the user
-          is watching is already the workspace rail before the workspace has
-          painted. */}
+      {/* Depth stack: atmosphere → lights → receding login → product push → seam */}
+      <div className="auth-entry-atmosphere" />
+      <div className="auth-entry-light auth-entry-light--cobalt" />
+      <div className="auth-entry-light auth-entry-light--cyan" />
       <div className="auth-entry-plane" />
+      <div className="auth-entry-login-glass" />
+      <div className="auth-entry-mark">
+        <img
+          src="/nexusos-wordmark.png"
+          alt=""
+          width={180}
+          height={29}
+          draggable={false}
+        />
+      </div>
+      <div className="auth-entry-product">
+        <div className="auth-entry-product-shell">
+          <div className="auth-entry-product-rail" />
+          <div className="auth-entry-product-body">
+            <div className="auth-entry-product-bar" />
+            <div className="auth-entry-product-grid">
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="auth-entry-seam" />
       <div className="auth-entry-sweep" />
+      <div className="auth-entry-vignette" />
     </div>
   );
 }

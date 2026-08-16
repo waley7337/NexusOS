@@ -58,16 +58,15 @@ function NavLinkItem({
             // above in-flow content, which would cover the icon and label.
             <motion.span
               layoutId="nav-active-surface"
-              className="absolute inset-0 -z-10 rounded-lg bg-primary/10 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.22),0_0_24px_-8px_var(--glow-blue)]"
+              className="nav-active-glow absolute inset-0 -z-10 rounded-lg bg-primary/10"
               transition={indicatorTransition}
               aria-hidden="true"
             />
           )}
           {isActive && (
-            // Position marker on the chassis rail — accent reserved for state.
             <motion.span
               layoutId="nav-rail-marker"
-              className="absolute -right-3 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-primary shadow-[0_0_10px_var(--glow-blue)]"
+              className="nav-rail-alive absolute -right-3 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-primary"
               transition={indicatorTransition}
               aria-hidden="true"
             />

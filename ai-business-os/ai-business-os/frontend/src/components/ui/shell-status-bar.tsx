@@ -102,7 +102,11 @@ export function ShellStatusBar({
         {/* The dot is the only colour, and the only thing that survives at
             the narrowest width. */}
         <span
-          className={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[variant])}
+          className={cn(
+            "h-1.5 w-1.5 shrink-0 rounded-full",
+            DOT[variant],
+            variant === "online" && "status-dot-alive text-success",
+          )}
           aria-hidden="true"
         />
 

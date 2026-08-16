@@ -6,7 +6,7 @@ import { PageLoading } from "@/components/page-loading";
 /** Standard band (220ms) plus a short buffer. If the animation clock never
  *  advances, this is what forces the surface visible instead of leaving it
  *  at the from-keyframe. */
-const ROUTE_ENTER_SETTLE_MS = 300;
+const ROUTE_ENTER_SETTLE_MS = 380;
 
 /**
  * Authenticated content boundary. AppLayout (sidebar, top bar, status)

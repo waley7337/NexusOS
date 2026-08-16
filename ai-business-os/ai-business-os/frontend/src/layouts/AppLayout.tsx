@@ -35,6 +35,7 @@ import {
   MobileSidebar,
 } from "@/components/app-navigation";
 import { OfflineBanner } from "@/components/offline-banner";
+import { Atmosphere } from "@/components/atmosphere";
 import { LazyOutlet } from "@/routes/LazyOutlet";
 import { Button } from "@/components/ui/button";
 import { IconTooltip, TooltipProvider } from "@/components/ui/tooltip";
@@ -43,6 +44,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerBody } from "@/components/ui
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Row, RowGroup } from "@/components/ui/structure";
+import { useAmbientPresence } from "@/hooks/useAmbientPresence";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -88,6 +90,9 @@ export function AppLayout() {
   // the store, same shape as isNotificationPanelOpen above.
   const captureOpen = useUiStore((state) => state.isCaptureOpen);
   const setCaptureOpen = useUiStore((state) => state.setCaptureOpen);
+  const authEntryActive = useUiStore((state) => state.isAuthEntryActive);
+  const commandPaletteOpen = useUiStore((state) => state.isCommandPaletteOpen);
+  const stageRef = useAmbientPresence(!authEntryActive);
 
   useRouteFocus();
 
@@ -136,8 +141,13 @@ export function AppLayout() {
     // away with the document. dvh rather than vh so mobile browser chrome
     // collapsing doesn't leave the bar off-screen.
     <TooltipProvider delayDuration={150} skipDelayDuration={200}>
-    <div className="app-stage h-dvh overflow-hidden">
-      <div className="atmosphere" aria-hidden="true" />
+    <div
+      ref={stageRef}
+      className="app-stage h-dvh overflow-hidden"
+      data-entry={authEntryActive ? "in" : "settled"}
+      data-search={commandPaletteOpen ? "open" : "idle"}
+    >
+      <Atmosphere />
       <div className="app-shell-frame">
     <div className="chassis h-full overflow-hidden bg-transparent" data-collapsed={collapsed}>
       <CommandPalette />
@@ -532,7 +542,8 @@ export function AppLayout() {
             onClick={toggleCommandPalette}
             aria-label="Search pages and actions"
             aria-keyshortcuts="Meta+K"
-            className="focus-ring group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-control border border-line-soft bg-surface-0 text-muted-foreground shadow-[inset_0_1px_2px_0_var(--edge-shade)] transition-colors duration-fast hover:border-line-strong hover:text-foreground sm:w-auto sm:flex-1 sm:justify-start sm:px-3 md:max-w-sm lg:max-w-md"
+            data-active={commandPaletteOpen ? "true" : undefined}
+            className="shell-search focus-ring group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-control border border-line-soft bg-surface-0 text-muted-foreground shadow-[inset_0_1px_2px_0_var(--edge-shade)] sm:w-auto sm:flex-1 sm:justify-start sm:px-3 md:max-w-sm lg:max-w-md"
           >
             <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
 

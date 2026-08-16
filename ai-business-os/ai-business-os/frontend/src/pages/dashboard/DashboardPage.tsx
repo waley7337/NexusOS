@@ -286,9 +286,9 @@ export function DashboardPage() {
                   <div className="mt-auto flex items-center gap-2 border-t border-line-soft pt-5">
                     <span
                       className={cn(
-                        "h-1.5 w-1.5 rounded-full shadow-[0_0_8px_currentColor]",
+                        "h-1.5 w-1.5 rounded-full",
                         apiOk && dbOk
-                          ? "bg-success text-success"
+                          ? "status-dot-alive bg-success text-success"
                           : isError
                             ? "bg-destructive text-destructive"
                             : "bg-warning text-warning",
@@ -527,48 +527,52 @@ function AmbientWaveform() {
       aria-hidden="true"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_50%_100%,hsl(var(--primary)/0.18),transparent_55%)]" />
-      <svg
-        viewBox="0 0 640 208"
-        className="h-full w-full"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <linearGradient id="nx-wave-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-          </linearGradient>
-          <filter id="nx-wave-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        {[48, 88, 128, 168].map((y) => (
-          <line
-            key={y}
-            x1="24"
-            x2="616"
-            y1={y}
-            y2={y}
-            stroke="currentColor"
-            strokeOpacity="0.06"
-            className="text-foreground"
+      <div className="ambient-wave-phase absolute inset-[-2%_-3%]">
+        <svg
+          viewBox="0 0 640 208"
+          className="h-full w-full"
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <linearGradient id="nx-wave-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+            </linearGradient>
+            <filter id="nx-wave-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {[48, 88, 128, 168].map((y) => (
+            <line
+              key={y}
+              x1="24"
+              x2="616"
+              y1={y}
+              y2={y}
+              stroke="currentColor"
+              strokeOpacity="0.06"
+              className="text-foreground"
+            />
+          ))}
+          <path
+            d="M24 148 C 90 148, 110 72, 180 96 S 280 168, 340 120 S 440 48, 500 88 S 580 140, 616 112 V 190 H 24 Z"
+            fill="url(#nx-wave-fill)"
           />
-        ))}
-        <path
-          d="M24 148 C 90 148, 110 72, 180 96 S 280 168, 340 120 S 440 48, 500 88 S 580 140, 616 112 V 190 H 24 Z"
-          fill="url(#nx-wave-fill)"
-        />
-        <path
-          d="M24 148 C 90 148, 110 72, 180 96 S 280 168, 340 120 S 440 48, 500 88 S 580 140, 616 112"
-          fill="none"
-          stroke="hsl(var(--primary-soft))"
-          strokeWidth="2.25"
-          filter="url(#nx-wave-glow)"
-        />
-      </svg>
+          <path
+            d="M24 148 C 90 148, 110 72, 180 96 S 280 168, 340 120 S 440 48, 500 88 S 580 140, 616 112"
+            fill="none"
+            stroke="hsl(var(--primary-soft))"
+            strokeWidth="2.25"
+            filter="url(#nx-wave-glow)"
+            className="ambient-wave-sheen"
+            strokeDasharray="8 14"
+          />
+        </svg>
+      </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
         <div className="flex items-center gap-2 rounded-full border border-line-soft bg-surface-2/90 px-3 py-1.5 backdrop-blur-sm">
