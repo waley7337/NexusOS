@@ -44,7 +44,7 @@ function NavLinkItem({
       onFocus={() => prefetchRoute(to)}
       className={({ isActive }) =>
         cn(
-          "focus-ring group relative flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2 text-sm transition-colors duration-fast",
+          "focus-ring group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-fast",
           isActive ? "font-medium text-foreground" : "text-muted-foreground hover:bg-surface-3 hover:text-foreground",
         )
       }
@@ -63,6 +63,24 @@ function NavLinkItem({
               aria-hidden="true"
             />
           )}
+          {isActive && (
+            // V4: the position marker, and the reason navigation now reads as
+            // spatial rather than as a fill moving between rows. It sits on
+            // the sidebar's outer edge — flush against the chassis rail — and
+            // FLIPs vertically to the new row on every route change, so the
+            // rail visibly reports where you are. The rail is the product's
+            // continuity anchor (V3); this is what makes it answer to
+            // navigation instead of just standing there.
+            //
+            // Violet is correct here and nowhere near decorative: this is
+            // position state, which is exactly what the accent is reserved for.
+            <motion.span
+              layoutId="nav-rail-marker"
+              className="absolute -right-3 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-primary"
+              transition={indicatorTransition}
+              aria-hidden="true"
+            />
+          )}
           <Icon
             className={cn(
               "h-4 w-4 shrink-0 transition-colors duration-fast",
@@ -76,8 +94,11 @@ function NavLinkItem({
             transition={collapseTransition}
             className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap"
           >
+            {/* V4: the trailing violet dot is gone. With the rail marker now
+                reporting position, a dot inside the row was a second active
+                indicator saying the same thing — and it was the weaker of the
+                two, since it cannot travel. */}
             <span className="min-w-0 truncate">{label}</span>
-            {isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
           </motion.span>
         </>
       )}
@@ -151,7 +172,7 @@ function NavItems({ collapsed = false, onNavigate }: AppNavigationProps) {
 /** Desktop sidebar navigation links. */
 export function AppNavigation({ collapsed = false }: AppNavigationProps) {
   return (
-    <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden p-3">
+    <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-clip p-3 pr-4">
       {/* Scoped so this list's layoutId cannot cross-match the mobile
           drawer. The desktop aside is only CSS-hidden below md, not
           unmounted, so both trees exist whenever the drawer is open. */}
@@ -188,7 +209,7 @@ export function MobileSidebar({
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerContent side="left" className="max-w-[15rem] border-r p-0">
         <DrawerHeader title="NexusOS" />
-        <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden p-3">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-clip p-3 pr-4">
           <LayoutGroup id="mobile-nav">
             <NavItems onNavigate={() => setOpen(false)} />
           </LayoutGroup>

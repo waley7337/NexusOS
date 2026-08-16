@@ -107,7 +107,7 @@ export function DashboardPage() {
               Health probes did not respond.{" "}
               <button
                 type="button"
-                className="focus-ring rounded text-foreground underline-offset-4 hover:underline"
+                className="focus-ring rounded text-foreground underline-offset-4 transition-colors duration-fast hover:text-primary hover:underline"
                 onClick={() => refetch()}
               >
                 Retry
