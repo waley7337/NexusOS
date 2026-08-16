@@ -3,16 +3,16 @@ import { Outlet, useLocation } from "react-router-dom";
 import { RouteErrorBoundary } from "@/components/route-error-boundary";
 import { PageLoading } from "@/components/page-loading";
 
-/** Opacity enter (~160ms) + buffer. Forces visible if animationend never fires. */
-const ROUTE_ENTER_SETTLE_MS = 220;
+/** Opacity + slight rise (~240ms) + buffer. Forces visible if animationend never fires. */
+const ROUTE_ENTER_SETTLE_MS = 300;
 
 /**
  * Authenticated content boundary. AppLayout (sidebar, top bar, status)
  * stays mounted; only this surface transitions between routes.
  *
- * Enter-only CSS opacity (`.route-enter`) — no translateY. Keyed by
- * pathname so rapid navigation replaces the previous surface immediately
- * (no animation queue). Cleanup cancels in-flight animations.
+ * Enter-only CSS (`.route-enter`) — opacity + ~6px translateY.
+ * Keyed by pathname so rapid navigation replaces the previous surface
+ * immediately (no animation queue). Cleanup cancels in-flight animations.
  *
  * First paint skips enter so login cinematic is not doubled.
  */

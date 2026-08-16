@@ -56,12 +56,6 @@ function NavLinkItem({
               aria-hidden="true"
             />
           )}
-          {isActive && (
-            <span
-              className="nav-rail-alive absolute -right-3 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-primary"
-              aria-hidden="true"
-            />
-          )}
           <Icon
             className={cn(
               "h-4 w-4 shrink-0 transition-colors duration-fast",

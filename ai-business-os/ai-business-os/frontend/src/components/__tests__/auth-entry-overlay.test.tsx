@@ -58,7 +58,7 @@ describe("AuthEntryOverlay", () => {
   it("does not clear when a child animation ends", () => {
     useUiStore.getState().armAuthEntry();
     const { container } = render(<AuthEntryOverlay />);
-    const field = container.querySelector(".auth-entry-field");
+    const field = container.querySelector(".auth-immersion-field");
     expect(field).not.toBeNull();
     act(() => {
       field!.dispatchEvent(new Event("animationend", { bubbles: true }));
@@ -85,7 +85,7 @@ describe("AuthEntryOverlay", () => {
     render(<AuthEntryOverlay />);
     const overlay = screen.getByTestId("auth-entry-overlay");
     expect(overlay).toHaveAttribute("data-motion", "reduce");
-    expect(overlay).toHaveClass("auth-entry-overlay--reduce");
+    expect(overlay).toHaveClass("auth-immersion--reduce");
     act(() => {
       overlay.dispatchEvent(new Event("animationend", { bubbles: true }));
     });

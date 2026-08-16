@@ -6,7 +6,7 @@
  *   NAVIGATION  220–320ms   route content, tabs, nav indicator
  *   SURFACE     300–450ms   panels, shell settle
  *   SECTION     450–700ms   section reveal
- *   CINEMATIC   900–1500ms  auth entry only
+ *   CINEMATIC   1400–1650ms auth immersion only
  *
  * Easings: standard / cinematic / exit — see --ease-* tokens.
  * Reduced motion: MotionConfig reducedMotion="user" in App.tsx.
@@ -19,10 +19,10 @@ export const transitionFast: Transition = { duration: 0.15, ease: [0.22, 0.61, 0
 
 export const transitionInstant: Transition = { duration: 0.1, ease: [0.25, 1, 0.5, 1] };
 /** NAVIGATION band — route content stage. */
-export const transitionStandard: Transition = { duration: 0.26, ease: [0.22, 0.61, 0.36, 1] };
+export const transitionStandard: Transition = { duration: 0.24, ease: [0.22, 0.61, 0.36, 1] };
 export const transitionSpatial: Transition = { duration: 0.34, ease: [0.83, 0, 0.17, 1] };
 export const transitionReveal: Transition = { duration: 0.56, ease: [0.16, 1, 0.3, 1] };
-export const transitionCinematic: Transition = { duration: 1.2, ease: [0.16, 1, 0.3, 1] };
+export const transitionCinematic: Transition = { duration: 1.55, ease: [0.16, 1, 0.3, 1] };
 
 /** Content appearing (design-system demos). No continuous blur in product. */
 export const fadeInUp: Variants = {
@@ -53,12 +53,12 @@ export const scaleIn: Variants = {
 
 /**
  * Authenticated route-content transition.
- * LazyOutlet plays CSS `.route-enter` (~160ms opacity). No translateY.
+ * LazyOutlet plays CSS `.route-enter` (~240ms opacity + 6px rise).
  * Shell stays put. Keyed remount cancels prior enter (no queue).
  */
 export const routePageTransition: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.16, ease: [0.22, 0.61, 0.36, 1] } },
+  hidden: { opacity: 0, y: 6 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.22, 0.61, 0.36, 1] } },
 };
 
 export const routePageTransitionReduced: Variants = {
