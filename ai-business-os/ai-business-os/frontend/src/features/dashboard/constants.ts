@@ -5,7 +5,7 @@ import { ROUTES } from "@/constants/routes";
  * These describe what each route is for — not current business values.
  */
 export const MODULE_SUMMARIES: Record<string, string> = {
-  [ROUTES.crm]: "Companies, contacts, leads, and deals.",
+  [ROUTES.crm]: "Business accounts and organizations.",
   [ROUTES.projects]: "Boards, lists, timelines, and calendars.",
   [ROUTES.tasks]: "Work assigned to you and your team.",
   [ROUTES.finance]: "Revenue, expenses, invoices, and payments.",

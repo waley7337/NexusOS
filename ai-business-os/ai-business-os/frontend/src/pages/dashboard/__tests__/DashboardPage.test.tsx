@@ -68,11 +68,12 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Revenue vs expenses")).not.toBeInTheDocument();
   });
 
-  it("lists placeholder modules as links without inventing counts", async () => {
+  it("lists modules with CRM operational and others still honest empties", async () => {
     mockGetDashboard.mockResolvedValue(snapshot);
     renderDashboard();
 
     expect(await screen.findByRole("link", { name: /CRM/ })).toHaveAttribute("href", "/crm");
+    expect(screen.getByText("Operational")).toBeInTheDocument();
     expect(screen.getAllByText("Not operational").length).toBeGreaterThan(0);
     expect(screen.queryByText("312")).not.toBeInTheDocument();
   });

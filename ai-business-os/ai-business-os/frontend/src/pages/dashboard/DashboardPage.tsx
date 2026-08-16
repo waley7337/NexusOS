@@ -244,8 +244,9 @@ export function DashboardPage() {
                   </p>
                   <h2 className="mt-2 text-h3 text-foreground">Module field</h2>
                   <p className="mt-1.5 text-body text-muted-foreground">
-                    Routes that exist today. Each opens an empty workspace until
-                    its part ships.
+                    Configured routes in this workspace. CRM Customers is live;
+                    other modules open as honest empty surfaces until their APIs
+                    ship.
                   </p>
 
                   <div className="mt-5 flex items-center gap-5">
@@ -257,8 +258,8 @@ export function DashboardPage() {
                     <dl className="min-w-0 flex-1 space-y-3">
                       <ReadinessRow
                         label="Operational modules"
-                        value="0"
-                        hint="no module APIs yet"
+                        value="1"
+                        hint="CRM · Customers"
                       />
                       <ReadinessRow
                         label="Last probe"
@@ -640,6 +641,7 @@ function ModuleTile({
   description: string;
   icon: LucideIcon;
 }) {
+  const operational = to === ROUTES.crm;
   return (
     <Link
       to={to}
@@ -661,7 +663,7 @@ function ModuleTile({
           </p>
         </div>
         <span className="shrink-0 rounded-full border border-line-soft bg-surface-0/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Not operational
+          {operational ? "Operational" : "Not operational"}
         </span>
       </div>
     </Link>

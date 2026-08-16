@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
   AssistantPlaceholder,
-  CrmPlaceholder,
   DocumentsPlaceholder,
   FinancePlaceholder,
   HrPlaceholder,
@@ -14,7 +13,6 @@ import {
 } from "../ModulePlaceholders";
 
 const placeholders = [
-  ["CRM", CrmPlaceholder],
   ["Projects", ProjectsPlaceholder],
   ["Tasks", TasksPlaceholder],
   ["HR", HrPlaceholder],

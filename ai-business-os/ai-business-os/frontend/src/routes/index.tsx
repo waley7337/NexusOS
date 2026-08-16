@@ -34,8 +34,8 @@ const NotFoundPage = lazy(() =>
   import("@/pages/errors/NotFoundPage").then((m) => ({ default: m.NotFoundPage })),
 );
 
-const CrmPlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.CrmPlaceholder })),
+const CustomersPage = lazy(() =>
+  import("@/pages/crm/CustomersPage").then((m) => ({ default: m.CustomersPage })),
 );
 const ProjectsPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.ProjectsPlaceholder })),
@@ -127,7 +127,10 @@ export const router = createBrowserRouter([
         children: [
           { path: ROUTES.home, element: <DashboardPage /> },
           { path: ROUTES.design, element: <DesignSystemPage /> },
-          { path: ROUTES.crm, element: <CrmPlaceholder /> },
+          {
+            element: <PermissionRoute permission="customers.read" />,
+            children: [{ path: ROUTES.crm, element: <CustomersPage /> }],
+          },
           { path: ROUTES.projects, element: <ProjectsPlaceholder /> },
           { path: ROUTES.tasks, element: <TasksPlaceholder /> },
           { path: ROUTES.hr, element: <HrPlaceholder /> },
