@@ -1360,18 +1360,18 @@ html:not(.dark) .app-stage > .atmosphere {
   opacity: 1;
 }
 
-/* First-auth Mission Control stagger — opacity only, auth entry only. */
+/* First-auth content resolve — timed to cinematic handoff (~shot 07). */
 .cinema-entry .cinema-hero,
 .cinema-entry .cinema-stage,
 .cinema-entry .cinema-signals,
 .cinema-entry .cinema-ops {
   opacity: 0;
-  animation: cinema-resolve 220ms var(--ease-standard) both;
+  animation: cinema-resolve 240ms var(--ease-standard) both;
 }
-.cinema-entry .cinema-hero { animation-delay: 40ms; }
-.cinema-entry .cinema-stage { animation-delay: 80ms; }
-.cinema-entry .cinema-signals { animation-delay: 110ms; }
-.cinema-entry .cinema-ops { animation-delay: 140ms; }
+.cinema-entry .cinema-hero { animation-delay: 1380ms; }
+.cinema-entry .cinema-stage { animation-delay: 1460ms; }
+.cinema-entry .cinema-signals { animation-delay: 1520ms; }
+.cinema-entry .cinema-ops { animation-delay: 1580ms; }
 @keyframes cinema-resolve {
   to { opacity: 1; }
 }
@@ -1391,153 +1391,412 @@ html:not(.dark) .app-stage > .atmosphere {
 }
 
 /* ------------------------------------------------------------------
-   SIGNATURE TRANSITION — cinematic login → NexusOS.
+   NEXUS SPATIAL BOOT — login success → product (~1600ms).
 
-   Dark field → logo resolves → atmosphere opens → shell advances.
-   ~1200ms. Transform + opacity only. No animated filters/blur.
+   Darkness → light → logo hero → depth travel → product proxy →
+   lock onto real AppLayout → overlay opacity 0 → unmount.
+
+   Transform + opacity only. No filters / backdrop-filter / blur /
+   particles / layoutId. Low DOM. Mobile drops depth planes.
    ------------------------------------------------------------------ */
 .auth-entry-overlay {
-  --auth-entry-duration: 1200ms;
+  --auth-entry-duration: 1600ms;
   --auth-ease: var(--ease-cinematic);
+  --auth-ease-accel: cubic-bezier(0.33, 0, 0.2, 1);
   position: fixed;
   inset: 0;
   z-index: 55;
   overflow: hidden;
   pointer-events: none;
-  background-color: #02040a;
+  background-color: #010308;
   animation: auth-entry-overlay var(--auth-entry-duration) var(--ease-exit) both;
+  contain: strict;
 }
 
+/* Shot 01 — visual silence, then soft navy volume */
 .auth-entry-field {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 55%, rgb(8 18 40 / 0.9), #02040a 72%);
+  background: #010308;
   animation: auth-entry-field var(--auth-entry-duration) var(--auth-ease) both;
 }
 
-.auth-entry-glow {
+/* Shot 02 — light exists in space (not a logo halo disc) */
+.auth-entry-light {
   position: absolute;
-  left: 18%;
-  bottom: -12%;
-  width: 72%;
-  height: 58%;
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, rgb(37 99 235 / 0.38), transparent 68%);
-  animation: auth-entry-glow var(--auth-entry-duration) var(--auth-ease) both;
+  left: 50%;
+  top: 48%;
+  width: 140%;
+  height: 90%;
+  margin-left: -70%;
+  margin-top: -40%;
+  background: radial-gradient(
+    ellipse 42% 36% at 50% 48%,
+    rgb(37 99 235 / 0.28),
+    rgb(8 18 40 / 0.12) 42%,
+    transparent 68%
+  );
+  opacity: 0;
+  transform: scale(0.78);
+  animation: auth-entry-light var(--auth-entry-duration) var(--auth-ease) both;
+}
+.auth-entry-light-edge {
+  position: absolute;
+  right: -8%;
+  top: 12%;
+  width: 55%;
+  height: 50%;
+  background: radial-gradient(
+    ellipse 50% 45% at 40% 50%,
+    rgb(56 189 248 / 0.14),
+    transparent 70%
+  );
+  opacity: 0;
+  animation: auth-entry-light-edge var(--auth-entry-duration) var(--auth-ease) both;
 }
 
+/* Camera — anticipates, accelerates, locks */
+.auth-entry-camera {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 48%;
+  animation: auth-entry-camera var(--auth-entry-duration) var(--auth-ease-accel) both;
+}
+
+/* Shot 04 — architectural depth rails (2 max) */
+.auth-entry-plane {
+  position: absolute;
+  border: 1px solid rgb(160 190 255 / 0.1);
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.03),
+    transparent 70%
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+.auth-entry-plane--a {
+  left: 4%;
+  top: 18%;
+  width: 18%;
+  height: 64%;
+  border-radius: 2px;
+  transform: translate3d(-40px, 20px, 0) scale(0.92);
+  animation: auth-entry-plane-a var(--auth-entry-duration) var(--auth-ease-accel) both;
+}
+.auth-entry-plane--b {
+  right: 5%;
+  top: 22%;
+  width: 14%;
+  height: 52%;
+  border-radius: 2px;
+  transform: translate3d(36px, -12px, 0) scale(0.9);
+  animation: auth-entry-plane-b var(--auth-entry-duration) var(--auth-ease-accel) both;
+}
+
+/* Shot 03 — identity money shot */
 .auth-entry-identity {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 44%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 22px;
+  z-index: 3;
   transform: translate(-50%, -50%);
-  z-index: 2;
+  animation: auth-entry-identity var(--auth-entry-duration) var(--auth-ease) both;
 }
+.auth-entry-mark {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+.auth-entry-mark-plate,
 .auth-entry-symbol {
   display: block;
-  width: 56px;
-  height: 56px;
+  width: 96px;
+  height: 96px;
+  position: absolute;
+  inset: 0;
+}
+/* Dimensional plate — positional offset only (no blur/filter) */
+.auth-entry-mark-plate {
   opacity: 0;
+  transform: translate3d(2px, 3px, 0) scale(0.86);
+  animation: auth-entry-mark-plate var(--auth-entry-duration) var(--auth-ease) both;
+}
+.auth-entry-symbol {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0) scale(0.86);
   animation: auth-entry-symbol var(--auth-entry-duration) var(--auth-ease) both;
 }
 .auth-entry-wordmark {
   display: block;
-  width: min(200px, 52vw);
+  width: min(220px, 56vw);
   height: auto;
+  position: relative;
   opacity: 0;
+  transform: translate3d(0, 10px, 0);
   animation: auth-entry-wordmark var(--auth-entry-duration) var(--auth-ease) both;
 }
 
+/* Shot 05–06 — proxy matches real .app-shell-frame geometry */
 .auth-entry-shell {
   position: absolute;
   inset: 0;
+  z-index: 2;
+  padding: 10px;
+  box-sizing: border-box;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3vh 3vw;
-  z-index: 1;
+  opacity: 0;
+  transform: translate3d(0, 28px, 0) scale(0.84);
+  transform-origin: 50% 50%;
+  animation: auth-entry-shell var(--auth-entry-duration) var(--auth-ease) both;
 }
 .auth-entry-shell-chrome {
-  width: min(1120px, 92%);
-  height: min(680px, 84%);
+  flex: 1;
+  min-height: 0;
   border-radius: var(--r-shell);
   border: 1px solid rgb(160 190 255 / 0.14);
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.04), transparent 32%),
-    hsl(222 61% 4%);
+    linear-gradient(180deg, rgb(255 255 255 / 0.04), transparent 28%),
+    hsl(var(--surface-1));
   box-shadow:
     0 1px 0 0 rgb(180 210 255 / 0.08) inset,
-    0 28px 64px -32px rgb(0 4 12 / 0.9);
+    0 24px 48px -28px rgb(0 4 12 / 0.85);
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 270px 1fr;
   overflow: hidden;
-  opacity: 0;
-  transform: translate3d(0, 24px, 0) scale(0.92);
-  animation: auth-entry-shell-chrome var(--auth-entry-duration) var(--auth-ease) both;
 }
 .auth-entry-shell-rail {
   border-right: 1px solid rgb(160 190 255 / 0.1);
   background: hsl(225 67% 2.4%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 12px;
+}
+.auth-entry-shell-brand {
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid rgb(160 190 255 / 0.12);
+  background: hsl(220 61% 8% / 0.9);
+}
+.auth-entry-shell-nav {
+  display: block;
+  height: 28px;
+  border-radius: 8px;
+  background: rgb(160 190 255 / 0.06);
+}
+.auth-entry-shell-nav--short {
+  width: 72%;
+}
+.auth-entry-shell-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background:
+    radial-gradient(ellipse 70% 45% at 68% 0%, rgb(37 99 235 / 0.12), transparent 55%);
+}
+/* Matches real h-shell-header + search control silhouette */
+.auth-entry-shell-bar {
+  height: var(--shell-header-h, 3rem);
+  flex-shrink: 0;
+  border-bottom: 1px solid rgb(160 190 255 / 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+}
+.auth-entry-shell-search {
+  display: block;
+  height: 32px;
+  width: min(280px, 42%);
+  border-radius: 8px;
+  border: 1px solid rgb(160 190 255 / 0.1);
+  background: hsl(220 61% 7% / 0.7);
+}
+.auth-entry-shell-actions {
+  display: block;
+  width: 88px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgb(160 190 255 / 0.07);
 }
 .auth-entry-shell-stage {
+  flex: 1;
+  margin: 16px 18px 18px;
+  border-radius: 14px;
+  border: 1px solid rgb(160 190 255 / 0.08);
   background:
-    radial-gradient(ellipse 70% 50% at 68% 0%, rgb(37 99 235 / 0.14), transparent 58%);
+    linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 40%),
+    hsl(220 61% 5% / 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  min-height: 0;
 }
-@media (max-width: 767.98px) {
-  .auth-entry-shell-chrome {
-    grid-template-columns: 1fr;
-  }
-  .auth-entry-shell-rail { display: none; }
+.auth-entry-shell-signals {
+  display: block;
+  height: 56px;
+  border-radius: 10px;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(160 190 255 / 0.08) 0 23%,
+      transparent 23% 26%,
+      rgb(160 190 255 / 0.08) 26% 49%,
+      transparent 49% 52%,
+      rgb(160 190 255 / 0.08) 52% 75%,
+      transparent 75% 78%,
+      rgb(160 190 255 / 0.08) 78% 100%
+    );
+}
+.auth-entry-shell-panel {
+  display: block;
+  flex: 1;
+  min-height: 72px;
+  border-radius: 12px;
+  border: 1px solid rgb(160 190 255 / 0.07);
+  background:
+    radial-gradient(ellipse 60% 50% at 70% 0%, rgb(37 99 235 / 0.16), transparent 55%),
+    hsl(220 61% 6% / 0.55);
 }
 
-/* Timeline (% of 1000ms): field → logo → shell → handoff */
+@media (max-width: 767.98px) {
+  .auth-entry-shell {
+    padding: 0;
+  }
+  .auth-entry-shell-chrome {
+    border-radius: 0;
+    border: none;
+    grid-template-columns: 1fr;
+    box-shadow: none;
+  }
+  .auth-entry-shell-rail { display: none; }
+  .auth-entry-plane { display: none; }
+  /* Keep mark hero-strong on mobile — do not shrink below brand presence. */
+  .auth-entry-mark,
+  .auth-entry-mark-plate,
+  .auth-entry-symbol {
+    width: 88px;
+    height: 88px;
+  }
+  .auth-entry-wordmark {
+    width: min(200px, 70vw);
+  }
+  .auth-entry-shell-search {
+    width: min(200px, 55%);
+  }
+}
+
+/*
+  Timeline (% of 1600ms):
+  0–7%   darkness
+  7–25%  light + mark emerge
+  25–44% logo hero
+  40–62% space opens / camera accel
+  53–75% product approaches
+  72–90% lock
+  88–100% handoff fade
+*/
 @keyframes auth-entry-overlay {
-  0%, 70% { opacity: 1; }
+  0%, 86% { opacity: 1; }
   100%    { opacity: 0; }
 }
 @keyframes auth-entry-field {
-  0%   { opacity: 1; }
-  100% { opacity: 0.35; }
+  0%, 6%  { opacity: 1; background: #010308; }
+  22%     { opacity: 1; background: #02040a; }
+  70%     { opacity: 1; }
+  100%    { opacity: 0.15; }
 }
-@keyframes auth-entry-glow {
-  0%   { opacity: 0; transform: scale(0.94); }
-  25%  { opacity: 0.9; transform: scale(1); }
-  100% { opacity: 0.2; transform: scale(1.04); }
+@keyframes auth-entry-light {
+  0%, 7%  { opacity: 0; transform: scale(0.78); }
+  18%     { opacity: 0.55; transform: scale(0.92); }
+  40%     { opacity: 1; transform: scale(1); }
+  70%     { opacity: 0.75; transform: scale(1.08); }
+  100%    { opacity: 0.15; transform: scale(1.18); }
+}
+@keyframes auth-entry-light-edge {
+  0%, 10% { opacity: 0; }
+  28%     { opacity: 0.7; }
+  65%     { opacity: 0.45; }
+  100%    { opacity: 0.08; }
+}
+@keyframes auth-entry-camera {
+  0%, 22% { transform: scale(1) translate3d(0, 0, 0); }
+  45%     { transform: scale(1.02) translate3d(0, -0.4%, 0); }
+  68%     { transform: scale(1.08) translate3d(0, -1.2%, 0); }
+  88%     { transform: scale(1.12) translate3d(0, -1.6%, 0); }
+  100%    { transform: scale(1.14) translate3d(0, -1.8%, 0); }
+}
+@keyframes auth-entry-plane-a {
+  0%, 38% { opacity: 0; transform: translate3d(-40px, 20px, 0) scale(0.92); }
+  52%     { opacity: 0.35; transform: translate3d(-12px, 8px, 0) scale(1); }
+  72%     { opacity: 0.18; transform: translate3d(28px, -24px, 0) scale(1.08); }
+  100%    { opacity: 0; transform: translate3d(60px, -48px, 0) scale(1.16); }
+}
+@keyframes auth-entry-plane-b {
+  0%, 42% { opacity: 0; transform: translate3d(36px, -12px, 0) scale(0.9); }
+  56%     { opacity: 0.3; transform: translate3d(8px, -4px, 0) scale(1); }
+  75%     { opacity: 0.12; transform: translate3d(-22px, 18px, 0) scale(1.1); }
+  100%    { opacity: 0; transform: translate3d(-48px, 36px, 0) scale(1.2); }
+}
+@keyframes auth-entry-identity {
+  0%, 70% { opacity: 1; }
+  86%     { opacity: 0; }
+  100%    { opacity: 0; }
+}
+@keyframes auth-entry-mark-plate {
+  0%, 8%  { opacity: 0; transform: translate3d(2px, 3px, 0) scale(0.86); }
+  22%     { opacity: 0.35; transform: translate3d(2px, 3px, 0) scale(1); }
+  44%     { opacity: 0.4; transform: translate3d(2px, 3px, 0) scale(1.02); }
+  68%     { opacity: 0.15; transform: translate3d(4px, 6px, 0) scale(0.94); }
+  100%    { opacity: 0; transform: translate3d(6px, 10px, 0) scale(0.86); }
 }
 @keyframes auth-entry-symbol {
-  0%   { opacity: 0; transform: translate3d(0, 8px, 0); }
-  14%  { opacity: 1; transform: translate3d(0, 0, 0); }
-  55%  { opacity: 1; }
-  100% { opacity: 0; transform: translate3d(0, -16px, 0); }
+  0%, 8%  { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.86); }
+  14%     { opacity: 0.4; transform: translate3d(0, 8px, 0) scale(0.92); }
+  26%     { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  44%     { opacity: 1; transform: translate3d(0, -2px, 0) scale(1.04); }
+  62%     { opacity: 0.85; transform: translate3d(0, -10px, 0) scale(0.96); }
+  78%     { opacity: 0.2; transform: translate3d(0, -28px, 0) scale(0.78); }
+  100%    { opacity: 0; transform: translate3d(0, -40px, 0) scale(0.7); }
 }
 @keyframes auth-entry-wordmark {
-  0%, 12% { opacity: 0; transform: translate3d(0, 6px, 0); }
-  24%     { opacity: 1; transform: translate3d(0, 0, 0); }
-  58%     { opacity: 0.95; }
-  100%    { opacity: 0; transform: translate3d(0, -12px, 0); }
+  0%, 22% { opacity: 0; transform: translate3d(0, 10px, 0); }
+  32%     { opacity: 1; transform: translate3d(0, 0, 0); }
+  50%     { opacity: 1; }
+  68%     { opacity: 0.55; transform: translate3d(0, -8px, 0); }
+  82%     { opacity: 0; transform: translate3d(0, -18px, 0); }
+  100%    { opacity: 0; }
 }
-@keyframes auth-entry-shell-chrome {
-  0%, 28% {
+@keyframes auth-entry-shell {
+  0%, 48% {
     opacity: 0;
-    transform: translate3d(0, 24px, 0) scale(0.92);
+    transform: translate3d(0, 36px, 0) scale(0.84);
   }
-  48% {
-    opacity: 0.85;
-    transform: translate3d(0, 8px, 0) scale(0.97);
+  58% {
+    opacity: 0.55;
+    transform: translate3d(0, 18px, 0) scale(0.9);
   }
-  68% {
+  72% {
+    opacity: 0.92;
+    transform: translate3d(0, 4px, 0) scale(0.97);
+  }
+  84% {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate3d(0, 0, 0) scale(1.02);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -1546,15 +1805,25 @@ html:not(.dark) .app-stage > .atmosphere {
   100% { opacity: 0; }
 }
 .auth-entry-overlay--reduce {
-  animation: auth-entry-overlay-reduce var(--motion-nav) var(--ease-standard) both;
+  animation: auth-entry-overlay-reduce 300ms var(--ease-standard) both;
 }
 .auth-entry-overlay--reduce .auth-entry-field,
-.auth-entry-overlay--reduce .auth-entry-glow,
+.auth-entry-overlay--reduce .auth-entry-light,
+.auth-entry-overlay--reduce .auth-entry-light-edge,
+.auth-entry-overlay--reduce .auth-entry-camera,
+.auth-entry-overlay--reduce .auth-entry-plane,
 .auth-entry-overlay--reduce .auth-entry-identity,
+.auth-entry-overlay--reduce .auth-entry-mark-plate,
+.auth-entry-overlay--reduce .auth-entry-symbol,
+.auth-entry-overlay--reduce .auth-entry-wordmark,
 .auth-entry-overlay--reduce .auth-entry-shell {
-  animation: none;
-  opacity: 0;
-  transform: none;
+  animation: none !important;
+  opacity: 0 !important;
+  transform: none !important;
+}
+.auth-entry-overlay--reduce .auth-entry-identity,
+.auth-entry-overlay--reduce .auth-entry-symbol {
+  opacity: 1 !important;
 }
 
 /* Login CTA confirmation flash — only while submit is pending. */
@@ -1580,14 +1849,14 @@ html:not(.dark) .app-stage > .atmosphere {
   to { transform: translateX(120%); }
 }
 
-/* Shell settle after auth overlay — opacity only (do not transform the shell). */
+/* Real shell stays put during cinema — opacity only handoff (no chassis transform). */
 .app-stage[data-entry="in"] .app-shell-frame {
-  opacity: 0.92;
+  opacity: 1;
   transition: none;
 }
 .app-stage[data-entry="settled"] .app-shell-frame {
   opacity: 1;
-  transition: opacity 160ms var(--ease-standard);
+  transition: none;
 }
 
 @keyframes draw { to { stroke-dashoffset: 0; } }
@@ -1644,17 +1913,27 @@ html:not(.dark) .app-stage > .atmosphere {
      !important beats the * duration backstop so the 220ms fade can finish. */
   .auth-entry-overlay {
     animation-name: auth-entry-overlay-reduce !important;
-    animation-duration: var(--motion-nav) !important;
+    animation-duration: 300ms !important;
     animation-timing-function: var(--ease-standard) !important;
     animation-iteration-count: 1 !important;
   }
   .auth-entry-overlay .auth-entry-field,
-  .auth-entry-overlay .auth-entry-glow,
+  .auth-entry-overlay .auth-entry-light,
+  .auth-entry-overlay .auth-entry-light-edge,
+  .auth-entry-overlay .auth-entry-camera,
+  .auth-entry-overlay .auth-entry-plane,
   .auth-entry-overlay .auth-entry-identity,
+  .auth-entry-overlay .auth-entry-mark-plate,
+  .auth-entry-overlay .auth-entry-symbol,
+  .auth-entry-overlay .auth-entry-wordmark,
   .auth-entry-overlay .auth-entry-shell {
     animation: none !important;
     opacity: 0 !important;
     transform: none !important;
+  }
+  .auth-entry-overlay .auth-entry-identity,
+  .auth-entry-overlay .auth-entry-symbol {
+    opacity: 1 !important;
   }
 
   .atmosphere-layer--cobalt,
