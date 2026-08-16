@@ -1150,104 +1150,126 @@
 
 /* Phase F — auth → control-plane overlay. Transform + opacity only.
    Duration is visual, not a navigation gate. Fail-safe lives in JS. */
+/* ------------------------------------------------------------------
+   SIGNATURE TRANSITION (V7) — login becomes workspace.
+
+   The idea the whole reconstruction has been building toward: ONE OBJECT
+   SURVIVES. The login seam and the workspace rail are the same 1px line
+   at the same coordinate (V6 put the auth page on the chassis grid), so
+   the transition does not cross-fade two unrelated screens — it clears
+   the login room while the line stays, and the workspace resolves around
+   the line the user was already looking at.
+
+   Three layers, all leaving except one:
+     plane    the login room's structural field, receding
+     seam     the survivor. Flares, then settles to the rail's own value.
+     sweep    a single horizontal opening at the seam, the moment the
+              workspace is admitted.
+
+   NON-NEGOTIABLE: this is presentation only. It is mounted above the
+   router, reads one boolean, and gates nothing. Authentication,
+   navigation, prefetch and authorization never wait on it — if it never
+   rendered, login would complete identically and the only consequence
+   would be a hard cut.
+   ------------------------------------------------------------------ */
 .auth-entry-overlay {
   --auth-entry-duration: 820ms;
   position: fixed;
   inset: 0;
   z-index: 55;
-  display: grid;
-  place-items: center;
   overflow: hidden;
   pointer-events: none;
   background-color: hsl(0 0% 0%);
   animation: auth-entry-overlay var(--auth-entry-duration) var(--ease-out-quart) both;
 }
+
+/* The login room's structure, receding. */
 .auth-entry-plane {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(hsl(0 0% 100% / 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(0 0% 100% / 0.045) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 55% 45% at 50% 50%, black, transparent 70%);
-  -webkit-mask-image: radial-gradient(ellipse 55% 45% at 50% 50%, black, transparent 70%);
+  background-image: repeating-linear-gradient(
+    90deg,
+    hsl(0 0% 100% / 0.055) 0 1px,
+    transparent 1px 80px
+  );
+  mask-image: linear-gradient(100deg, #000 0%, rgb(0 0 0 / 0.5) 45%, transparent 88%);
+  -webkit-mask-image: linear-gradient(100deg, #000 0%, rgb(0 0 0 / 0.5) 45%, transparent 88%);
   animation: auth-entry-plane var(--auth-entry-duration) var(--ease-out-quart) both;
 }
-.auth-entry-aperture {
+
+/* THE SURVIVOR. Positioned from --sidebar-w, which is the same property
+   the chassis grid uses for its rail track — so this line is at the
+   workspace rail's exact x before the workspace has even painted. Below
+   the sidebar breakpoint there is no rail to survive into, so it is not
+   rendered (see the media query). */
+.auth-entry-seam {
   position: absolute;
-  left: 50%;
+  top: 0;
+  bottom: 0;
+  left: var(--sidebar-w);
+  width: 1px;
+  background: var(--rail);
+  transform-origin: 50% 50%;
+  animation: auth-entry-seam var(--auth-entry-duration) var(--ease-out-quart) both;
+}
+
+/* The opening. One horizontal line spreading from the seam — the instant
+   the room parts and the workspace is admitted. */
+.auth-entry-sweep {
+  position: absolute;
   top: 50%;
-  width: min(72vw, 36rem);
+  left: var(--sidebar-w);
+  right: 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    hsl(0 0% 100% / 0.42),
-    transparent
-  );
-  transform: translate(-50%, -50%) scaleX(0);
-  transform-origin: center;
-  animation: auth-entry-aperture var(--auth-entry-duration) var(--ease-out-quart) both;
+  background: linear-gradient(90deg, hsl(var(--primary) / 0.65), transparent 72%);
+  transform-origin: left center;
+  animation: auth-entry-sweep var(--auth-entry-duration) var(--ease-out-quart) both;
 }
-.auth-entry-mark {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  animation: auth-entry-mark var(--auth-entry-duration) var(--ease-out-quart) both;
+
+@media (max-width: 1023.98px) {
+  .auth-entry-seam,
+  .auth-entry-sweep { display: none; }
 }
-.auth-entry-rule {
-  display: block;
-  width: 2.25rem;
-  height: 1px;
-  background: hsl(0 0% 100% / 0.28);
-}
-.auth-entry-word {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: hsl(0 0% 96% / 0.82);
-}
+
 @keyframes auth-entry-overlay {
-  0% { opacity: 1; }
-  58% { opacity: 1; }
+  0%   { opacity: 1; }
+  62%  { opacity: 1; }
   100% { opacity: 0; }
 }
 @keyframes auth-entry-plane {
-  0% { opacity: 0.55; transform: scale(1.03); }
-  38% { opacity: 0.32; transform: scale(1.008); }
+  0%   { opacity: 0.6; transform: scale(1.02); }
+  40%  { opacity: 0.3; }
   100% { opacity: 0; transform: scale(1); }
 }
-@keyframes auth-entry-aperture {
-  0% { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
-  10% { opacity: 1; }
-  28% { transform: translate(-50%, -50%) scaleX(1); opacity: 0.9; }
-  68% { opacity: 0.35; }
-  100% { transform: translate(-50%, -50%) scaleX(1); opacity: 0; }
+/* The seam brightens as the room clears, then settles. It never moves and
+   never scales on X — it is the fixed thing everything else leaves. */
+@keyframes auth-entry-seam {
+  0%   { opacity: 0.5; transform: scaleY(0.7); }
+  30%  { opacity: 1;   transform: scaleY(1); }
+  100% { opacity: 1;   transform: scaleY(1); }
 }
-@keyframes auth-entry-mark {
-  0%, 8% { opacity: 0; transform: translateY(4px); }
-  26% { opacity: 1; transform: translateY(0); }
-  62% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(0); }
+@keyframes auth-entry-sweep {
+  0%   { transform: scaleX(0); opacity: 0; }
+  18%  { opacity: 1; }
+  55%  { transform: scaleX(1); opacity: 0.8; }
+  100% { transform: scaleX(1); opacity: 0; }
 }
+
 @keyframes auth-entry-overlay-reduce {
-  0% { opacity: 1; }
+  0%   { opacity: 1; }
   100% { opacity: 0; }
 }
 .auth-entry-overlay--reduce {
-  animation-name: auth-entry-overlay-reduce;
-  animation-duration: var(--duration-standard);
+  animation: auth-entry-overlay-reduce var(--duration-standard) var(--ease-out-quart) both;
 }
 .auth-entry-overlay--reduce .auth-entry-plane,
-.auth-entry-overlay--reduce .auth-entry-aperture,
-.auth-entry-overlay--reduce .auth-entry-mark {
+.auth-entry-overlay--reduce .auth-entry-seam,
+.auth-entry-overlay--reduce .auth-entry-sweep {
   animation: none;
   opacity: 0;
   transform: none;
 }
+
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes drift {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }

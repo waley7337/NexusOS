@@ -1,5 +1,7 @@
 /**
- * Phase F — presentational AuthLayout → AppLayout bridge.
+ * Signature login -> workspace transition (V7).
+ *
+ * Presentational AuthLayout -> AppLayout bridge.
  *
  * Mounted above RouterProvider. Authentication, navigation, prefetch, and
  * authorization do not read this component. pointer-events: none; aria-hidden.
@@ -59,13 +61,14 @@ export function AuthEntryOverlay() {
         ["--auth-entry-duration" as string]: `${AUTH_ENTRY_DURATION_MS}ms`,
       }}
     >
+      {/* V7: the login room leaves, the seam stays. See the SIGNATURE
+          TRANSITION block in globals.css — the seam sits at var(--sidebar-w),
+          which is the chassis rail's own track position, so the line the user
+          is watching is already the workspace rail before the workspace has
+          painted. */}
       <div className="auth-entry-plane" />
-      <div className="auth-entry-aperture" />
-      <div className="auth-entry-mark">
-        <span className="auth-entry-rule" />
-        <span className="auth-entry-word">NexusOS</span>
-        <span className="auth-entry-rule" />
-      </div>
+      <div className="auth-entry-seam" />
+      <div className="auth-entry-sweep" />
     </div>
   );
 }
