@@ -155,17 +155,16 @@ def test_deal_create_normalizes_currency():
     assert payload.status is DealStatus.OPEN
 
 
-def test_crm_router_mounts_customers_and_contacts_only_so_far():
-    """06.2+06.4: Customers and Contacts; Leads/Deals remain unmounted."""
+def test_crm_router_mounts_customers_contacts_and_leads():
+    """06.2+06.4+06.6: Customers, Contacts, Leads; Deals remain unmounted."""
     assert crm_router.prefix == "/crm"
     paths = [getattr(route, "path", "") for route in crm_router.routes]
     assert any("/customers" in p for p in paths)
     assert any("/contacts" in p for p in paths)
-    assert not any("/leads" in p for p in paths)
+    assert any("/leads" in p for p in paths)
     assert not any("/deals" in p for p in paths)
 
     api_paths = [getattr(route, "path", "") for route in api_router.routes]
-    assert not any("/leads" in p for p in api_paths)
     assert not any("/deals" in p for p in api_paths)
 
 
