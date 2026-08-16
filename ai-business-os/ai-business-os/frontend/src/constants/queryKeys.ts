@@ -33,5 +33,13 @@ export const queryKeys = {
       details: () => ["crm", "contacts", "detail"] as const,
       detail: (id: string) => ["crm", "contacts", "detail", id] as const,
     },
+    leads: {
+      all: ["crm", "leads"] as const,
+      lists: () => ["crm", "leads", "list"] as const,
+      list: (params: Record<string, unknown>) =>
+        ["crm", "leads", "list", params] as const,
+      details: () => ["crm", "leads", "detail"] as const,
+      detail: (id: string) => ["crm", "leads", "detail", id] as const,
+    },
   },
 } as const;

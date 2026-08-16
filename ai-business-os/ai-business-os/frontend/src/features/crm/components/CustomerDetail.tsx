@@ -107,6 +107,14 @@ export function CustomerDetail({
               View contacts
             </Link>
           </Can>
+          <Can permission="leads.read">
+            <Link
+              to={`${ROUTES.crmLeads}?customerId=${customer.id}`}
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+            >
+              View leads
+            </Link>
+          </Can>
           <Can permission="customers.update">
             <Button variant="outline" size="sm" onClick={onEdit}>
               Edit

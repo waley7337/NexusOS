@@ -1,6 +1,6 @@
 /**
- * CRM sub-navigation — Customers / Contacts only (operational resources).
- * Uses NavLinks styled like Tabs; does not expose Leads/Deals.
+ * CRM sub-navigation — Customers / Contacts / Leads (operational only).
+ * Does not expose Deals, Activities, or Meetings.
  */
 import { NavLink } from "react-router-dom";
 import { Can } from "@/components/can";
@@ -29,6 +29,11 @@ export function CrmSubnav() {
       <Can permission="contacts.read">
         <NavLink to={ROUTES.crmContacts} className={linkClass} end>
           Contacts
+        </NavLink>
+      </Can>
+      <Can permission="leads.read">
+        <NavLink to={ROUTES.crmLeads} className={linkClass} end>
+          Leads
         </NavLink>
       </Can>
     </nav>

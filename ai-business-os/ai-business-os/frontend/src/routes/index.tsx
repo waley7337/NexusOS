@@ -40,6 +40,9 @@ const CustomersPage = lazy(() =>
 const ContactsPage = lazy(() =>
   import("@/pages/crm/ContactsPage").then((m) => ({ default: m.ContactsPage })),
 );
+const LeadsPage = lazy(() =>
+  import("@/pages/crm/LeadsPage").then((m) => ({ default: m.LeadsPage })),
+);
 const CrmIndexRedirect = lazy(() =>
   import("@/features/crm/pages/CrmIndexRedirect").then((m) => ({
     default: m.CrmIndexRedirect,
@@ -146,6 +149,10 @@ export const router = createBrowserRouter([
               {
                 element: <PermissionRoute permission="contacts.read" />,
                 children: [{ path: "contacts", element: <ContactsPage /> }],
+              },
+              {
+                element: <PermissionRoute permission="leads.read" />,
+                children: [{ path: "leads", element: <LeadsPage /> }],
               },
             ],
           },

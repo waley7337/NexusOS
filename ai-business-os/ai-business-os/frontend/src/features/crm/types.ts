@@ -1,4 +1,4 @@
-/** CRM Customers + Contacts — wire types matching backend contracts. */
+/** CRM Customers + Contacts + Leads — wire types matching backend contracts. */
 
 export const CUSTOMER_STATUSES = ["lead", "active", "inactive", "churned"] as const;
 export type CustomerStatus = (typeof CUSTOMER_STATUSES)[number];
@@ -105,3 +105,67 @@ export interface ContactCreatePayload {
 }
 
 export type ContactUpdatePayload = Partial<ContactCreatePayload>;
+
+// ---------------------------------------------------------------------------
+// Leads
+// ---------------------------------------------------------------------------
+
+/** Canonical PipelineStage order from backend enum declaration. */
+export const PIPELINE_STAGES = [
+  "new",
+  "qualified",
+  "proposal",
+  "negotiation",
+  "won",
+  "lost",
+] as const;
+export type PipelineStage = (typeof PIPELINE_STAGES)[number];
+
+export const LEAD_SORT_FIELDS = [
+  "created_at",
+  "pipeline_stage",
+  "expected_close_date",
+  "estimated_value",
+] as const;
+export type LeadSortField = (typeof LEAD_SORT_FIELDS)[number];
+
+export interface Lead {
+  id: string;
+  companyId: string;
+  customerId: string;
+  pipelineStage: PipelineStage;
+  estimatedValue: string | number | null;
+  probability: number | null;
+  expectedCloseDate: string | null;
+  assignedTo: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedAt: string | null;
+}
+
+export interface LeadListParams {
+  page?: number;
+  pageSize?: number;
+  sortBy?: LeadSortField;
+  sortDesc?: boolean;
+  search?: string;
+  customerId?: string;
+  pipelineStage?: PipelineStage;
+  assignedTo?: string;
+}
+
+export interface LeadCreatePayload {
+  customerId: string;
+  pipelineStage?: PipelineStage;
+  estimatedValue?: string | number | null;
+  probability?: number | null;
+  expectedCloseDate?: string | null;
+  assignedTo?: string | null;
+  notes?: string | null;
+}
+
+export type LeadUpdatePayload = Partial<LeadCreatePayload>;

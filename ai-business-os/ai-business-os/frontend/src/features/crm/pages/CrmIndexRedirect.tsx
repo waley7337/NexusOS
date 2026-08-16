@@ -5,15 +5,17 @@ import { useAuthMe, usePermission } from "@/hooks/usePermission";
 
 /**
  * /crm → first operational CRM section the user can read.
- * Prefer Customers when both are available (historical default).
+ * Prefer Customers, then Contacts, then Leads.
  */
 export function CrmIndexRedirect() {
   const { isPending } = useAuthMe();
   const canCustomers = usePermission("customers.read");
   const canContacts = usePermission("contacts.read");
+  const canLeads = usePermission("leads.read");
 
   if (isPending) return <PageLoading />;
   if (canCustomers) return <Navigate to={ROUTES.crmCustomers} replace />;
   if (canContacts) return <Navigate to={ROUTES.crmContacts} replace />;
+  if (canLeads) return <Navigate to={ROUTES.crmLeads} replace />;
   return <Navigate to={ROUTES.home} replace />;
 }

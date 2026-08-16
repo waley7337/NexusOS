@@ -9,6 +9,7 @@ const prefetchRegistry: Partial<Record<string, PrefetchFn>> = {
   [ROUTES.crm]: () => void import("@/features/crm/pages/CrmIndexRedirect"),
   [ROUTES.crmCustomers]: () => void import("@/pages/crm/CustomersPage"),
   [ROUTES.crmContacts]: () => void import("@/pages/crm/ContactsPage"),
+  [ROUTES.crmLeads]: () => void import("@/pages/crm/LeadsPage"),
   [ROUTES.projects]: () => void import("@/pages/placeholders/ModulePlaceholders"),
   [ROUTES.tasks]: () => void import("@/pages/placeholders/ModulePlaceholders"),
   [ROUTES.hr]: () => void import("@/pages/placeholders/ModulePlaceholders"),
