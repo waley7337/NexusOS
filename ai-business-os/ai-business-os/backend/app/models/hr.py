@@ -1,6 +1,7 @@
-"""HR: employees (extends users), leave requests, attendance."""
+"""HR: employees (employment identity), leave requests, attendance."""
 import uuid
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Date, DateTime, Enum, ForeignKey, ForeignKeyConstraint, Index, Numeric,
@@ -14,42 +15,40 @@ from app.models.enums import (
     ApprovalStatus, EmployeeStatus, EmploymentType, LeaveType,
 )
 
+if TYPE_CHECKING:
+    from app.models.user import User
+
 
 class Employee(Base, TenantBusinessMixin):
     __tablename__ = "employees"
     __table_args__ = (
-        # Partial unique index: a terminated/soft-deleted employee record
-        # must free its employee_number for reuse.
         Index(
             "ix_employees_company_number_active_uq", "company_id", "employee_number",
             unique=True, postgresql_where=text("deleted_at IS NULL"),
         ),
         Index("ix_employees_company_status", "company_id", "status"),
-        # manager_id is self-referential — pin it to a manager in the same
-        # tenant (a stale/forged id must not resolve to another company's
-        # employee).
         ForeignKeyConstraint(
             ["manager_id", "company_id"], ["employees.id", "employees.company_id"],
             name="fk_employees_manager_id_tenant_scoped", ondelete="SET NULL",
         ),
         ForeignKeyConstraint(
             ["user_id", "company_id"], ["users.id", "users.company_id"],
-            name="fk_employees_user_id_tenant_scoped", ondelete="CASCADE",
+            name="fk_employees_user_id_tenant_scoped", ondelete="SET NULL",
         ),
-        # Composite-FK anchor for LeaveRequest/Attendance.employee_id (below).
         UniqueConstraint("id", "company_id", name="uq_employees_id_company"),
-        # Partial unique index, not a plain unique column: a terminated and
-        # soft-deleted employee record must free the user for a rehire.
         Index(
             "ix_employees_user_id_active_uq", "user_id",
             unique=True, postgresql_where=text("deleted_at IS NULL"),
         ),
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
     )
+    first_name: Mapped[str | None] = mapped_column(String(100))
+    last_name: Mapped[str | None] = mapped_column(String(100))
+    work_email: Mapped[str | None] = mapped_column(String(255))
     employee_number: Mapped[str] = mapped_column(String(40), nullable=False)
     department: Mapped[str | None] = mapped_column(String(120))
     manager_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -66,6 +65,7 @@ class Employee(Base, TenantBusinessMixin):
         default=EmployeeStatus.ACTIVE, nullable=False,
     )
 
+    user: Mapped["User | None"] = relationship(foreign_keys=[user_id])
     manager: Mapped["Employee | None"] = relationship(
         remote_side="Employee.id", foreign_keys=[manager_id]
     )

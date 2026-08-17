@@ -34,6 +34,9 @@ Design decisions worth knowing:
 | invoice → payments | RESTRICT | Same — money history is protected |
 | supplier → purchase_orders | RESTRICT | Same |
 | user → owned records (`owner_id`, `created_by`, …) | SET NULL | Removing a person must not destroy business data |
+| user → employees (`user_id`, Part 07.1) | SET NULL | Employment history survives user deletion; link may be cleared |
+
+**HR identity (Part 07.1):** `Employee` is the employment record. `user_id` is **optional** — HR-only staff have no login. Identity for HR-only rows lives on `employees.first_name` / `last_name` / `work_email`. When linked, display names may be resolved from `users` if employee name columns are empty. **`employees.department` is HR-authoritative**; `users.department` remains but is not used by HR v1.
 
 ## Per-tenant uniqueness
 
@@ -57,13 +60,15 @@ Every list screen filters by tenant first, so indexes lead with `company_id`:
 ```
 permissions (GLOBAL catalog, seeded)     roles (PER-COMPANY, customizable)
    "customers.read"                         Owner / Admin / Manager /
-   "invoices.send"        ←──────────→      Employee / Viewer (is_system)
+   "employees.read"       ←──────────→      Employee / Viewer (is_system)
    "finance.view"          role_permissions
-        53 seeded                │
+        catalog seeded             │
                               user_roles ──→ users
 ```
 
 Permissions are `<module>.<action>` strings seeded by `python -m app.db.seed` (idempotent). Roles belong to a company so each tenant can customize; the five defaults are flagged `is_system`.
+
+**Employees module (Part 07.1, seven permissions):** `employees.read`, `employees.read_compensation`, `employees.read_self`, `employees.read_team`, `employees.create`, `employees.update`, `employees.delete`. Compensation (`salary_grade`) is never included in ordinary `employees.read` responses. Default Manager grants: `read_team` + `read_self` only (no `read_compensation`).
 
 ## Entity map
 
@@ -87,7 +92,7 @@ erDiagram
     tasks ||--o{ task_comments : has
     tasks ||--o{ task_attachments : has
 
-    users ||--o| employees : "is"
+    users ||--o| employees : "optional link"
     employees ||--o{ leave_requests : requests
     employees ||--o{ attendance : logs
 

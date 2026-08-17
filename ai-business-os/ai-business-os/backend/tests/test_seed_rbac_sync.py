@@ -128,3 +128,17 @@ def test_expand_owner_includes_all_crm_permissions():
     for module in ("customers", "contacts", "leads", "deals"):
         for action in ("read", "create", "update", "delete"):
             assert f"{module}.{action}" in names
+
+
+def test_expand_owner_includes_all_employee_permissions():
+    names = expand(DEFAULT_ROLES["Owner"])
+    for perm in (
+        "employees.read",
+        "employees.read_compensation",
+        "employees.read_self",
+        "employees.read_team",
+        "employees.create",
+        "employees.update",
+        "employees.delete",
+    ):
+        assert perm in names
