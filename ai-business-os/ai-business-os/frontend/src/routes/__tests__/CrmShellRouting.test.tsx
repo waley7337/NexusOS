@@ -12,8 +12,6 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LazyOutlet } from "../LazyOutlet";
 import { PermissionRoute } from "../PermissionRoute";
-import { CrmIndexRedirect } from "@/features/crm/pages/CrmIndexRedirect";
-import { CrmSectionLayout } from "@/features/crm/pages/CrmSectionLayout";
 import { useAuthStore } from "@/stores/auth";
 import { ROUTES } from "@/constants/routes";
 
@@ -83,20 +81,18 @@ function shellRoutes(permissions: string[]) {
       }
     >
       <Route path="/" element={<h1>DashboardPage</h1>} />
-      <Route path="/crm" element={<CrmSectionLayout />}>
-        <Route index element={<CrmIndexRedirect />} />
-        <Route element={<PermissionRoute permission="customers.read" />}>
-          <Route path="customers" element={<h1>CustomersPage</h1>} />
-        </Route>
-        <Route element={<PermissionRoute permission="contacts.read" />}>
-          <Route path="contacts" element={<h1>ContactsPage</h1>} />
-        </Route>
-        <Route element={<PermissionRoute permission="leads.read" />}>
-          <Route path="leads" element={<h1>LeadsPage</h1>} />
-        </Route>
-        <Route element={<PermissionRoute permission="deals.read" />}>
-          <Route path="deals" element={<h1>DealsPage</h1>} />
-        </Route>
+      <Route element={<PermissionRoute permission="customers.read" />}>
+        <Route path="/crm" element={<h1>CustomersPage</h1>} />
+        <Route path="/crm/customers" element={<h1>CustomersPage</h1>} />
+      </Route>
+      <Route element={<PermissionRoute permission="contacts.read" />}>
+        <Route path="/crm/contacts" element={<h1>ContactsPage</h1>} />
+      </Route>
+      <Route element={<PermissionRoute permission="leads.read" />}>
+        <Route path="/crm/leads" element={<h1>LeadsPage</h1>} />
+      </Route>
+      <Route element={<PermissionRoute permission="deals.read" />}>
+        <Route path="/crm/deals" element={<h1>DealsPage</h1>} />
       </Route>
     </Route>,
   );
@@ -120,7 +116,7 @@ function renderCrmShell(
     router,
     ...render(
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} useTransitions={false} />
+        <RouterProvider router={router} />
       </QueryClientProvider>,
     ),
   };
@@ -131,7 +127,7 @@ describe("CRM shell routing regression", () => {
     vi.clearAllMocks();
   });
 
-  it("entering /crm cannot leave DashboardPage mounted as the route viewport", async () => {
+  it("entering /crm mounts Customers and unmounts Dashboard", async () => {
     const user = userEvent.setup();
     const { router } = renderCrmShell();
 
@@ -140,14 +136,14 @@ describe("CRM shell routing regression", () => {
     await user.click(screen.getByRole("link", { name: "CRM" }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe(ROUTES.crmCustomers);
+      expect(router.state.location.pathname).toBe(ROUTES.crm);
     });
     expect(await screen.findByRole("heading", { name: "CustomersPage" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "DashboardPage" })).not.toBeInTheDocument();
-    expect(screen.getByTestId("pathname")).toHaveTextContent(ROUTES.crmCustomers);
+    expect(screen.getByTestId("pathname")).toHaveTextContent(ROUTES.crm);
   });
 
-  it("refresh of /crm redirects into the CRM workspace", async () => {
+  it("refresh of /crm renders Customers without Dashboard", async () => {
     renderCrmShell([ROUTES.crm]);
     expect(await screen.findByRole("heading", { name: "CustomersPage" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "DashboardPage" })).not.toBeInTheDocument();
@@ -155,6 +151,7 @@ describe("CRM shell routing regression", () => {
 
   it("direct navigation and refresh work for each CRM section", async () => {
     for (const [path, title] of [
+      [ROUTES.crm, "CustomersPage"],
       [ROUTES.crmCustomers, "CustomersPage"],
       [ROUTES.crmContacts, "ContactsPage"],
       [ROUTES.crmLeads, "LeadsPage"],
@@ -194,11 +191,12 @@ describe("CRM shell routing regression", () => {
     expect(screen.queryByRole("heading", { name: "CustomersPage" })).not.toBeInTheDocument();
   });
 
-  it("redirects /crm to home when the user has no CRM read permissions", async () => {
+  it("shows forbidden on /crm when the user lacks customers.read", async () => {
     const { router } = renderCrmShell([ROUTES.crm], []);
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe(ROUTES.home);
-    });
-    expect(await screen.findByRole("heading", { name: "DashboardPage" })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/don't have permission to view this page/i),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(ROUTES.crm);
+    expect(screen.queryByRole("heading", { name: "DashboardPage" })).not.toBeInTheDocument();
   });
 });

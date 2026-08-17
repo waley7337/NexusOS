@@ -1,7 +1,7 @@
 /**
  * CRM sub-navigation — Customers / Contacts / Leads / Deals.
  */
-import { NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { Can } from "@/components/can";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
@@ -15,15 +15,24 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   );
 
 export function CrmSubnav() {
+  const { pathname } = useLocation();
+  // /crm and /crm/customers both render CustomersPage.
+  const customersActive =
+    pathname === ROUTES.crm || pathname === ROUTES.crmCustomers;
+
   return (
     <nav
       aria-label="CRM sections"
       className="inline-flex items-center gap-1 border-b border-line-soft"
     >
       <Can permission="customers.read">
-        <NavLink to={ROUTES.crmCustomers} className={linkClass} end>
+        <Link
+          to={ROUTES.crmCustomers}
+          className={linkClass({ isActive: customersActive })}
+          aria-current={customersActive ? "page" : undefined}
+        >
           Customers
-        </NavLink>
+        </Link>
       </Can>
       <Can permission="contacts.read">
         <NavLink to={ROUTES.crmContacts} className={linkClass} end>

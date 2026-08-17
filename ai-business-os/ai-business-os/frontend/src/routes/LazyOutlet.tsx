@@ -15,11 +15,6 @@ const ROUTE_ENTER_SETTLE_MS = 300;
  * immediately (no animation queue). Cleanup cancels in-flight animations.
  *
  * First paint skips enter so login cinematic is not doubled.
- *
- * Suspense around `<Outlet />` must not be paired with RR's default
- * `startTransition` router updates (see `App.tsx` `useTransitions={false}`):
- * otherwise a suspending lazy page keeps the previous outlet painted while
- * the URL has already changed.
  */
 export function LazyOutlet() {
   const { pathname } = useLocation();
@@ -42,13 +37,7 @@ export function LazyOutlet() {
   );
 }
 
-function RouteSurface({
-  playEnter,
-  children,
-}: {
-  playEnter: boolean;
-  children: ReactNode;
-}) {
+function RouteSurface({ playEnter, children }: { playEnter: boolean; children: ReactNode }) {
   const play = useRef(playEnter);
   const ref = useRef<HTMLDivElement>(null);
 

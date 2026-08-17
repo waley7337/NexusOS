@@ -22,15 +22,7 @@ export default function App() {
               raises itself above the application only during the auth
               cinematic. See SpaceField. */}
           <SpaceField />
-          {/*
-            useTransitions={false}: RR7 defaults to wrapping router state updates
-            in React.startTransition. LazyOutlet's <Suspense> around <Outlet />
-            then keeps the previously committed page (e.g. Dashboard) visible
-            while the browser URL already shows /crm and a lazy CRM chunk is
-            still loading. Disabling transitions makes Suspense show its
-            fallback instead of preserving the stale outlet.
-          */}
-          <RouterProvider router={router} useTransitions={false} />
+          <RouterProvider router={router} />
           <Toaster
             position="top-right"
             richColors

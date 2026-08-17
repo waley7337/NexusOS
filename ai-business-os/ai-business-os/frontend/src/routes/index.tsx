@@ -8,8 +8,6 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { PermissionRoute } from "@/routes/PermissionRoute";
 import { RouteErrorBoundary } from "@/components/route-error-boundary";
 import { PageLoading } from "@/components/page-loading";
-import { CrmIndexRedirect } from "@/features/crm/pages/CrmIndexRedirect";
-import { CrmSectionLayout } from "@/features/crm/pages/CrmSectionLayout";
 
 const LoginPage = lazy(() =>
   import("@/pages/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
@@ -138,30 +136,25 @@ export const router = createBrowserRouter([
         children: [
           { path: ROUTES.home, element: <DashboardPage /> },
           { path: ROUTES.design, element: <DesignSystemPage /> },
+          // CRM sibling leaf routes (d5f54d6 semantics) — no nested index redirect.
           {
-            path: ROUTES.crm,
-            element: <CrmSectionLayout />,
+            element: <PermissionRoute permission="customers.read" />,
             children: [
-              // Eager: a lazy index redirect can leave Dashboard mounted at /crm
-              // while the chunk loads (RR concurrent navigation + Suspense).
-              { index: true, element: <CrmIndexRedirect /> },
-              {
-                element: <PermissionRoute permission="customers.read" />,
-                children: [{ path: "customers", element: <CustomersPage /> }],
-              },
-              {
-                element: <PermissionRoute permission="contacts.read" />,
-                children: [{ path: "contacts", element: <ContactsPage /> }],
-              },
-              {
-                element: <PermissionRoute permission="leads.read" />,
-                children: [{ path: "leads", element: <LeadsPage /> }],
-              },
-              {
-                element: <PermissionRoute permission="deals.read" />,
-                children: [{ path: "deals", element: <DealsPage /> }],
-              },
+              { path: ROUTES.crm, element: <CustomersPage /> },
+              { path: ROUTES.crmCustomers, element: <CustomersPage /> },
             ],
+          },
+          {
+            element: <PermissionRoute permission="contacts.read" />,
+            children: [{ path: ROUTES.crmContacts, element: <ContactsPage /> }],
+          },
+          {
+            element: <PermissionRoute permission="leads.read" />,
+            children: [{ path: ROUTES.crmLeads, element: <LeadsPage /> }],
+          },
+          {
+            element: <PermissionRoute permission="deals.read" />,
+            children: [{ path: ROUTES.crmDeals, element: <DealsPage /> }],
           },
           { path: ROUTES.projects, element: <ProjectsPlaceholder /> },
           { path: ROUTES.tasks, element: <TasksPlaceholder /> },
