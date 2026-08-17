@@ -6,6 +6,7 @@ from app.repositories.crm import (
     DealRepository,
     LeadRepository,
 )
+from app.repositories.finance import InvoiceRepository
 from app.repositories.hr import EmployeeRepository
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "LeadRepository",
     "DealRepository",
     "EmployeeRepository",
+    "InvoiceRepository",
 ]
