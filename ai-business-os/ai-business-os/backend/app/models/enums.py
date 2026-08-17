@@ -133,6 +133,51 @@ class PaymentStatus(str, enum.Enum):
     REFUNDED = "refunded"
 
 
+class PaymentSource(str, enum.Enum):
+    MANUAL = "manual"
+    PROVIDER = "provider"
+
+
+class PaymentProviderKind(str, enum.Enum):
+    STRIPE = "stripe"
+
+
+class ProviderConnectionStatus(str, enum.Enum):
+    PENDING = "pending"
+    ONBOARDING = "onboarding"
+    ACTIVE = "active"
+    RESTRICTED = "restricted"
+    DISCONNECTED = "disconnected"
+
+
+class WebhookDomain(str, enum.Enum):
+    PLATFORM_BILLING = "platform_billing"
+    TENANT_PAYMENTS = "tenant_payments"
+
+
+class WebhookProcessingStatus(str, enum.Enum):
+    RECEIVED = "received"
+    PROCESSED = "processed"
+    FAILED = "failed"
+    IGNORED = "ignored"
+
+
+class PlatformPlan(str, enum.Enum):
+    FREE = "free"
+    STARTER = "starter"
+    PRO = "pro"
+    ENTERPRISE = "enterprise"
+
+
+class PlatformSubscriptionStatus(str, enum.Enum):
+    TRIALING = "trialing"
+    ACTIVE = "active"
+    PAST_DUE = "past_due"
+    INCOMPLETE = "incomplete"
+    CANCELED = "canceled"
+    PAUSED = "paused"
+
+
 class PurchaseOrderStatus(str, enum.Enum):
     DRAFT = "draft"
     ORDERED = "ordered"

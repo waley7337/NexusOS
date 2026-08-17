@@ -185,6 +185,14 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str | None = None
     EMAIL_FROM: str = "no-reply@example.com"
 
+    # --- Stripe (Part 08.1 foundation — optional until billing phases) ---
+    STRIPE_PLATFORM_SECRET_KEY: SecretStr | None = None
+    STRIPE_PLATFORM_PUBLISHABLE_KEY: str | None = None
+    STRIPE_PLATFORM_WEBHOOK_SECRET: SecretStr | None = None
+    STRIPE_CONNECT_WEBHOOK_SECRET: SecretStr | None = None
+    STRIPE_API_VERSION: str | None = None
+    PAYMENTS_IDEMPOTENCY_TTL_HOURS: int = 24
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"

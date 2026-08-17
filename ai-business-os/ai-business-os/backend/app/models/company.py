@@ -9,6 +9,7 @@ from app.models.base import ActiveMixin, Base, SoftDeleteMixin, TimestampMixin
 from app.models.enums import SubscriptionPlan, SubscriptionStatus
 
 if TYPE_CHECKING:
+    from app.models.payments import PlatformBillingProfile
     from app.models.user import User
 
 
@@ -46,3 +47,7 @@ class Company(Base, TimestampMixin, SoftDeleteMixin, ActiveMixin):
     trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     users: Mapped[list["User"]] = relationship(back_populates="company")
+    platform_billing_profile: Mapped["PlatformBillingProfile | None"] = relationship(
+        back_populates="company",
+        uselist=False,
+    )

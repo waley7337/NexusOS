@@ -31,18 +31,19 @@ pytestmark = pytest.mark.skipif(
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 from sqlalchemy.pool import NullPool  # noqa: E402
 
-from app.models import (
+from app.models import (  # noqa: E402
     Attendance,
     Company,
     Contact,
     Customer,
     CustomerNote,
     Employee,
+    Expense,
     Invoice,
     Lead,
     LeaveRequest,
     User,
-)  # noqa: E402
+)
 from app.models.enums import ApprovalStatus, EmployeeStatus, EmploymentType, InvoiceStatus, LeaveType, UserStatus  # noqa: E402
 
 
@@ -295,6 +296,26 @@ async def test_attendance_cannot_reference_cross_tenant_employee(
         company_id=a.id,
         employee_id=emp_b.id,
         date=date.today(),
+    )
+    db.add(forged)
+    with pytest.raises(IntegrityError):
+        await db.flush()
+    await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_expense_cannot_reference_cross_tenant_paid_by_user(
+    two_tenants_with_hr_rows,
+):
+    db, a, _b, _ua, ub, _emp_a, _emp_b = two_tenants_with_hr_rows
+
+    forged = Expense(
+        company_id=a.id,
+        category="Travel",
+        amount=50,
+        currency="USD",
+        date=date.today(),
+        paid_by=ub.id,
     )
     db.add(forged)
     with pytest.raises(IntegrityError):

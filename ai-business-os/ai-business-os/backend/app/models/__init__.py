@@ -8,6 +8,12 @@ from app.models.crm import Contact, Customer, CustomerNote, Deal, Lead, Meeting
 from app.models.project import Project, Task, TaskAttachment, TaskComment
 from app.models.hr import Attendance, Employee, LeaveRequest
 from app.models.finance import Expense, Invoice, InvoiceItem, Payment
+from app.models.payments import (
+    IdempotencyRecord,
+    PaymentProviderAccount,
+    PlatformBillingProfile,
+    ProviderWebhookEvent,
+)
 from app.models.inventory import (
     Product, PurchaseOrder, StockLevel, Supplier, Warehouse,
 )
@@ -23,7 +29,9 @@ __all__ = [
     "user_roles", "Session", "AuthToken", "Customer", "Contact", "Lead", "Deal", "Meeting",
     "CustomerNote", "Project", "Task", "TaskComment", "TaskAttachment",
     "Employee", "LeaveRequest", "Attendance", "Invoice", "InvoiceItem",
-    "Expense", "Payment", "Product", "Warehouse", "StockLevel", "Supplier",
+    "Expense", "Payment", "PaymentProviderAccount", "ProviderWebhookEvent",
+    "IdempotencyRecord", "PlatformBillingProfile",
+    "Product", "Warehouse", "StockLevel", "Supplier",
     "PurchaseOrder", "Document", "Notification", "AuditLog",
     "AiConversation", "AiMessage", "AiGeneratedReport", "Workflow",
     "WorkflowStep", "Activity",

@@ -21,6 +21,7 @@ celery==5.4.*
 structlog==24.*
 httpx==0.28.*
 sentry-sdk[fastapi]==2.65.0
+stripe==11.*
 
 # --- Dev / test ---
 pytest==8.*
