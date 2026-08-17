@@ -879,3 +879,172 @@ def test_status_filter(client):
     ids = {item["id"] for item in res.json()["data"]["items"]}
     assert leave["id"] in ids
     assert active["id"] not in ids
+
+
+# ---------------------------------------------------------------------------
+# Part 07.4 — Production readiness (compensation, audit, auth regression)
+# ---------------------------------------------------------------------------
+
+
+def test_update_response_never_includes_salary_grade(client):
+    owner = _register(client, "updcomp")
+    created = _create_employee(
+        client,
+        owner,
+        employeeNumber="UC-1",
+        salaryGrade="G6",
+    )
+    patched = client.patch(
+        f"{_BASE}/{created['id']}",
+        json={"salaryGrade": "G10", "department": "Payroll"},
+        headers=_auth(owner),
+    )
+    assert patched.status_code == 200
+    _response_has_no_salary_grade(patched.json()["data"])
+    assert patched.json()["data"]["department"] == "Payroll"
+
+    detail = client.get(f"{_BASE}/{created['id']}", headers=_auth(owner))
+    assert detail.json()["data"]["salaryGrade"] == "G10"
+
+
+def test_read_compensation_grants_detail_salary_grade(client):
+    owner = _register(client, "readcomp")
+    emp = _create_employee(
+        client,
+        owner,
+        employeeNumber="RC-1",
+        salaryGrade="G11",
+    )
+    detail = client.get(f"{_BASE}/{emp['id']}", headers=_auth(owner))
+    assert detail.status_code == 200
+    assert detail.json()["data"]["salaryGrade"] == "G11"
+
+
+def test_mutations_write_audit_events(client):
+    import asyncio
+
+    from sqlalchemy import select
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    from app.models import AuditLog
+
+    owner = _register(client, "emaudit")
+    created = _create_employee(
+        client,
+        owner,
+        employeeNumber="AUD-1",
+        salaryGrade="G99",
+    )
+    client.patch(
+        f"{_BASE}/{created['id']}",
+        json={"department": "Audit Dept"},
+        headers=_auth(owner),
+    )
+    client.delete(f"{_BASE}/{created['id']}", headers=_auth(owner))
+
+    async def _check():
+        engine = create_async_engine(TEST_DB, poolclass=NullPool)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with session_factory() as db:
+                rows = (
+                    await db.execute(
+                        select(AuditLog).where(
+                            AuditLog.company_id == uuid.UUID(owner["user"]["companyId"]),
+                            AuditLog.entity == "employees",
+                            AuditLog.entity_id == uuid.UUID(created["id"]),
+                        )
+                    )
+                ).scalars().all()
+                actions = {row.action for row in rows}
+                assert "employee.created" in actions
+                assert "employee.updated" in actions
+                assert "employee.archived" in actions
+                for row in rows:
+                    blob = str(row.old_values or "") + str(row.new_values or "")
+                    assert "salary_grade" not in blob
+                    assert "G99" not in blob
+                    assert "G10" not in blob
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_check())
+
+
+def test_failed_cross_tenant_archive_does_not_audit(client):
+    import asyncio
+
+    from sqlalchemy import func, select
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    from app.models import AuditLog
+
+    a = _register(client, "noempaudita")
+    b = _register(client, "noempauditb")
+    b_emp = _create_employee(client, b, employeeNumber="NO-AUD-B")
+
+    before = asyncio.run(_count_employee_archives(b["user"]["companyId"]))
+
+    res = client.delete(f"{_BASE}/{b_emp['id']}", headers=_auth(a))
+    assert res.status_code == 404
+
+    after = asyncio.run(_count_employee_archives(b["user"]["companyId"]))
+    assert after == before
+
+
+async def _count_employee_archives(company_id: str) -> int:
+    from sqlalchemy import func, select
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    from app.models import AuditLog
+
+    engine = create_async_engine(TEST_DB, poolclass=NullPool)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        async with session_factory() as db:
+            return (
+                await db.execute(
+                    select(func.count())
+                    .select_from(AuditLog)
+                    .where(
+                        AuditLog.company_id == uuid.UUID(company_id),
+                        AuditLog.entity == "employees",
+                        AuditLog.action == "employee.archived",
+                    )
+                )
+            ).scalar_one()
+    finally:
+        await engine.dispose()
+
+
+def test_registration_does_not_create_employee(client):
+    import asyncio
+
+    from sqlalchemy import func, select
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    from app.models import Employee
+
+    session = _register(client, "regonly")
+    company_id = session["user"]["companyId"]
+
+    async def _count():
+        engine = create_async_engine(TEST_DB, poolclass=NullPool)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with session_factory() as db:
+                return (
+                    await db.execute(
+                        select(func.count())
+                        .select_from(Employee)
+                        .where(Employee.company_id == uuid.UUID(company_id))
+                    )
+                ).scalar_one()
+        finally:
+            await engine.dispose()
+
+    assert asyncio.run(_count()) == 0

@@ -20,6 +20,7 @@ os.environ.setdefault(
 
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
+from sqlalchemy import delete  # noqa: E402
 from sqlalchemy.exc import IntegrityError  # noqa: E402
 
 TEST_DB = os.environ.get("TEST_DATABASE_URL", os.environ["DATABASE_URL"])
@@ -30,8 +31,19 @@ pytestmark = pytest.mark.skipif(
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 from sqlalchemy.pool import NullPool  # noqa: E402
 
-from app.models import Company, Contact, Customer, CustomerNote, Invoice, Lead  # noqa: E402
-from app.models.enums import InvoiceStatus  # noqa: E402
+from app.models import (
+    Attendance,
+    Company,
+    Contact,
+    Customer,
+    CustomerNote,
+    Employee,
+    Invoice,
+    Lead,
+    LeaveRequest,
+    User,
+)  # noqa: E402
+from app.models.enums import ApprovalStatus, EmployeeStatus, EmploymentType, InvoiceStatus, LeaveType, UserStatus  # noqa: E402
 
 
 @pytest_asyncio.fixture
@@ -148,6 +160,142 @@ async def test_customer_note_cannot_reference_a_different_tenants_customer(
     db, a, b, ca, cb = two_tenants_with_customers
 
     forged = CustomerNote(company_id=a.id, customer_id=cb.id, content="Cross-tenant")
+    db.add(forged)
+    with pytest.raises(IntegrityError):
+        await db.flush()
+    await db.rollback()
+
+
+@pytest_asyncio.fixture
+async def two_tenants_with_hr_rows():
+    """Two companies with users and one employee each — HR composite FK checks."""
+    engine = create_async_engine(TEST_DB, poolclass=NullPool)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as db:
+        a = Company(name="HR Tenant A", slug=f"hr-xt-a-{os.urandom(4).hex()}")
+        b = Company(name="HR Tenant B", slug=f"hr-xt-b-{os.urandom(4).hex()}")
+        db.add_all([a, b])
+        await db.flush()
+
+        ua = User(
+            company_id=a.id,
+            first_name="A",
+            last_name="User",
+            email=f"hr-a-{os.urandom(4).hex()}@example.com",
+            password_hash="x",
+            status=UserStatus.ACTIVE,
+        )
+        ub = User(
+            company_id=b.id,
+            first_name="B",
+            last_name="User",
+            email=f"hr-b-{os.urandom(4).hex()}@example.com",
+            password_hash="x",
+            status=UserStatus.ACTIVE,
+        )
+        db.add_all([ua, ub])
+        await db.flush()
+
+        emp_a = Employee(
+            company_id=a.id,
+            user_id=ua.id,
+            first_name="A",
+            last_name="Emp",
+            employee_number=f"EA-{os.urandom(2).hex()}",
+            employment_type=EmploymentType.FULL_TIME,
+            status=EmployeeStatus.ACTIVE,
+        )
+        emp_b = Employee(
+            company_id=b.id,
+            user_id=ub.id,
+            first_name="B",
+            last_name="Emp",
+            employee_number=f"EB-{os.urandom(2).hex()}",
+            employment_type=EmploymentType.FULL_TIME,
+            status=EmployeeStatus.ACTIVE,
+        )
+        db.add_all([emp_a, emp_b])
+        await db.commit()
+
+        a_id, b_id = a.id, b.id
+        yield db, a, b, ua, ub, emp_a, emp_b
+
+        await db.execute(delete(Attendance).where(Attendance.company_id.in_([a_id, b_id])))
+        await db.execute(delete(LeaveRequest).where(LeaveRequest.company_id.in_([a_id, b_id])))
+        await db.execute(delete(Employee).where(Employee.company_id.in_([a_id, b_id])))
+        await db.execute(delete(User).where(User.company_id.in_([a_id, b_id])))
+        await db.execute(delete(Company).where(Company.id.in_([a_id, b_id])))
+        await db.commit()
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_employee_cannot_link_cross_tenant_user(two_tenants_with_hr_rows):
+    db, a, _b, _ua, ub, _emp_a, _emp_b = two_tenants_with_hr_rows
+    forged = Employee(
+        company_id=a.id,
+        user_id=ub.id,
+        first_name="Cross",
+        last_name="User",
+        employee_number=f"XU-{os.urandom(2).hex()}",
+        employment_type=EmploymentType.FULL_TIME,
+        status=EmployeeStatus.ACTIVE,
+    )
+    db.add(forged)
+    with pytest.raises(IntegrityError):
+        await db.flush()
+    await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_employee_cannot_reference_cross_tenant_manager(two_tenants_with_hr_rows):
+    db, a, _b, _ua, _ub, _emp_a, emp_b = two_tenants_with_hr_rows
+    forged = Employee(
+        company_id=a.id,
+        user_id=None,
+        first_name="Cross",
+        last_name="Mgr",
+        employee_number=f"XM-{os.urandom(2).hex()}",
+        manager_id=emp_b.id,
+        employment_type=EmploymentType.FULL_TIME,
+        status=EmployeeStatus.ACTIVE,
+    )
+    db.add(forged)
+    with pytest.raises(IntegrityError):
+        await db.flush()
+    await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_leave_request_cannot_reference_cross_tenant_employee(
+    two_tenants_with_hr_rows,
+):
+    db, a, _b, _ua, _ub, _emp_a, emp_b = two_tenants_with_hr_rows
+    today = date.today()
+    forged = LeaveRequest(
+        company_id=a.id,
+        employee_id=emp_b.id,
+        leave_type=LeaveType.VACATION,
+        start_date=today,
+        end_date=today + timedelta(days=1),
+        approval_status=ApprovalStatus.PENDING,
+    )
+    db.add(forged)
+    with pytest.raises(IntegrityError):
+        await db.flush()
+    await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_attendance_cannot_reference_cross_tenant_employee(
+    two_tenants_with_hr_rows,
+):
+    db, a, _b, _ua, _ub, _emp_a, emp_b = two_tenants_with_hr_rows
+    forged = Attendance(
+        company_id=a.id,
+        employee_id=emp_b.id,
+        date=date.today(),
+    )
     db.add(forged)
     with pytest.raises(IntegrityError):
         await db.flush()
