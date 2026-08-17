@@ -6,10 +6,18 @@ export const leadFormSchema = z.object({
   pipelineStage: z.enum(PIPELINE_STAGES),
   estimatedValue: z
     .string()
-    .refine(
-      (v) => v.trim() === "" || (!Number.isNaN(Number(v)) && Number(v) >= 0),
-      { message: "Enter a valid amount" },
-    ),
+    .superRefine((v, ctx) => {
+      const trimmed = v.trim();
+      if (trimmed === "") return;
+      const n = Number(trimmed);
+      if (Number.isNaN(n)) {
+        ctx.addIssue({ code: "custom", message: "Enter a valid amount" });
+        return;
+      }
+      if (n < 0) {
+        ctx.addIssue({ code: "custom", message: "Amount must be zero or greater" });
+      }
+    }),
   probability: z
     .string()
     .refine(

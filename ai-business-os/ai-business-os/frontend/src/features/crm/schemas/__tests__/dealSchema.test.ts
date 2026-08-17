@@ -49,4 +49,32 @@ describe("dealFormSchema", () => {
   it("normalizes currency to uppercase ISO-3", () => {
     expect(normalizeCurrency(" eur ")).toBe("EUR");
   });
+
+  it("accepts zero value and rejects negative amounts", () => {
+    expect(
+      dealFormSchema.safeParse({
+        leadId: VALID_LEAD,
+        value: "0",
+        currency: "USD",
+        status: "open",
+        wonAt: "",
+        lostReason: "",
+      }).success,
+    ).toBe(true);
+
+    const negative = dealFormSchema.safeParse({
+      leadId: VALID_LEAD,
+      value: "-50",
+      currency: "USD",
+      status: "open",
+      wonAt: "",
+      lostReason: "",
+    });
+    expect(negative.success).toBe(false);
+    if (!negative.success) {
+      expect(negative.error.issues.some((i) => i.message === "Value must be zero or greater")).toBe(
+        true,
+      );
+    }
+  });
 });

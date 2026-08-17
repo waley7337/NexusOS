@@ -154,7 +154,7 @@ class LeadCreate(CamelModel):
     pipeline_stage: PipelineStage = Field(
         default=PipelineStage.NEW, alias="pipelineStage"
     )
-    estimated_value: Decimal | None = Field(default=None, alias="estimatedValue")
+    estimated_value: Decimal | None = Field(default=None, alias="estimatedValue", ge=0)
     probability: int | None = Field(default=None, ge=0, le=100)
     expected_close_date: date | None = Field(default=None, alias="expectedCloseDate")
     assigned_to: uuid.UUID | None = Field(default=None, alias="assignedTo")
@@ -164,7 +164,7 @@ class LeadCreate(CamelModel):
 class LeadUpdate(CamelModel):
     customer_id: uuid.UUID | None = Field(default=None, alias="customerId")
     pipeline_stage: PipelineStage | None = Field(default=None, alias="pipelineStage")
-    estimated_value: Decimal | None = Field(default=None, alias="estimatedValue")
+    estimated_value: Decimal | None = Field(default=None, alias="estimatedValue", ge=0)
     probability: int | None = Field(default=None, ge=0, le=100)
     expected_close_date: date | None = Field(default=None, alias="expectedCloseDate")
     assigned_to: uuid.UUID | None = Field(default=None, alias="assignedTo")
@@ -196,7 +196,7 @@ class LeadResponse(CamelModel):
 
 class DealCreate(CamelModel):
     lead_id: uuid.UUID = Field(alias="leadId")
-    value: Decimal
+    value: Decimal = Field(ge=0)
     currency: str = Field(default="USD", min_length=3, max_length=3)
     status: DealStatus = DealStatus.OPEN
     won_at: datetime | None = Field(default=None, alias="wonAt")
@@ -209,7 +209,7 @@ class DealCreate(CamelModel):
 
 
 class DealUpdate(CamelModel):
-    value: Decimal | None = None
+    value: Decimal | None = Field(default=None, ge=0)
     currency: str | None = Field(default=None, min_length=3, max_length=3)
     status: DealStatus | None = None
     won_at: datetime | None = Field(default=None, alias="wonAt")

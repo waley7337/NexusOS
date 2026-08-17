@@ -47,4 +47,34 @@ describe("leadFormSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts zero estimated value and rejects negative amounts", () => {
+    expect(
+      leadFormSchema.safeParse({
+        customerId: VALID_CUSTOMER,
+        pipelineStage: "new",
+        estimatedValue: "0",
+        probability: "",
+        expectedCloseDate: "",
+        assigneeMode: "unassigned",
+        notes: "",
+      }).success,
+    ).toBe(true);
+
+    const negative = leadFormSchema.safeParse({
+      customerId: VALID_CUSTOMER,
+      pipelineStage: "new",
+      estimatedValue: "-100",
+      probability: "",
+      expectedCloseDate: "",
+      assigneeMode: "unassigned",
+      notes: "",
+    });
+    expect(negative.success).toBe(false);
+    if (!negative.success) {
+      expect(negative.error.issues.some((i) => i.message === "Amount must be zero or greater")).toBe(
+        true,
+      );
+    }
+  });
 });

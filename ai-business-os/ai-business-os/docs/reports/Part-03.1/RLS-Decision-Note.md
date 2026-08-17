@@ -1,8 +1,69 @@
 # NexusOS — PostgreSQL Row-Level Security (RLS) Decision Note
 
-**Status:** DEFERRED (P2) — application-level tenant isolation remains the primary control.
-**Date:** 15 July 2026
+**Status:** DEFERRED — ACCEPTED ARCHITECTURAL DECISION (Part 06 CRM release, August 2026)  
+**Date:** 15 July 2026 (original); reassessed 17 August 2026  
 **Owner:** Backend/Platform
+
+---
+
+## Part 06 reassessment (August 2026)
+
+The original revisit trigger in §6 has **fired**: live tenant-scoped CRM CRUD (Customers, Contacts, Leads, Deals, Customer Notes) now ships through `BaseRepository` with server-derived `company_id`, RBAC, composite tenant FKs, and regression suites (`tests/test_*_api.py`, `tests/security/test_cross_tenant_relationships.py`).
+
+After reassessment for the Part 06 CRM release, **RLS remains deliberately deferred**. Application-level tenant isolation is the **authoritative** control for this release:
+
+```
+Authenticated request
+      ↓
+authenticated user (DB-derived, not JWT-trusted for tenant)
+      ↓
+server-derived company_id
+      ↓
+RBAC permission enforcement
+      ↓
+tenant-scoped BaseRepository
+      ↓
+company_id-scoped queries
+      ↓
+composite tenant foreign keys
+      ↓
+PostgreSQL
+```
+
+RLS is **future defense-in-depth**, not the primary tenant-isolation mechanism for Part 06. Implementation belongs in a **dedicated security-hardening phase**, not bundled into CRM or another business module.
+
+**No RLS policies, migrations, `SET LOCAL` wiring, DB role splits, or pooling changes are authorized for the Part 06 release.**
+
+### Future proposed architecture (design only — not implemented)
+
+When RLS is revisited, prefer:
+
+```
+transaction begins
+      ↓
+SET LOCAL app.current_company_id = '<tenant UUID>'
+      ↓
+application queries
+      ↓
+PostgreSQL RLS policies (USING company_id = current_setting(...))
+      ↓
+transaction commit/rollback
+      ↓
+tenant context automatically cleared (SET LOCAL scope)
+```
+
+Future implementation should consider:
+
+- `SET LOCAL`, not unsafe persistent session state on pooled connections
+- Dedicated application DB role **without** `BYPASSRLS`
+- Separate migration/admin role with `BYPASSRLS`
+- Fail-closed behavior when tenant context is absent (zero rows, not open)
+- Authentication/bootstrap paths where tenant context is not yet known
+- Connection pooling safety (asyncpg pool reuse)
+- Background workers (when introduced)
+- Migrations (`ENABLE ROW LEVEL SECURITY` + policies)
+- Integration tests proving cross-tenant reads fail at DB layer
+- Cross-module verification, staging rollout, rollback strategy
 
 ---
 
@@ -42,27 +103,25 @@ The actual live tenant-touching code today (`auth_service.py`) does not use laye
 
 ## 5. Decision
 
-**Do not enable RLS now.**
+**Do not enable RLS now.** This remains an **accepted architectural decision** for the Part 06 CRM release (see Part 06 reassessment above).
 
-CURRENT REALITY: no live, reachable request path — repository-backed or direct-query — currently performs an unscoped tenant list/query that RLS would need to backstop. The schema layer (composite FKs) and authorization layer (`get_current_active_user`) are live and already satisfy the stated invariant ("tenant isolation is automatic and fail-closed") for every code path that exists in the codebase today. RLS would add meaningful operational complexity (connection-pool session-variable discipline, migration privilege separation, admin-bypass policy design) to defend against a bug class (a repository or raw query forgetting `company_id`) that:
+CURRENT REALITY (August 2026): Part 06 CRM ships live tenant-scoped list/CRUD through `BaseRepository`. Tenant isolation for those paths is enforced by server-derived `company_id`, RBAC, repository scoping, composite FKs, and automated regression suites — not by PostgreSQL RLS. RLS would add operational complexity (connection-pool session-variable discipline, migration privilege separation, admin-bypass policy design) as **defense-in-depth** against a bug class (a repository or raw query forgetting `company_id`) that is:
 
-- is caught by the tenant-isolation and cross-tenant-relationship regression suites (`tests/test_tenant_isolation.py`, `tests/security/test_cross_tenant_relationships.py`) today, and
-- cannot yet be triggered by any code path that exists, live-callers-wise, because no tenant-scoped list/CRUD endpoint of any kind has shipped yet.
+- caught by tenant-isolation and cross-tenant-relationship regression suites today, and
+- not currently observed in production or test suites for the shipped CRM surface.
 
-FUTURE REQUIREMENT: this deferral is conditional on that gap remaining true. The first real business module that ships a tenant-scoped list/CRUD route — whether built on `BaseRepository` or a hand-written query — is the point where "does application-level enforcement remain systematic" must be re-verified against actual shipped code, not assumed. If tenant query paths proliferate across multiple hand-written call sites, if enforcement becomes inconsistent across modules, if compliance requirements demand DB-level isolation regardless of application-layer correctness, or if multiple data-access paths bypass whatever the centralized invariant becomes, RLS should be reconsidered on the merits at that time.
+FUTURE REQUIREMENT: if tenant query paths proliferate across inconsistent hand-written call sites, if compliance requires DB-level isolation regardless of application correctness, if direct-DB-access surfaces bypass the ORM, or if a security incident identifies an application-layer bypass that RLS would have caught, RLS should be implemented as a **standalone security-hardening phase** using the future proposed architecture documented above.
 
 ## 6. Trigger conditions to revisit
 
-Re-evaluate RLS if **any** of the following becomes true:
+The **first tenant-scoped list/CRUD route** trigger (§6, July 2026) **has fired** with Part 06 CRM. RLS was reassessed and **remains deferred** for that release (see Part 06 reassessment).
 
-- **The first PR ships a real tenant-scoped list/CRUD route to production** — the single most concrete, nearest-term trigger (added per independent-review §22): this is the moment the "no live tenant-scoped query endpoint exists" premise this deferral rests on stops being true, regardless of whether that route is built on `BaseRepository` or a direct query.
-- A direct-DB-access surface is introduced that bypasses whatever the centralized tenant-scoping mechanism is at that time (e.g. an admin BI tool, a read replica exposed to an analytics team, a raw SQL reporting endpoint).
-- Background job workers are introduced (Celery/RQ) with tenant-scoped tasks running outside the current per-request dependency-injection flow, where the "always call `get_current_active_user`" discipline doesn't naturally apply.
-- A security audit or incident specifically identifies an application-layer tenant-isolation bypass that RLS would have caught.
-- Tenant-scoped query paths proliferate across enough independent call sites, or enough hand-written direct queries, that "every tenant query is correctly scoped" can no longer be enforced through code review alone.
+Re-evaluate RLS implementation (dedicated phase) if **any** of the following becomes true:
 
-If any trigger fires, implement RLS with:
+- A direct-DB-access surface is introduced that bypasses application-level scoping (e.g. an admin BI tool, a read replica exposed to analytics, a raw SQL reporting endpoint).
+- Background job workers are introduced (Celery/RQ) with tenant-scoped tasks outside the per-request dependency-injection flow.
+- A security audit or incident identifies an application-layer tenant-isolation bypass that RLS would have caught.
+- Tenant-scoped query paths proliferate across enough independent call sites that "every tenant query is correctly scoped" can no longer be enforced through code review alone.
+- Compliance or customer requirements mandate DB-enforced isolation regardless of application-layer correctness.
 
-- `SET LOCAL app.current_company_id = ...` scoped to the transaction (not the connection) — `SET LOCAL` is automatically reset at transaction end, sidestepping the pooled-connection leak risk entirely.
-- A dedicated non-`BYPASSRLS` runtime role, distinct from the migration role.
-- Explicit test coverage proving a forgotten `SET LOCAL` fails closed (returns zero rows), not open.
+If implementation is authorized, use the future proposed architecture in the Part 06 reassessment section (SET LOCAL, role split, fail-closed tests) — not persistent session variables on pooled connections.

@@ -7,8 +7,15 @@ export const dealFormSchema = z.object({
     .string()
     .trim()
     .min(1, "Value is required")
-    .refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, {
-      message: "Enter a valid amount",
+    .superRefine((v, ctx) => {
+      const n = Number(v);
+      if (Number.isNaN(n)) {
+        ctx.addIssue({ code: "custom", message: "Enter a valid amount" });
+        return;
+      }
+      if (n < 0) {
+        ctx.addIssue({ code: "custom", message: "Value must be zero or greater" });
+      }
     }),
   currency: z
     .string()

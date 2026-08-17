@@ -11,7 +11,7 @@ from app.api.v1.crm import router as crm_router
 api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(auth.router, prefix="/auth")
-# CRM shell (06.1) — no operational CRUD routes yet; 06.2+ adds them.
+# CRM (06.2–06.9) — Customers, Contacts, Leads, Deals, Customer Notes.
 api_router.include_router(crm_router)
 
 

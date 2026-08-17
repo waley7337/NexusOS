@@ -682,6 +682,42 @@ def test_create_validation_errors(client):
     assert unknown_customer.status_code == 422
 
 
+def test_estimated_value_non_negative(client):
+    a = _register(client, "evval")
+    customer = _create_customer(client, a)
+
+    positive = client.post(
+        _BASE,
+        json={"customerId": customer["id"], "estimatedValue": "1500.50"},
+        headers=_auth(a),
+    )
+    assert positive.status_code == 201, positive.text
+    assert float(positive.json()["data"]["estimatedValue"]) == 1500.50
+
+    zero = client.post(
+        _BASE,
+        json={"customerId": customer["id"], "estimatedValue": "0"},
+        headers=_auth(a),
+    )
+    assert zero.status_code == 201, zero.text
+    assert float(zero.json()["data"]["estimatedValue"]) == 0
+
+    negative = client.post(
+        _BASE,
+        json={"customerId": customer["id"], "estimatedValue": "-1"},
+        headers=_auth(a),
+    )
+    assert negative.status_code == 422
+
+    created = _create_lead(client, a, customer["id"], estimatedValue="100")
+    negative_update = client.patch(
+        f"{_BASE}/{created['id']}",
+        json={"estimatedValue": "-0.01"},
+        headers=_auth(a),
+    )
+    assert negative_update.status_code == 422
+
+
 def test_soft_delete_sets_deleted_at(client):
     import asyncio
 

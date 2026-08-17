@@ -709,6 +709,46 @@ def test_create_validation_errors(client):
     assert unknown_lead.status_code == 422
 
 
+def test_deal_value_non_negative(client):
+    a = _register(client, "dealval")
+    customer = _create_customer(client, a)
+    lead = _create_lead(client, a, customer["id"])
+
+    positive = client.post(
+        _BASE,
+        json={"leadId": lead["id"], "value": "25000.50"},
+        headers=_auth(a),
+    )
+    assert positive.status_code == 201, positive.text
+    assert float(positive.json()["data"]["value"]) == 25000.50
+
+    customer2 = _create_customer(client, a, name="Other Co")
+    lead2 = _create_lead(client, a, customer2["id"])
+    zero = client.post(
+        _BASE,
+        json={"leadId": lead2["id"], "value": "0"},
+        headers=_auth(a),
+    )
+    assert zero.status_code == 201, zero.text
+    assert float(zero.json()["data"]["value"]) == 0
+
+    customer3 = _create_customer(client, a, name="Third Co")
+    lead3 = _create_lead(client, a, customer3["id"])
+    negative = client.post(
+        _BASE,
+        json={"leadId": lead3["id"], "value": "-1"},
+        headers=_auth(a),
+    )
+    assert negative.status_code == 422
+
+    negative_update = client.patch(
+        f"{_BASE}/{positive.json()['data']['id']}",
+        json={"value": "-0.01"},
+        headers=_auth(a),
+    )
+    assert negative_update.status_code == 422
+
+
 def test_soft_delete_sets_deleted_at(client):
     import asyncio
 

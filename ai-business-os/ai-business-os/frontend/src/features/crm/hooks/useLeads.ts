@@ -35,6 +35,8 @@ export function useCreateLead() {
     mutationFn: (payload: LeadCreatePayload) => createLead(payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.crm.leads.lists() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.crm.leads.options() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.crm.deals.boundLeadIds() });
     },
   });
 }
@@ -47,6 +49,7 @@ export function useUpdateLead() {
     onSuccess: (lead: Lead) => {
       queryClient.setQueryData(queryKeys.crm.leads.detail(lead.id), lead);
       void queryClient.invalidateQueries({ queryKey: queryKeys.crm.leads.lists() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.crm.leads.options() });
     },
   });
 }
@@ -58,6 +61,8 @@ export function useArchiveLead() {
     onSuccess: (_data, id) => {
       queryClient.removeQueries({ queryKey: queryKeys.crm.leads.detail(id) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.crm.leads.lists() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.crm.leads.options() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.crm.deals.boundLeadIds() });
     },
   });
 }
