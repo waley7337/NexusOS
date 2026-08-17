@@ -30,7 +30,7 @@ pytestmark = pytest.mark.skipif(
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 from sqlalchemy.pool import NullPool  # noqa: E402
 
-from app.models import Company, Contact, Customer, Invoice, Lead  # noqa: E402
+from app.models import Company, Contact, Customer, CustomerNote, Invoice, Lead  # noqa: E402
 from app.models.enums import InvoiceStatus  # noqa: E402
 
 
@@ -135,6 +135,19 @@ async def test_invoice_cannot_reference_a_different_tenants_customer(
         tax=0,
         total=100,
     )
+    db.add(forged)
+    with pytest.raises(IntegrityError):
+        await db.flush()
+    await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_customer_note_cannot_reference_a_different_tenants_customer(
+    two_tenants_with_customers,
+):
+    db, a, b, ca, cb = two_tenants_with_customers
+
+    forged = CustomerNote(company_id=a.id, customer_id=cb.id, content="Cross-tenant")
     db.add(forged)
     with pytest.raises(IntegrityError):
         await db.flush()

@@ -255,3 +255,162 @@ def test_mass_assignment_ignores_extra_fields(client: TestClient):
     assert note["companyId"] == session["user"]["companyId"]
     assert note["customerId"] == customer_id
     assert note["authorId"] == session["user"]["id"]
+
+
+def _set_user_role(user_id: str, role_name: str) -> None:
+    import asyncio
+
+    from sqlalchemy import select
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy.pool import NullPool
+
+    from app.models import Role, User
+
+    async def _run():
+        engine = create_async_engine(TEST_DB, poolclass=NullPool)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with session_factory() as db:
+                user = (
+                    await db.execute(
+                        select(User)
+                        .where(User.id == uuid.UUID(user_id))
+                        .options(selectinload(User.roles))
+                    )
+                ).scalar_one()
+                role = (
+                    await db.execute(
+                        select(Role).where(
+                            Role.company_id == user.company_id,
+                            Role.name == role_name,
+                            Role.is_system.is_(True),
+                        )
+                    )
+                ).scalar_one()
+                user.roles = [role]
+                await db.commit()
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_run())
+
+
+def _login(
+    client: TestClient, email: str, password: str, company_slug: str
+) -> dict:
+    res = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": password, "companySlug": company_slug},
+    )
+    assert res.status_code == 200, res.text
+    return {"Authorization": f"Bearer {res.json()['data']['accessToken']}"}
+
+
+def test_rbac_viewer_can_read_notes_not_mutate(client: TestClient):
+    owner = _register(client, "notes-viewer")
+    customer = _create_customer(client, owner)
+    note = client.post(
+        _notes_path(customer["id"]),
+        json={"content": "Seed note"},
+        headers=_auth(owner),
+    ).json()["data"]
+
+    _set_user_role(owner["user"]["id"], "Viewer")
+    headers = _login(
+        client, owner["email"], owner["password"], owner["user"]["companySlug"]
+    )
+
+    assert client.get(_notes_path(customer["id"]), headers=headers).status_code == 200
+    assert (
+        client.get(f"{_notes_path(customer['id'])}/{note['id']}", headers=headers).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            _notes_path(customer["id"]),
+            json={"content": "Nope"},
+            headers=headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        client.patch(
+            f"{_notes_path(customer['id'])}/{note['id']}",
+            json={"content": "Nope"},
+            headers=headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        client.delete(f"{_notes_path(customer['id'])}/{note['id']}", headers=headers).status_code
+        == 403
+    )
+
+
+def test_rbac_employee_can_read_notes_not_write(client: TestClient):
+    owner = _register(client, "notes-emp")
+    customer = _create_customer(client, owner)
+    note = client.post(
+        _notes_path(customer["id"]),
+        json={"content": "Seed note"},
+        headers=_auth(owner),
+    ).json()["data"]
+
+    _set_user_role(owner["user"]["id"], "Employee")
+    headers = _login(
+        client, owner["email"], owner["password"], owner["user"]["companySlug"]
+    )
+
+    assert client.get(_notes_path(customer["id"]), headers=headers).status_code == 200
+    assert (
+        client.post(
+            _notes_path(customer["id"]),
+            json={"content": "Nope"},
+            headers=headers,
+        ).status_code
+        == 403
+    )
+    assert (
+        client.delete(f"{_notes_path(customer['id'])}/{note['id']}", headers=headers).status_code
+        == 403
+    )
+
+
+def test_rbac_manager_can_mutate_notes(client: TestClient):
+    owner = _register(client, "notes-mgr")
+    customer = _create_customer(client, owner)
+
+    _set_user_role(owner["user"]["id"], "Manager")
+    headers = _login(
+        client, owner["email"], owner["password"], owner["user"]["companySlug"]
+    )
+
+    created = client.post(
+        _notes_path(customer["id"]),
+        json={"content": "Manager note"},
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    note_id = created.json()["data"]["id"]
+
+    updated = client.patch(
+        f"{_notes_path(customer['id'])}/{note_id}",
+        json={"content": "Updated"},
+        headers=headers,
+    )
+    assert updated.status_code == 200, updated.text
+
+    archived = client.delete(
+        f"{_notes_path(customer['id'])}/{note_id}",
+        headers=headers,
+    )
+    assert archived.status_code == 200, archived.text
+
+
+def test_unauthenticated_notes_rejected(client: TestClient):
+    customer_id = str(uuid.uuid4())
+    assert client.get(_notes_path(customer_id)).status_code == 401
+    assert (
+        client.post(_notes_path(customer_id), json={"content": "X"}).status_code == 401
+    )
