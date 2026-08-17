@@ -97,13 +97,28 @@ async def _unique_slug(db: AsyncSession, base_name: str) -> str:
 
 async def _bootstrap_company_roles(db: AsyncSession, company_id: uuid.UUID) -> dict[str, Role]:
     """Creates the 5 system roles for a new tenant with their permission
-    grants, per the Part 3 seed catalog (`DEFAULT_ROLES`)."""
+    grants, per the Part 3 seed catalog (`DEFAULT_ROLES`).
+
+    Requires the global permission catalog to already be fully seeded —
+    otherwise Owner/Admin would be created with empty grants and the UI
+    would show Access denied for every gated route.
+    """
+    from app.db.seed import all_permission_names
+
     catalog = {p.name: p for p in (await db.execute(select(Permission))).scalars().all()}
+    expected = set(all_permission_names())
+    missing = expected - set(catalog)
+    if missing:
+        raise ValidationError(
+            "Permission catalog is not seeded. Run `python -m app.db.seed` "
+            "before registering companies.",
+            details={"missingCount": len(missing)},
+        )
 
     roles: dict[str, Role] = {}
     for role_name, pattern in DEFAULT_ROLES.items():
         role = Role(company_id=company_id, name=role_name, is_system=True)
-        role.permissions = [catalog[name] for name in expand(pattern) if name in catalog]
+        role.permissions = [catalog[name] for name in expand(pattern)]
         db.add(role)
         roles[role_name] = role
     await db.flush()
