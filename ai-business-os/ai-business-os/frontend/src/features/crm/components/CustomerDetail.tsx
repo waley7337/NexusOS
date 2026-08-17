@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 import type { Customer, CustomerStatus } from "../types";
+import { CustomerNotesSection } from "./CustomerNotesSection";
 
 const STATUS_LABEL: Record<CustomerStatus, string> = {
   lead: "Lead",
@@ -163,13 +164,15 @@ export function CustomerDetail({
       </section>
 
       {customer.notes && (
-        <section aria-labelledby="customer-notes">
-          <h4 id="customer-notes" className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Notes
+        <section aria-labelledby="customer-profile-notes">
+          <h4 id="customer-profile-notes" className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Profile notes
           </h4>
           <p className="whitespace-pre-wrap text-sm text-foreground">{customer.notes}</p>
         </section>
       )}
+
+      <CustomerNotesSection customerId={customer.id} />
 
       <section aria-labelledby="customer-meta">
         <h4 id="customer-meta" className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

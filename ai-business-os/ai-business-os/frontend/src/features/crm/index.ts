@@ -7,6 +7,11 @@ export type {
   CustomerSortField,
   CustomerStatus,
   CustomerUpdatePayload,
+  CustomerNote,
+  CustomerNoteCreatePayload,
+  CustomerNoteListParams,
+  CustomerNoteSortField,
+  CustomerNoteUpdatePayload,
   Contact,
   ContactCreatePayload,
   ContactListParams,
@@ -29,6 +34,7 @@ export type {
 export {
   CUSTOMER_SORT_FIELDS,
   CUSTOMER_STATUSES,
+  CUSTOMER_NOTE_SORT_FIELDS,
   CONTACT_SORT_FIELDS,
   LEAD_SORT_FIELDS,
   PIPELINE_STAGES,
@@ -43,6 +49,13 @@ export {
   updateCustomer,
   archiveCustomer,
 } from "./services/customersService";
+
+export {
+  listCustomerNotes,
+  createCustomerNote,
+  updateCustomerNote,
+  archiveCustomerNote,
+} from "./services/customerNotesService";
 
 export {
   listContacts,
@@ -75,6 +88,13 @@ export {
   useUpdateCustomer,
   useArchiveCustomer,
 } from "./hooks/useCustomers";
+
+export {
+  useCustomerNotes,
+  useCreateCustomerNote,
+  useUpdateCustomerNote,
+  useArchiveCustomerNote,
+} from "./hooks/useCustomerNotes";
 
 export {
   useContacts,

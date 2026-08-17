@@ -26,6 +26,8 @@ from app.schemas.crm import CustomerCreate, CustomerResponse, CustomerUpdate
 from app.schemas.response import ApiResponse, Paginated
 from app.services import audit_service
 
+from app.api.v1.crm import customer_notes
+
 router = APIRouter(prefix="/customers", tags=["CRM Customers"])
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
@@ -224,3 +226,6 @@ async def archive_customer(
         user_agent=user_agent,
     )
     return ApiResponse.ok(message="Customer archived.")
+
+
+router.include_router(customer_notes.router)

@@ -14,6 +14,7 @@ from app.dependencies.auth import CurrentUser, get_current_active_user
 from app.db.session import get_db
 from app.repositories.crm import (
     ContactRepository,
+    CustomerNoteRepository,
     CustomerRepository,
     DealRepository,
     LeadRepository,
@@ -51,7 +52,15 @@ def get_deal_repository(
     return DealRepository(db, company_id=user.company_id, user_id=user.id)
 
 
+def get_customer_note_repository(
+    db: DbSession,
+    user: ActiveUser,
+) -> CustomerNoteRepository:
+    return CustomerNoteRepository(db, company_id=user.company_id, user_id=user.id)
+
+
 CustomerRepo = Annotated[CustomerRepository, Depends(get_customer_repository)]
 ContactRepo = Annotated[ContactRepository, Depends(get_contact_repository)]
 LeadRepo = Annotated[LeadRepository, Depends(get_lead_repository)]
 DealRepo = Annotated[DealRepository, Depends(get_deal_repository)]
+CustomerNoteRepo = Annotated[CustomerNoteRepository, Depends(get_customer_note_repository)]

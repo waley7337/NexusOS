@@ -25,6 +25,16 @@ export const queryKeys = {
       /** Bounded options list for pickers / contact name lookup (pageSize ≤ 100). */
       options: () => ["crm", "customers", "options"] as const,
     },
+    customerNotes: {
+      all: ["crm", "customer-notes"] as const,
+      lists: (customerId: string) => ["crm", "customer-notes", customerId, "list"] as const,
+      list: (customerId: string, params: Record<string, unknown>) =>
+        ["crm", "customer-notes", customerId, "list", params] as const,
+      details: (customerId: string) =>
+        ["crm", "customer-notes", customerId, "detail"] as const,
+      detail: (customerId: string, noteId: string) =>
+        ["crm", "customer-notes", customerId, "detail", noteId] as const,
+    },
     contacts: {
       all: ["crm", "contacts"] as const,
       lists: () => ["crm", "contacts", "list"] as const,

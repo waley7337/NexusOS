@@ -76,6 +76,28 @@ class CustomerResponse(CamelModel):
     deleted_at: datetime | None = Field(default=None, alias="deletedAt")
 
 
+class CustomerNoteCreate(CamelModel):
+    content: str = Field(min_length=1)
+
+
+class CustomerNoteUpdate(CamelModel):
+    content: str | None = Field(default=None, min_length=1)
+
+
+class CustomerNoteResponse(CamelModel):
+    id: uuid.UUID
+    company_id: uuid.UUID = Field(alias="companyId")
+    customer_id: uuid.UUID = Field(alias="customerId")
+    author_id: uuid.UUID | None = Field(default=None, alias="authorId")
+    content: str
+    is_active: bool = Field(alias="isActive")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+    created_by: uuid.UUID | None = Field(default=None, alias="createdBy")
+    updated_by: uuid.UUID | None = Field(default=None, alias="updatedBy")
+    deleted_at: datetime | None = Field(default=None, alias="deletedAt")
+
+
 # ---------------------------------------------------------------------------
 # Contacts
 # ---------------------------------------------------------------------------

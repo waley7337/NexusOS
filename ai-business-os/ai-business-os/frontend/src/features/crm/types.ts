@@ -59,6 +59,42 @@ export interface CustomerCreatePayload {
 export type CustomerUpdatePayload = Partial<CustomerCreatePayload>;
 
 // ---------------------------------------------------------------------------
+// Customer timeline notes (nested API — distinct from Customer.notes field)
+// ---------------------------------------------------------------------------
+
+export const CUSTOMER_NOTE_SORT_FIELDS = ["created_at"] as const;
+export type CustomerNoteSortField = (typeof CUSTOMER_NOTE_SORT_FIELDS)[number];
+
+export interface CustomerNote {
+  id: string;
+  companyId: string;
+  customerId: string;
+  authorId: string | null;
+  content: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedAt: string | null;
+}
+
+export interface CustomerNoteListParams {
+  page?: number;
+  pageSize?: number;
+  sortBy?: CustomerNoteSortField;
+  sortDesc?: boolean;
+}
+
+export interface CustomerNoteCreatePayload {
+  content: string;
+}
+
+export interface CustomerNoteUpdatePayload {
+  content?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Contacts
 // ---------------------------------------------------------------------------
 

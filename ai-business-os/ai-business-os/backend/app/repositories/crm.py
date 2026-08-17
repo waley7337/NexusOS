@@ -16,8 +16,8 @@ from typing import List
 
 from sqlalchemy import func, or_, select
 
-from app.core.exceptions import ValidationError
-from app.models.crm import Contact, Customer, Deal, Lead
+from app.core.exceptions import NotFoundError, ValidationError
+from app.models.crm import Contact, Customer, CustomerNote, Deal, Lead
 from app.models.enums import CustomerStatus, DealStatus, PipelineStage
 from app.models.user import User
 from app.repositories.base import DEFAULT_PAGE_SIZE, BaseRepository
@@ -350,3 +350,54 @@ class DealRepository(BaseRepository[Deal]):
 
         result = await self.db.execute(stmt)
         return list(result.scalars().all()), total
+
+
+class CustomerNoteRepository(BaseRepository[CustomerNote]):
+    model = CustomerNote
+    SORT_FIELDS = {
+        "created_at": CustomerNote.created_at,
+    }
+
+    async def ensure_customer_in_tenant(self, customer_id: uuid.UUID) -> None:
+        """Reject customers that are missing, soft-deleted, or other-tenant."""
+        self._require_tenant_context()
+        stmt = select(Customer.id).where(
+            Customer.id == customer_id,
+            Customer.company_id == self.company_id,
+            Customer.deleted_at.is_(None),
+        )
+        found = (await self.db.execute(stmt)).scalar_one_or_none()
+        if found is None:
+            raise ValidationError("Customer must belong to the current company.")
+
+    async def list_for_customer(
+        self,
+        customer_id: uuid.UUID,
+        *,
+        page: int = 1,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        sort_by: str | None = None,
+        sort_desc: bool = False,
+    ) -> tuple[List[CustomerNote], int]:
+        await self.ensure_customer_in_tenant(customer_id)
+        page, page_size = self._clamp_pagination(page, page_size)
+        stmt = self._base_query().where(CustomerNote.customer_id == customer_id)
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = (await self.db.execute(count_stmt)).scalar_one()
+
+        resolved_order = self._safe_order_by(sort_by, sort_desc)
+        if resolved_order is not None:
+            stmt = stmt.order_by(resolved_order)
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all()), total
+
+    async def get_for_customer(
+        self, customer_id: uuid.UUID, note_id: uuid.UUID
+    ) -> CustomerNote:
+        note = await self.get(note_id)
+        if note.customer_id != customer_id:
+            raise NotFoundError("CustomerNote not found")
+        return note

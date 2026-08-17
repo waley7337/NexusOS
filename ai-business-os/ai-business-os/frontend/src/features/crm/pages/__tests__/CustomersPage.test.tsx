@@ -15,6 +15,7 @@ const mockCreateCustomer = vi.fn();
 const mockUpdateCustomer = vi.fn();
 const mockArchiveCustomer = vi.fn();
 const mockGetMe = vi.fn();
+const mockListCustomerNotes = vi.fn();
 
 vi.mock("@/features/crm/services/customersService", () => ({
   listCustomers: (...args: unknown[]) => mockListCustomers(...args),
@@ -22,6 +23,13 @@ vi.mock("@/features/crm/services/customersService", () => ({
   createCustomer: (...args: unknown[]) => mockCreateCustomer(...args),
   updateCustomer: (...args: unknown[]) => mockUpdateCustomer(...args),
   archiveCustomer: (...args: unknown[]) => mockArchiveCustomer(...args),
+}));
+
+vi.mock("@/features/crm/services/customerNotesService", () => ({
+  listCustomerNotes: (...args: unknown[]) => mockListCustomerNotes(...args),
+  createCustomerNote: vi.fn(),
+  updateCustomerNote: vi.fn(),
+  archiveCustomerNote: vi.fn(),
 }));
 
 vi.mock("@/features/auth", async () => {
@@ -121,6 +129,10 @@ function renderPage(initialEntry = "/crm/customers", permissions: string[] = [
 describe("CustomersPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockListCustomerNotes.mockResolvedValue({
+      items: [],
+      meta: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+    });
     useAuthStore.setState({
       accessToken: "token",
       refreshToken: "refresh",
