@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/constants/queryKeys";
-import { hasPermission, type Permission } from "@/constants/permissions";
+import { hasAnyPermission, hasPermission, type Permission } from "@/constants/permissions";
 import { getMe, type MeDto } from "@/features/auth";
 import { useAuthStore } from "@/stores/auth";
 
@@ -24,4 +24,11 @@ export function usePermission(permission: Permission): boolean {
   const { data } = useAuthMe();
   if (!data) return false;
   return hasPermission(data.permissions, permission);
+}
+
+/** Returns whether the current user holds any of the listed permissions. */
+export function useAnyPermission(permissions: readonly Permission[]): boolean {
+  const { data } = useAuthMe();
+  if (!data) return false;
+  return hasAnyPermission(data.permissions, permissions);
 }

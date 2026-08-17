@@ -6,6 +6,7 @@ import { AuthLayout } from "@/layouts/AuthLayout";
 import { ROUTES } from "@/constants/routes";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { PermissionRoute } from "@/routes/PermissionRoute";
+import { HrPermissionRoute } from "@/routes/HrPermissionRoute";
 import { RouteErrorBoundary } from "@/components/route-error-boundary";
 import { PageLoading } from "@/components/page-loading";
 
@@ -46,14 +47,17 @@ const LeadsPage = lazy(() =>
 const DealsPage = lazy(() =>
   import("@/pages/crm/DealsPage").then((m) => ({ default: m.DealsPage })),
 );
+const EmployeesPage = lazy(() =>
+  import("@/pages/hr/EmployeesPage").then((m) => ({ default: m.EmployeesPage })),
+);
+const EmployeeDetailPage = lazy(() =>
+  import("@/pages/hr/EmployeeDetailPage").then((m) => ({ default: m.EmployeeDetailPage })),
+);
 const ProjectsPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.ProjectsPlaceholder })),
 );
 const TasksPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.TasksPlaceholder })),
-);
-const HrPlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.HrPlaceholder })),
 );
 const FinancePlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.FinancePlaceholder })),
@@ -158,7 +162,14 @@ export const router = createBrowserRouter([
           },
           { path: ROUTES.projects, element: <ProjectsPlaceholder /> },
           { path: ROUTES.tasks, element: <TasksPlaceholder /> },
-          { path: ROUTES.hr, element: <HrPlaceholder /> },
+          {
+            element: <HrPermissionRoute />,
+            children: [
+              { path: ROUTES.hr, element: <EmployeesPage /> },
+              { path: ROUTES.hrEmployees, element: <EmployeesPage /> },
+              { path: ROUTES.hrEmployeeDetail, element: <EmployeeDetailPage /> },
+            ],
+          },
           {
             element: <PermissionRoute permission="finance.view" />,
             children: [{ path: ROUTES.finance, element: <FinancePlaceholder /> }],

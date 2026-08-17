@@ -9,7 +9,15 @@ const MODULES = {
   deals: ["read", "create", "update", "delete"],
   projects: ["read", "create", "update", "delete", "manage"],
   tasks: ["read", "create", "update", "delete"],
-  hr: ["read", "manage"],
+  employees: [
+    "read",
+    "read_compensation",
+    "read_self",
+    "read_team",
+    "create",
+    "update",
+    "delete",
+  ],
   finance: ["view", "manage"],
   invoices: ["read", "create", "update", "delete", "send"],
   inventory: ["read", "manage"],
@@ -39,3 +47,18 @@ export function hasPermission(
 ): boolean {
   return permissions.includes(required);
 }
+
+/** True when the caller holds at least one of the listed permissions. */
+export function hasAnyPermission(
+  permissions: readonly string[],
+  required: readonly Permission[],
+): boolean {
+  return required.some((perm) => permissions.includes(perm));
+}
+
+/** Permissions that grant entry to the operational HR workspace (07.2). */
+export const HR_WORKSPACE_PERMISSIONS = [
+  "employees.read",
+  "employees.read_self",
+  "employees.read_team",
+] as const satisfies readonly Permission[];

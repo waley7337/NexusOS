@@ -9,7 +9,7 @@ export const MODULE_SUMMARIES: Record<string, string> = {
   [ROUTES.projects]: "Boards, lists, timelines, and calendars.",
   [ROUTES.tasks]: "Work assigned to you and your team.",
   [ROUTES.finance]: "Revenue, expenses, invoices, and payments.",
-  [ROUTES.hr]: "People, attendance, leave, and performance.",
+  [ROUTES.hr]: "Employee records and organization.",
   [ROUTES.inventory]: "Products, warehouses, and stock movements.",
   [ROUTES.documents]: "Store, organize, and share files.",
   [ROUTES.reports]: "Exports and scheduled reports.",

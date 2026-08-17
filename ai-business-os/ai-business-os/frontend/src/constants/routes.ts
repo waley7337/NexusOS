@@ -20,6 +20,8 @@ export const ROUTES = {
   projects: "/projects",
   tasks: "/tasks",
   hr: "/hr",
+  hrEmployees: "/hr/employees",
+  hrEmployeeDetail: "/hr/employees/:employeeId",
   finance: "/finance",
   inventory: "/inventory",
   documents: "/documents",

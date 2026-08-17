@@ -64,4 +64,16 @@ export const queryKeys = {
       boundLeadIds: () => ["crm", "deals", "bound-lead-ids"] as const,
     },
   },
+  hr: {
+    all: ["hr"] as const,
+    employees: {
+      all: ["hr", "employees"] as const,
+      lists: () => ["hr", "employees", "list"] as const,
+      list: (params: Record<string, unknown>) =>
+        ["hr", "employees", "list", params] as const,
+      details: () => ["hr", "employees", "detail"] as const,
+      detail: (id: string) => ["hr", "employees", "detail", id] as const,
+      options: () => ["hr", "employees", "options"] as const,
+    },
+  },
 } as const;

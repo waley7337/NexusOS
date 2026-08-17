@@ -1,2 +1,5 @@
-/** Hr module — public surface. Business logic ships in a future part. */
-export {};
+export { EmployeesPage } from "./pages/EmployeesPage";
+export { EmployeeDetailPage } from "./pages/EmployeeDetailPage";
+export * from "./types";
+export * from "./hooks/useEmployees";
+export * from "./services/employeesService";
