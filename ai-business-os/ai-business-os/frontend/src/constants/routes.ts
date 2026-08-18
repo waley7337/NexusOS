@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { hasPermission, type Permission } from "@/constants/permissions";
 import {
   LayoutDashboard, Users, FolderKanban, CheckSquare, UserRound, Wallet,
   Boxes, FileText, BarChart3, Sparkles, Settings, Palette,
@@ -23,6 +24,8 @@ export const ROUTES = {
   hrEmployees: "/hr/employees",
   hrEmployeeDetail: "/hr/employees/:employeeId",
   finance: "/finance",
+  financeInvoices: "/finance/invoices",
+  financeInvoiceDetail: "/finance/invoices/:invoiceId",
   inventory: "/inventory",
   documents: "/documents",
   reports: "/reports",
@@ -41,6 +44,7 @@ export interface NavItem {
    * "more" collapses under the "More modules" disclosure. Does not affect
    * PALETTE_PAGES, which stays a flat list for ⌘K search. */
   group?: "primary" | "more";
+  permission?: Permission;
 }
 
 /** Sidebar navigation items. */
@@ -49,7 +53,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.crm, label: "CRM", icon: Users },
   { to: ROUTES.projects, label: "Projects", icon: FolderKanban },
   { to: ROUTES.tasks, label: "Tasks", icon: CheckSquare },
-  { to: ROUTES.finance, label: "Finance", icon: Wallet },
+  { to: ROUTES.finance, label: "Finance", icon: Wallet, permission: "invoices.read" },
   { to: ROUTES.hr, label: "HR", icon: UserRound, group: "more" },
   { to: ROUTES.inventory, label: "Inventory", icon: Boxes, group: "more" },
   { to: ROUTES.documents, label: "Documents", icon: FileText, group: "more" },
@@ -63,3 +67,13 @@ export const PALETTE_PAGES: NavItem[] = [
   ...NAV_ITEMS,
   { to: ROUTES.design, label: "Design system", icon: Palette },
 ];
+
+/** Hides permission-scoped destinations until permission data is available. */
+export function discoverableNavItems(
+  items: readonly NavItem[],
+  permissions?: readonly string[],
+): NavItem[] {
+  return items.filter(
+    (item) => !item.permission || Boolean(permissions && hasPermission(permissions, item.permission)),
+  );
+}

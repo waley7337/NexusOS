@@ -1,2 +1,2 @@
-/** Finance module — public surface. Business logic ships in a future part. */
-export {};
+export { InvoicesPage } from "./pages/InvoicesPage";
+export { InvoiceDetailPage } from "./pages/InvoiceDetailPage";

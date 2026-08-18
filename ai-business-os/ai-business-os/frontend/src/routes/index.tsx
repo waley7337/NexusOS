@@ -59,9 +59,8 @@ const ProjectsPlaceholder = lazy(() =>
 const TasksPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.TasksPlaceholder })),
 );
-const FinancePlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.FinancePlaceholder })),
-);
+const InvoicesPage = lazy(() => import("@/features/finance").then((m) => ({ default: m.InvoicesPage })));
+const InvoiceDetailPage = lazy(() => import("@/features/finance").then((m) => ({ default: m.InvoiceDetailPage })));
 const InventoryPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.InventoryPlaceholder })),
 );
@@ -171,8 +170,12 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            element: <PermissionRoute permission="finance.view" />,
-            children: [{ path: ROUTES.finance, element: <FinancePlaceholder /> }],
+            element: <PermissionRoute permission="invoices.read" />,
+            children: [
+              { path: ROUTES.finance, element: <InvoicesPage /> },
+              { path: ROUTES.financeInvoices, element: <InvoicesPage /> },
+              { path: ROUTES.financeInvoiceDetail, element: <InvoiceDetailPage /> },
+            ],
           },
           { path: ROUTES.inventory, element: <InventoryPlaceholder /> },
           { path: ROUTES.documents, element: <DocumentsPlaceholder /> },

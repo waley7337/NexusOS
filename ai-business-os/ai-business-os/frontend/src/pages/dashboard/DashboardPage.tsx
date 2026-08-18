@@ -22,7 +22,8 @@ import { useLiveClock } from "@/hooks/useLiveClock";
 import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
 import { useDashboard } from "@/features/dashboard";
 import { MODULE_SUMMARIES } from "@/features/dashboard/constants";
-import { NAV_ITEMS, ROUTES } from "@/constants/routes";
+import { discoverableNavItems, NAV_ITEMS, ROUTES } from "@/constants/routes";
+import { useAuthMe } from "@/hooks/usePermission";
 import { Button } from "@/components/ui/button";
 import { Plane } from "@/components/ui/structure";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,8 +35,6 @@ function greetingAt(date: Date): string {
   if (h < 18) return "Good afternoon";
   return "Good evening";
 }
-
-const MODULES = NAV_ITEMS.filter((item) => item.to !== ROUTES.home);
 
 const CAPABILITY_SECTIONS = [
   {
@@ -63,6 +62,10 @@ export function DashboardPage() {
   const prefersReducedMotion = useReducedMotion();
   const storyRef = useRevealOnScroll<HTMLElement>();
   const modulesRef = useRevealOnScroll<HTMLElement>();
+  const { data: me } = useAuthMe();
+  const modules = discoverableNavItems(NAV_ITEMS, me?.permissions).filter(
+    (item) => item.to !== ROUTES.home,
+  );
 
   /* One-shot cinema after auth entry — never replay on later module visits. */
   const [cinemaEntry] = useState(() => {
@@ -251,7 +254,7 @@ export function DashboardPage() {
 
                   <div className="mt-5 flex items-center gap-5">
                     <ReadinessRing
-                      value={MODULES.length}
+                      value={modules.length}
                       label="Configured"
                       sublabel="modules"
                     />
@@ -320,12 +323,12 @@ export function DashboardPage() {
           </h2>
           <span className="h-px flex-1 bg-line-soft" aria-hidden="true" />
           <span className="text-xs text-muted-foreground">
-            {MODULES.length} routes
+            {modules.length} routes
           </span>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {MODULES.map((item) => {
+          {modules.map((item) => {
             const Icon = item.icon;
             return (
               <ModuleTile

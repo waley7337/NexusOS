@@ -76,4 +76,12 @@ export const queryKeys = {
       options: () => ["hr", "employees", "options"] as const,
     },
   },
+  finance: {
+    invoices: {
+      all: ["finance", "invoices"] as const,
+      lists: () => ["finance", "invoices", "list"] as const,
+      list: (params: Record<string, unknown>) => ["finance", "invoices", "list", params] as const,
+      detail: (id: string) => ["finance", "invoices", "detail", id] as const,
+    },
+  },
 } as const;

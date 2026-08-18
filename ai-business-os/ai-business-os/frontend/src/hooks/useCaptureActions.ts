@@ -1,7 +1,8 @@
 import { Moon, Sun, type LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { PALETTE_PAGES } from "@/constants/routes";
+import { discoverableNavItems, PALETTE_PAGES } from "@/constants/routes";
 import { useTheme } from "@/providers/theme-provider";
+import { useAuthMe } from "@/hooks/usePermission";
 
 export interface CaptureAction {
   id: string;
@@ -18,6 +19,7 @@ export interface CaptureAction {
 export function useCaptureActions(): CaptureAction[] {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { data: me } = useAuthMe();
 
   return [
     {
@@ -26,7 +28,7 @@ export function useCaptureActions(): CaptureAction[] {
       icon: theme === "dark" ? Sun : Moon,
       onSelect: () => setTheme(theme === "dark" ? "light" : "dark"),
     },
-    ...PALETTE_PAGES.map((item) => ({
+    ...discoverableNavItems(PALETTE_PAGES, me?.permissions).map((item) => ({
       id: `go-${item.to}`,
       label: item.label,
       icon: item.icon,

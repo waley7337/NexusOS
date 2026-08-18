@@ -4,22 +4,18 @@ import { NavLink } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { transitionSpatial } from "@/lib/motion";
-import { NAV_ITEMS, type NavItem } from "@/constants/routes";
+import { discoverableNavItems, NAV_ITEMS, type NavItem } from "@/constants/routes";
 import { prefetchRoute } from "@/routes/prefetch";
 import { useUiStore } from "@/stores/ui";
 import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/tooltip";
+import { useAuthMe } from "@/hooks/usePermission";
 
 interface AppNavigationProps {
   collapsed?: boolean;
   onNavigate?: () => void;
 }
-
-// Part 04, Phase 5 — sidebar grouping. Split once at module scope; NAV_ITEMS
-// doesn't change at runtime.
-const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => item.group !== "more");
-const MORE_ITEMS = NAV_ITEMS.filter((item) => item.group === "more");
 
 function NavLinkItem({
   item,
@@ -87,13 +83,17 @@ function NavItems({ collapsed = false, onNavigate }: AppNavigationProps) {
   // Session-only, local to this render tree — same precedent as
   // isSidebarCollapsed in stores/ui.ts (no persistence).
   const [moreOpen, setMoreOpen] = useState(false);
+  const { data: me } = useAuthMe();
+  const visibleItems = discoverableNavItems(NAV_ITEMS, me?.permissions);
+  const primaryItems = visibleItems.filter((item) => item.group !== "more");
+  const moreItems = visibleItems.filter((item) => item.group === "more");
 
   // Icon-only sidebar has no room for a disclosure header — render everything
   // flat rather than hiding "more" items behind a collapsed toggle nobody can see.
   if (collapsed) {
     return (
       <>
-        {NAV_ITEMS.map((item) => (
+        {visibleItems.map((item) => (
           <NavLinkItem key={item.to} item={item} collapsed onNavigate={onNavigate} />
         ))}
       </>
@@ -102,11 +102,11 @@ function NavItems({ collapsed = false, onNavigate }: AppNavigationProps) {
 
   return (
     <>
-      {PRIMARY_ITEMS.map((item) => (
+      {primaryItems.map((item) => (
         <NavLinkItem key={item.to} item={item} collapsed={false} onNavigate={onNavigate} />
       ))}
 
-      {MORE_ITEMS.length > 0 && (
+      {moreItems.length > 0 && (
         // V3: a rule separates the groups, not just spacing. The primary
         // modules and the rest were previously distinguished only by a gap,
         // which reads as a list that happens to have a button in it rather
@@ -122,12 +122,12 @@ function NavItems({ collapsed = false, onNavigate }: AppNavigationProps) {
           >
             <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-fast", !moreOpen && "-rotate-90")} />
             <span className="flex-1 text-left">More modules</span>
-            <span className="num tabular-nums">{MORE_ITEMS.length}</span>
+            <span className="num tabular-nums">{moreItems.length}</span>
           </button>
 
           {moreOpen && (
             <div className="mt-0.5 space-y-0.5">
-              {MORE_ITEMS.map((item) => (
+              {moreItems.map((item) => (
                 <NavLinkItem key={item.to} item={item} collapsed={false} onNavigate={onNavigate} />
               ))}
             </div>

@@ -12,7 +12,7 @@ import { env } from "@/config/env";
 import { queryClient } from "@/lib/query-client";
 import { ROUTES } from "@/constants/routes";
 import { useAuthStore } from "@/stores/auth";
-import type { ApiResponse } from "@/types/api";
+import type { ApiError, ApiResponse } from "@/types/api";
 
 export const api = axios.create({
   baseURL: env.apiBaseUrl,
@@ -82,9 +82,22 @@ api.interceptors.response.use(
         return api(original);
       }
     }
+    const body = error.response?.data;
+    if (isApiErrorResponse(body)) {
+      return Promise.reject(
+        new ApiRequestError(body.message, body.errors ?? [], error.response?.status),
+      );
+    }
     return Promise.reject(error);
   },
 );
+
+function isApiErrorResponse(value: unknown): value is ApiResponse<unknown> {
+  if (!value || typeof value !== "object") return false;
+  const body = value as Partial<ApiResponse<unknown>>;
+  return body.success === false && typeof body.message === "string" &&
+    (body.errors === null || Array.isArray(body.errors));
+}
 
 /** Typed request helper: unwraps the envelope, throws on business failure. */
 export async function request<T>(config: AxiosRequestConfig): Promise<T> {
@@ -99,7 +112,8 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
 export class ApiRequestError extends Error {
   constructor(
     message: string,
-    public readonly errors: { code: string; field?: string; detail?: string }[],
+    public readonly errors: ApiError[],
+    public readonly status?: number,
   ) {
     super(message);
     this.name = "ApiRequestError";
