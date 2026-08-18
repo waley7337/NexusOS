@@ -975,12 +975,6 @@ def test_mutations_write_audit_events(client):
 def test_failed_cross_tenant_archive_does_not_audit(client):
     import asyncio
 
-    from sqlalchemy import func, select
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-    from sqlalchemy.pool import NullPool
-
-    from app.models import AuditLog
-
     a = _register(client, "noempaudita")
     b = _register(client, "noempauditb")
     b_emp = _create_employee(client, b, employeeNumber="NO-AUD-B")
