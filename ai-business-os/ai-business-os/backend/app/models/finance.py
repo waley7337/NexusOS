@@ -24,6 +24,7 @@ from app.models.enums import (
 )
 
 if TYPE_CHECKING:
+    from app.models.crm import Customer
     from app.models.payments import PaymentProviderAccount
 
 
@@ -61,6 +62,7 @@ class Invoice(Base, TenantBusinessMixin):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    customer: Mapped["Customer"] = relationship(foreign_keys=[customer_id])
     items: Mapped[list["InvoiceItem"]] = relationship(
         back_populates="invoice", foreign_keys="InvoiceItem.invoice_id"
     )

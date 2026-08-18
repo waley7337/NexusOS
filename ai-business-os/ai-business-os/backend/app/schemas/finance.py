@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 
 class InvoiceItemInput(CamelModel):
     description: str = Field(min_length=1, max_length=500)
-    quantity: Decimal = Field(default=Decimal("1"))
-    unit_price: Decimal = Field(alias="unitPrice")
+    quantity: Decimal = Field(default=Decimal("1"), ge=0)
+    unit_price: Decimal = Field(alias="unitPrice", ge=0)
 
     @field_validator("quantity", "unit_price", mode="before")
     @classmethod
@@ -43,7 +43,7 @@ class InvoiceCreate(CamelModel):
     issue_date: date = Field(alias="issueDate")
     due_date: date = Field(alias="dueDate")
     currency: str = Field(default="USD", min_length=3, max_length=3)
-    tax: Decimal = Field(default=Decimal("0"))
+    tax: Decimal = Field(default=Decimal("0"), ge=0)
     items: list[InvoiceItemInput] = Field(min_length=1)
 
     @field_validator("tax", mode="before")
@@ -60,7 +60,7 @@ class InvoiceUpdate(CamelModel):
     issue_date: date | None = Field(default=None, alias="issueDate")
     due_date: date | None = Field(default=None, alias="dueDate")
     currency: str | None = Field(default=None, min_length=3, max_length=3)
-    tax: Decimal | None = None
+    tax: Decimal | None = Field(default=None, ge=0)
     items: list[InvoiceItemInput] | None = None
 
     @field_validator("tax", mode="before")
@@ -77,6 +77,7 @@ class InvoiceResponse(CamelModel):
     id: uuid.UUID
     company_id: uuid.UUID = Field(alias="companyId")
     customer_id: uuid.UUID = Field(alias="customerId")
+    customer_name: str = Field(alias="customerName")
     invoice_number: str = Field(alias="invoiceNumber")
     issue_date: date = Field(alias="issueDate")
     due_date: date = Field(alias="dueDate")
@@ -110,6 +111,7 @@ def invoice_to_response(
             "id": invoice.id,
             "companyId": invoice.company_id,
             "customerId": invoice.customer_id,
+            "customerName": invoice.customer.company_name,
             "invoiceNumber": invoice.invoice_number,
             "issueDate": invoice.issue_date,
             "dueDate": invoice.due_date,

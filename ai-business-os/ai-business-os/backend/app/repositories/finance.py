@@ -113,7 +113,11 @@ class InvoiceRepository(BaseRepository[Invoice]):
     async def get_with_details(self, invoice_id: uuid.UUID) -> Invoice:
         stmt = (
             self._base_query()
-            .options(selectinload(Invoice.items), selectinload(Invoice.payments))
+            .options(
+                selectinload(Invoice.customer),
+                selectinload(Invoice.items),
+                selectinload(Invoice.payments),
+            )
             .where(Invoice.id == invoice_id)
         )
         result = await self.db.execute(stmt)
@@ -135,6 +139,7 @@ class InvoiceRepository(BaseRepository[Invoice]):
     ) -> tuple[List[Invoice], int]:
         page, page_size = self._clamp_pagination(page, page_size)
         stmt = self._base_query().options(
+            selectinload(Invoice.customer),
             selectinload(Invoice.items),
             selectinload(Invoice.payments),
         )

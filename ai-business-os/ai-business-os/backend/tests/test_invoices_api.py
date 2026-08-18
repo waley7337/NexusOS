@@ -236,9 +236,10 @@ def _cleanup_module_data():
 
 def test_create_invoice_computes_decimal_totals(client):
     owner = _register(client, "create-totals")
-    customer = _create_customer(client, owner)
+    customer = _create_customer(client, owner, "Decimal Customer")
     created = _create_invoice(client, owner, customer["id"], tax="10.00")
 
+    assert created["customerName"] == "Decimal Customer"
     assert created["subtotal"] == "125.50"
     assert created["tax"] == "10.00"
     assert created["total"] == "135.50"
@@ -252,12 +253,13 @@ def test_create_invoice_computes_decimal_totals(client):
 
 def test_send_invoice_sets_sent_at(client):
     owner = _register(client, "send")
-    customer = _create_customer(client, owner)
+    customer = _create_customer(client, owner, "Send Customer")
     created = _create_invoice(client, owner, customer["id"])
 
     res = client.post(f"{_BASE}/{created['id']}/send", headers=_auth(owner))
     assert res.status_code == 200, res.text
     body = res.json()["data"]
+    assert body["customerName"] == "Send Customer"
     assert body["status"] == "sent"
     assert body["sentAt"] is not None
 
@@ -278,12 +280,13 @@ def test_cannot_update_sent_invoice(client):
 
 def test_void_draft_invoice(client):
     owner = _register(client, "void-draft")
-    customer = _create_customer(client, owner)
+    customer = _create_customer(client, owner, "Void Customer")
     created = _create_invoice(client, owner, customer["id"])
 
     res = client.post(f"{_BASE}/{created['id']}/void", headers=_auth(owner))
     assert res.status_code == 200, res.text
     body = res.json()["data"]
+    assert body["customerName"] == "Void Customer"
     assert body["status"] == "void"
     assert body["voidedAt"] is not None
 
@@ -326,11 +329,13 @@ def test_cross_tenant_customer_rejected(client):
 def test_cross_tenant_invoice_not_found(client):
     owner_a = _register(client, "iso-a")
     owner_b = _register(client, "iso-b")
-    customer = _create_customer(client, owner_b)
+    customer = _create_customer(client, owner_b, "Tenant B Customer")
     created = _create_invoice(client, owner_b, customer["id"])
+    assert created["customerName"] == "Tenant B Customer"
 
     res = client.get(f"{_BASE}/{created['id']}", headers=_auth(owner_a))
     assert res.status_code == 404
+    assert res.json()["data"] is None
 
 
 def test_rbac_manager_can_read_not_create(client):
@@ -363,7 +368,7 @@ def test_rbac_manager_cannot_send(client):
 
 def test_update_draft_recalculates_totals(client):
     owner = _register(client, "update-draft")
-    customer = _create_customer(client, owner)
+    customer = _create_customer(client, owner, "Updated Invoice Customer")
     created = _create_invoice(client, owner, customer["id"])
 
     res = client.patch(
@@ -376,6 +381,7 @@ def test_update_draft_recalculates_totals(client):
     )
     assert res.status_code == 200, res.text
     body = res.json()["data"]
+    assert body["customerName"] == "Updated Invoice Customer"
     assert body["subtotal"] == "30.00"
     assert body["tax"] == "5.00"
     assert body["total"] == "35.00"
@@ -456,3 +462,95 @@ def test_list_invoices_by_customer(client):
     data = res.json()["data"]
     assert data["meta"]["total"] == 1
     assert data["items"][0]["customerId"] == customer_a["id"]
+    assert data["items"][0]["customerName"] == "Alpha"
+
+
+def test_invoice_detail_returns_current_customer_name(client):
+    owner = _register(client, "detail-customer-name")
+    customer = _create_customer(client, owner, "Before Rename")
+    created = _create_invoice(client, owner, customer["id"])
+
+    rename_res = client.patch(
+        f"{_CUSTOMERS}/{customer['id']}",
+        json={"companyName": "After Rename"},
+        headers=_auth(owner),
+    )
+    assert rename_res.status_code == 200, rename_res.text
+
+    detail_res = client.get(f"{_BASE}/{created['id']}", headers=_auth(owner))
+    assert detail_res.status_code == 200, detail_res.text
+    assert detail_res.json()["data"]["customerName"] == "After Rename"
+
+
+@pytest.mark.parametrize(
+    ("override", "field"),
+    [
+        ({"items": [{"description": "Invalid", "quantity": "-1", "unitPrice": "1"}]}, "body.items.0.quantity"),
+        ({"items": [{"description": "Invalid", "quantity": "1", "unitPrice": "-1"}]}, "body.items.0.unitPrice"),
+        ({"tax": "-1"}, "body.tax"),
+    ],
+)
+def test_create_rejects_negative_money_with_validation_error(client, override, field):
+    owner = _register(client, f"create-negative-{field.rsplit('.', 1)[-1]}")
+    customer = _create_customer(client, owner)
+
+    res = client.post(
+        _BASE,
+        json=_invoice_payload(customer["id"], **override),
+        headers=_auth(owner),
+    )
+
+    assert res.status_code == 422, res.text
+    assert res.json()["errors"][0]["code"] == "validation_error"
+    assert res.json()["errors"][0]["field"] == field
+
+
+@pytest.mark.parametrize(
+    ("payload", "field"),
+    [
+        ({"items": [{"description": "Invalid", "quantity": "-1", "unitPrice": "1"}]}, "body.items.0.quantity"),
+        ({"items": [{"description": "Invalid", "quantity": "1", "unitPrice": "-1"}]}, "body.items.0.unitPrice"),
+        ({"tax": "-1"}, "body.tax"),
+    ],
+)
+def test_update_rejects_negative_money_with_validation_error(client, payload, field):
+    owner = _register(client, f"update-negative-{field.rsplit('.', 1)[-1]}")
+    customer = _create_customer(client, owner)
+    created = _create_invoice(client, owner, customer["id"])
+
+    res = client.patch(
+        f"{_BASE}/{created['id']}",
+        json=payload,
+        headers=_auth(owner),
+    )
+
+    assert res.status_code == 422, res.text
+    assert res.json()["errors"][0]["code"] == "validation_error"
+    assert res.json()["errors"][0]["field"] == field
+
+
+def test_zero_money_values_remain_valid_for_create_and_update(client):
+    owner = _register(client, "zero-money")
+    customer = _create_customer(client, owner, "Zero Customer")
+    created = _create_invoice(
+        client,
+        owner,
+        customer["id"],
+        tax="0",
+        items=[{"description": "Free", "quantity": "0", "unitPrice": "0"}],
+    )
+
+    assert created["subtotal"] == "0.00"
+    assert created["tax"] == "0.00"
+    assert created["total"] == "0.00"
+
+    update_res = client.patch(
+        f"{_BASE}/{created['id']}",
+        json={
+            "tax": "0",
+            "items": [{"description": "Still free", "quantity": "0", "unitPrice": "0"}],
+        },
+        headers=_auth(owner),
+    )
+    assert update_res.status_code == 200, update_res.text
+    assert update_res.json()["data"]["total"] == "0.00"
