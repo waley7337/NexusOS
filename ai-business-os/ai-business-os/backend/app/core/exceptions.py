@@ -52,6 +52,13 @@ class ValidationError(AppError):
     message = "Invalid input."
 
 
+class BillingProfileInvariantError(AppError):
+    """An existing company is missing its required billing authority row."""
+
+    code = "billing_profile_invariant"
+    message = "Company billing profile is not provisioned."
+
+
 class TenantIsolationError(AppError):
     """Raised if a query would cross tenant boundaries. Should never happen —
     logged at CRITICAL and returned as a generic 404 to avoid leaking data."""

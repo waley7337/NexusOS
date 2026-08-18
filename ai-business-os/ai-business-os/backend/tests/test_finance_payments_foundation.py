@@ -38,6 +38,8 @@ from app.models.payments import (  # noqa: E402
     PlatformBillingProfile,
     ProviderWebhookEvent,
 )
+from app.core.exceptions import BillingProfileInvariantError  # noqa: E402
+from app.repositories.platform_billing import PlatformBillingProfileRepository  # noqa: E402
 
 
 @pytest_asyncio.fixture
@@ -182,6 +184,79 @@ async def test_platform_billing_profile_one_to_one(db):
         )
     ).scalar_one()
     assert row.status == PlatformSubscriptionStatus.TRIALING
+
+    db.add(
+        PlatformBillingProfile(
+            company_id=company.id,
+            plan=PlatformPlan.FREE,
+            status=PlatformSubscriptionStatus.NO_SUBSCRIPTION,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await db.flush()
+    await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_platform_billing_profile_default_is_free_without_subscription(db):
+    company = Company(name="Free Co", slug=f"free-{os.urandom(4).hex()}")
+    db.add(company)
+    await db.flush()
+
+    profile = PlatformBillingProfile(company_id=company.id)
+    db.add(profile)
+    await db.flush()
+
+    assert profile.plan == PlatformPlan.FREE
+    assert profile.status == PlatformSubscriptionStatus.NO_SUBSCRIPTION
+    assert profile.stripe_customer_id is None
+    assert profile.stripe_subscription_id is None
+    assert profile.stripe_price_id is None
+    assert profile.current_period_start is None
+    assert profile.current_period_end is None
+    assert profile.trial_ends_at is None
+    assert profile.cancel_at_period_end is False
+    assert profile.canceled_at is None
+
+
+@pytest.mark.asyncio
+async def test_authoritative_profile_lookup_is_company_scoped(db):
+    a = Company(name="Authority A", slug=f"authority-a-{os.urandom(4).hex()}")
+    b = Company(name="Authority B", slug=f"authority-b-{os.urandom(4).hex()}")
+    db.add_all([a, b])
+    await db.flush()
+    profile_a = PlatformBillingProfile(company_id=a.id)
+    profile_b = PlatformBillingProfile(company_id=b.id, plan=PlatformPlan.PRO)
+    db.add_all([profile_a, profile_b])
+    await db.flush()
+
+    resolved = await PlatformBillingProfileRepository(
+        db, company_id=a.id
+    ).get_authoritative()
+
+    assert resolved.id == profile_a.id
+    assert resolved.id != profile_b.id
+
+
+@pytest.mark.asyncio
+async def test_authoritative_profile_lookup_never_falls_back_to_legacy_company_state(db):
+    from app.models.enums import SubscriptionPlan, SubscriptionStatus
+
+    company = Company(
+        name="Legacy Only",
+        slug=f"legacy-only-{os.urandom(4).hex()}",
+        subscription_plan=SubscriptionPlan.PRO,
+        subscription_status=SubscriptionStatus.ACTIVE,
+    )
+    db.add(company)
+    await db.flush()
+
+    with pytest.raises(BillingProfileInvariantError) as exc_info:
+        await PlatformBillingProfileRepository(
+            db, company_id=company.id
+        ).get_authoritative()
+
+    assert exc_info.value.code == "billing_profile_invariant"
 
 
 @pytest.mark.asyncio

@@ -34,6 +34,8 @@ class Company(Base, TimestampMixin, SoftDeleteMixin, ActiveMixin):
     timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
 
+    # Legacy migration-only subscription state. PlatformBillingProfile is the
+    # sole runtime authority; do not add readers, writers, or fallback logic.
     subscription_plan: Mapped[SubscriptionPlan] = mapped_column(
         Enum(SubscriptionPlan, native_enum=False, length=20),
         default=SubscriptionPlan.FREE,

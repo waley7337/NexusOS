@@ -23,7 +23,8 @@ pytestmark = pytest.mark.skipif(
 
 from app.core.exceptions import UnauthorizedError, ValidationError  # noqa: E402
 from app.dependencies.auth import CurrentUser  # noqa: E402
-from app.models import AuthToken, Company, Permission, Session, User  # noqa: E402
+from app.models import AuthToken, Company, Permission, PlatformBillingProfile, Session, User  # noqa: E402
+from app.models.enums import PlatformPlan, PlatformSubscriptionStatus  # noqa: E402
 from app.services import auth_service  # noqa: E402
 from app.schemas.auth import (  # noqa: E402
     ForgotPasswordRequest,
@@ -144,8 +145,52 @@ async def test_register_creates_company_owner_and_session(db):
     assert company.name == "Test Co"
     assert company.slug  # generated
 
+    profiles = (
+        await db.execute(
+            select(PlatformBillingProfile).where(
+                PlatformBillingProfile.company_id == company.id
+            )
+        )
+    ).scalars().all()
+    assert len(profiles) == 1
+    profile = profiles[0]
+    assert profile.plan == PlatformPlan.FREE
+    assert profile.status == PlatformSubscriptionStatus.NO_SUBSCRIPTION
+    assert profile.stripe_customer_id is None
+    assert profile.stripe_subscription_id is None
+    assert profile.stripe_price_id is None
+    assert profile.current_period_start is None
+    assert profile.current_period_end is None
+    assert profile.trial_ends_at is None
+    assert profile.cancel_at_period_end is False
+    assert profile.canceled_at is None
+
     sessions = (await db.execute(select(Session).where(Session.user_id == result.user.id))).scalars().all()
     assert len(sessions) == 1
+
+
+@pytest.mark.asyncio
+async def test_register_profile_failure_rolls_back_company(db, monkeypatch):
+    class ProvisioningFailure:
+        def __init__(self, **kwargs):
+            raise RuntimeError("profile provisioning failed")
+
+    monkeypatch.setattr(auth_service, "PlatformBillingProfile", ProvisioningFailure)
+
+    with pytest.raises(RuntimeError, match="profile provisioning failed"):
+        await _register(
+            db,
+            email="profile-failure@example.com",
+            company="Profile Failure Co",
+        )
+    await db.rollback()
+
+    company = (
+        await db.execute(
+            select(Company).where(Company.slug == "profile-failure-co")
+        )
+    ).scalar_one_or_none()
+    assert company is None
 
 
 @pytest.mark.asyncio

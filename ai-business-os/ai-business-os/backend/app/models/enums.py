@@ -170,6 +170,7 @@ class PlatformPlan(str, enum.Enum):
 
 
 class PlatformSubscriptionStatus(str, enum.Enum):
+    NO_SUBSCRIPTION = "no_subscription"
     TRIALING = "trialing"
     ACTIVE = "active"
     PAST_DUE = "past_due"

@@ -168,7 +168,7 @@ class PlatformBillingProfile(Base, TimestampMixin):
     )
     status: Mapped[PlatformSubscriptionStatus] = mapped_column(
         Enum(PlatformSubscriptionStatus, native_enum=False, length=20),
-        default=PlatformSubscriptionStatus.TRIALING,
+        default=PlatformSubscriptionStatus.NO_SUBSCRIPTION,
         nullable=False,
     )
     current_period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

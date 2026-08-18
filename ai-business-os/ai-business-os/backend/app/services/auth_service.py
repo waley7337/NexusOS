@@ -42,8 +42,8 @@ from app.core.security import (
 )
 from app.db.seed import DEFAULT_ROLES, expand
 from app.dependencies.auth import CurrentUser
-from app.models import AuthToken, Company, Permission, Role, Session, User
-from app.models.enums import AuthTokenPurpose, UserStatus
+from app.models import AuthToken, Company, Permission, PlatformBillingProfile, Role, Session, User
+from app.models.enums import AuthTokenPurpose, PlatformPlan, PlatformSubscriptionStatus, UserStatus
 from app.services import audit_service
 from app.schemas.auth import (
     AuthSessionResponse,
@@ -209,6 +209,15 @@ async def register(
     slug = await _unique_slug(db, data.company_name)
     company = Company(name=data.company_name, slug=slug, email=str(data.email))
     db.add(company)
+    await db.flush()
+
+    db.add(
+        PlatformBillingProfile(
+            company_id=company.id,
+            plan=PlatformPlan.FREE,
+            status=PlatformSubscriptionStatus.NO_SUBSCRIPTION,
+        )
+    )
     await db.flush()
 
     roles = await _bootstrap_company_roles(db, company.id)
