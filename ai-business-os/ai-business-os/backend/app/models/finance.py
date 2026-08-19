@@ -119,6 +119,14 @@ class Payment(Base, TenantBusinessMixin):
     __table_args__ = (
         Index("ix_payments_company_status", "company_id", "status"),
         Index("ix_payments_company_payment_date_id", "company_id", "payment_date", "id"),
+        Index(
+            "ix_payments_company_invoice_payment_date_id_active",
+            "company_id",
+            "invoice_id",
+            "payment_date",
+            "id",
+            postgresql_where=text("deleted_at IS NULL AND is_active = true"),
+        ),
         ForeignKeyConstraint(
             ["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"],
             name="fk_payments_invoice_id_tenant_scoped", ondelete="RESTRICT",

@@ -66,6 +66,9 @@ class FakePaymentRepository:
     async def flush(self) -> None:
         return None
 
+    async def refresh(self, payment: Payment) -> None:
+        return None
+
 
 def service(row: Invoice, *, timezone: str = "UTC") -> tuple[PaymentService, FakePaymentRepository]:
     repo = FakePaymentRepository(row, timezone=timezone)
@@ -119,6 +122,46 @@ async def test_positive_matching_currency_and_remaining_balance_are_authoritativ
     exact = await record(authority, row, "30")
     assert exact.amount == Decimal("30.00")
     assert row.status == InvoiceStatus.PAID
+
+
+@pytest.mark.asyncio
+async def test_future_payment_date_uses_company_local_calendar_and_reason():
+    row = invoice()
+    authority, _ = service(row, timezone="Pacific/Kiritimati")
+    with pytest.raises(ValidationError) as caught:
+        await authority.record_manual_payment(
+            invoice_id=row.id,
+            amount=Decimal("1"),
+            currency="USD",
+            payment_method=PaymentMethod.CASH,
+            payment_date=date(2026, 8, 20),
+        )
+    assert caught.value.details == {"reason": "payment_date_in_future"}
+
+
+@pytest.mark.asyncio
+async def test_payment_conflicts_publish_stable_reasons():
+    draft = invoice(status=InvoiceStatus.DRAFT)
+    authority, _ = service(draft)
+    with pytest.raises(ConflictError) as ineligible:
+        await record(authority, draft)
+    assert ineligible.value.details == {"reason": "invoice_not_payment_eligible"}
+
+    row = invoice()
+    authority, _ = service(row)
+    with pytest.raises(ValidationError) as currency:
+        await authority.record_manual_payment(
+            invoice_id=row.id,
+            amount=Decimal("1"),
+            currency="EUR",
+            payment_method=PaymentMethod.CASH,
+            payment_date=date(2026, 8, 18),
+        )
+    assert currency.value.details == {"reason": "payment_currency_mismatch"}
+
+    with pytest.raises(ConflictError) as overpayment:
+        await record(authority, row, "101")
+    assert overpayment.value.details == {"reason": "payment_exceeds_invoice_balance"}
 
 
 @pytest.mark.asyncio

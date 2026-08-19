@@ -26,6 +26,7 @@ from app.services.payment_service import PaymentService
 ROOT = Path(__file__).resolve().parents[1]
 PARENT = "f3a4b5c6d7e8"
 REVISION = "a4b5c6d7e8f9"
+HTTP_REVISION = "b5c6d7e8f9a0"
 
 
 def run(command: list[str], *, env: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -114,6 +115,37 @@ def test_upgrade_constraints_actor_fk_index_and_safe_reupgrade(payment_database)
     assert sql(payment_database, "SELECT count(*) FROM payments").stdout.strip() == "1"
     alembic(payment_database, "upgrade", REVISION)
     assert sql(payment_database, "SELECT count(*) FROM payments").stdout.strip() == "1"
+
+
+def test_payment_http_index_upgrade_downgrade_and_reupgrade(payment_database):
+    alembic(payment_database, "upgrade", REVISION)
+    ids = seed_invoice(payment_database)
+    before = sql(payment_database, "SELECT count(*) FROM payments").stdout.strip()
+
+    alembic(payment_database, "upgrade", HTTP_REVISION)
+    definition = sql(
+        payment_database,
+        "SELECT indexdef FROM pg_indexes WHERE indexname = "
+        "'ix_payments_company_invoice_payment_date_id_active'",
+    ).stdout.strip()
+    assert "(company_id, invoice_id, payment_date, id)" in definition
+    assert "WHERE ((deleted_at IS NULL) AND (is_active = true))" in definition
+    assert sql(payment_database, "SELECT count(*) FROM payments").stdout.strip() == before
+
+    alembic(payment_database, "downgrade", REVISION)
+    assert sql(
+        payment_database,
+        "SELECT count(*) FROM pg_indexes WHERE indexname = "
+        "'ix_payments_company_invoice_payment_date_id_active'",
+    ).stdout.strip() == "0"
+    assert sql(payment_database, f"SELECT count(*) FROM invoices WHERE id = '{ids['invoice']}'").stdout.strip() == "1"
+
+    alembic(payment_database, "upgrade", HTTP_REVISION)
+    assert sql(
+        payment_database,
+        "SELECT count(*) FROM pg_indexes WHERE indexname = "
+        "'ix_payments_company_invoice_payment_date_id_active'",
+    ).stdout.strip() == "1"
 
 
 def test_invalid_existing_financial_data_fails_closed_without_deletion(payment_database):

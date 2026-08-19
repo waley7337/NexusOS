@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.finance import invoices
+from app.api.v1.finance import invoices, payments
 
 router = APIRouter(prefix="/finance", tags=["Finance"])
 router.include_router(invoices.router)
+router.include_router(payments.router)

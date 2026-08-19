@@ -52,11 +52,15 @@ class PaymentService:
     async def record_manual_payment(
         self, *, invoice_id: uuid.UUID, amount: Decimal, currency: str,
         payment_method: PaymentMethod, payment_date: date, notes: str | None = None,
+        idempotency_key: str | None = None,
     ) -> Payment:
         now = self.clock()
         invoice = await self.repo.lock_invoice(invoice_id)
         if invoice.status not in _PAYMENT_ELIGIBLE:
-            raise ConflictError("Invoice cannot accept a payment in its current status.")
+            raise ConflictError(
+                "Invoice cannot accept a payment in its current status.",
+                details={"reason": "invoice_not_payment_eligible"},
+            )
         try:
             normalized_amount = quantize_money(Decimal(str(amount)))
         except (ValueError, ArithmeticError) as exc:
@@ -68,12 +72,24 @@ class PaymentService:
         except ValueError as exc:
             raise ValidationError("Payment currency is invalid.") from exc
         if normalized_currency != invoice.currency:
-            raise ValidationError("Payment currency must match invoice currency.")
+            raise ValidationError(
+                "Payment currency must match invoice currency.",
+                details={"reason": "payment_currency_mismatch"},
+            )
+        operation_date = await self._operation_date(now)
+        if payment_date > operation_date:
+            raise ValidationError(
+                "Payment date cannot be in the future.",
+                details={"reason": "payment_date_in_future"},
+            )
         payments = await self.repo.active_payments(invoice.id)
         paid = self.amount_paid(payments)
         remaining = quantize_money(invoice.total - paid)
         if normalized_amount > remaining:
-            raise ConflictError("Payment amount exceeds the invoice balance.")
+            raise ConflictError(
+                "Payment amount exceeds the invoice balance.",
+                details={"reason": "payment_exceeds_invoice_balance"},
+            )
         payment = Payment(
             invoice_id=invoice.id,
             payment_method=payment_method,
@@ -86,9 +102,10 @@ class PaymentService:
             confirmed_at=now,
             confirmed_by=self.repo.user_id,
             notes=notes,
+            idempotency_key=idempotency_key,
         )
         await self.repo.add(payment)
-        self._derive_invoice_status(invoice, paid + normalized_amount, await self._operation_date(now))
+        self._derive_invoice_status(invoice, paid + normalized_amount, operation_date)
         await self.repo.flush()
         return payment
 
@@ -108,14 +125,23 @@ class PaymentService:
         invoice = await self.repo.lock_invoice(invoice_id)
         payment = await self.repo.lock_payment(payment_id, invoice.id)
         if payment.status != PaymentStatus.COMPLETED:
-            raise ConflictError("Only completed payments can be refunded.")
+            raise ConflictError(
+                "Only completed payments can be refunded.",
+                details={"reason": "payment_not_manually_refundable"},
+            )
         if payment.source != PaymentSource.MANUAL:
-            raise ConflictError("Only manual payments can be manually refunded.")
+            raise ConflictError(
+                "Only manual payments can be manually refunded.",
+                details={"reason": "payment_not_manually_refundable"},
+            )
         payments = await self.repo.active_payments(invoice.id)
         paid_before = self.amount_paid(payments)
         new_refunded = quantize_money(payment.refunded_amount + refund_amount)
         if new_refunded > quantize_money(payment.amount):
-            raise ConflictError("Refund amount exceeds the refundable balance.")
+            raise ConflictError(
+                "Refund amount exceeds the refundable balance.",
+                details={"reason": "refund_exceeds_refundable_balance"},
+            )
         now = self.clock()
         payment.refunded_amount = new_refunded
         payment.refunded_at = now
@@ -126,4 +152,5 @@ class PaymentService:
             payment.status = PaymentStatus.REFUNDED
         self._derive_invoice_status(invoice, paid_before - refund_amount, await self._operation_date(now))
         await self.repo.flush()
+        await self.repo.refresh(payment)
         return payment
