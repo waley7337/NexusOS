@@ -12,10 +12,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.models.crm import Customer
-from app.models.enums import InvoiceStatus, PaymentStatus
+from app.models.enums import InvoiceStatus
 from app.models.finance import Invoice, InvoiceItem, Payment
 from app.payments.currency import normalize_currency
-from app.payments.money import invoice_subtotal, invoice_total, line_total, quantize_money
+from app.payments.money import effective_payment_amount, invoice_subtotal, invoice_total, line_total, quantize_money
 from app.repositories.base import DEFAULT_PAGE_SIZE, BaseRepository
 
 _MAX_SEARCH_LEN = 100
@@ -303,32 +303,31 @@ class InvoiceRepository(BaseRepository[Invoice]):
         await self.db.refresh(invoice)
         return invoice
 
-    async def _count_completed_payments(self, invoice_id: uuid.UUID) -> int:
-        stmt = select(func.count()).select_from(Payment).where(
-            Payment.invoice_id == invoice_id,
-            Payment.company_id == self.company_id,
-            Payment.status == PaymentStatus.COMPLETED,
-            Payment.deleted_at.is_(None),
-        )
-        return int((await self.db.execute(stmt)).scalar_one())
-
     async def void_invoice(self, invoice_id: uuid.UUID) -> Invoice:
-        invoice = await self.get_with_details(invoice_id)
-        if invoice.status in _IMMUTABLE_STATUSES:
+        stmt = self._base_query().where(Invoice.id == invoice_id).with_for_update()
+        invoice = (await self.db.execute(stmt)).scalar_one_or_none()
+        if invoice is None:
+            raise NotFoundError("Invoice not found")
+        if invoice.status in _IMMUTABLE_STATUSES or invoice.status == InvoiceStatus.PARTIALLY_PAID:
             raise ConflictError("Invoice cannot be voided in its current status.")
-        if invoice.status in {InvoiceStatus.SENT, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE}:
-            completed = await self._count_completed_payments(invoice_id)
-            if completed > 0:
-                raise ConflictError(
-                    "Cannot void an invoice that has completed payments.",
-                )
+        payments = list((await self.db.scalars(select(Payment).where(
+            Payment.invoice_id == invoice.id,
+            Payment.company_id == self.company_id,
+            Payment.deleted_at.is_(None),
+            Payment.is_active.is_(True),
+        ))).all())
+        paid = quantize_money(sum((effective_payment_amount(
+            status=row.status, amount=row.amount, refunded_amount=row.refunded_amount
+        ) for row in payments), start=Decimal("0")))
+        if paid > 0:
+            raise ConflictError("Cannot void an invoice that has effective payments.")
         invoice.status = InvoiceStatus.VOID
         invoice.voided_at = datetime.now(timezone.utc)
         if self.user_id is not None:
             invoice.updated_by = self.user_id
         await self.db.flush()
         await self.db.refresh(invoice)
-        return invoice
+        return await self.get_with_details(invoice.id)
 
     async def archive_draft(self, invoice_id: uuid.UUID) -> Invoice:
         invoice = await self.get(invoice_id)
@@ -340,7 +339,11 @@ class InvoiceRepository(BaseRepository[Invoice]):
     def payment_summary(invoice: Invoice) -> tuple[Decimal, Decimal]:
         paid = quantize_money(
             sum(
-                (payment.amount for payment in invoice.payments if payment.status == PaymentStatus.COMPLETED),
+                (effective_payment_amount(
+                    status=payment.status,
+                    amount=payment.amount,
+                    refunded_amount=payment.refunded_amount,
+                ) for payment in invoice.payments if payment.deleted_at is None and payment.is_active),
                 start=Decimal("0"),
             )
         )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-must-be-32-chars-long!!")
@@ -169,6 +169,7 @@ def _insert_completed_payment(invoice_id: str, company_id: str) -> None:
                         status=PaymentStatus.COMPLETED,
                         currency="USD",
                         source=PaymentSource.MANUAL,
+                        confirmed_at=datetime.now(UTC),
                     )
                 )
                 await db.commit()

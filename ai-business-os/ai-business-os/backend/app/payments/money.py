@@ -3,12 +3,16 @@ from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
 
+from app.models.enums import PaymentStatus
+
 MONEY_PRECISION = Decimal("0.01")
 QUANTITY_PRECISION = Decimal("0.01")
 
 
 def quantize_money(value: Decimal) -> Decimal:
     """Round to 2 decimal places using ROUND_HALF_UP."""
+    if not value.is_finite():
+        raise ValueError("money value must be finite")
     return value.quantize(MONEY_PRECISION, rounding=ROUND_HALF_UP)
 
 
@@ -37,6 +41,23 @@ def invoice_total(subtotal: Decimal, tax: Decimal) -> Decimal:
     if tax < 0:
         raise ValueError("tax must be >= 0")
     return quantize_money(subtotal + tax)
+
+
+def effective_payment_amount(
+    *, status: PaymentStatus, amount: Decimal, refunded_amount: Decimal
+) -> Decimal:
+    """Authoritative contribution of one payment to an invoice balance."""
+    amount = quantize_money(amount)
+    refunded_amount = quantize_money(refunded_amount)
+    if amount <= 0 or refunded_amount < 0 or refunded_amount > amount:
+        raise ValueError("invalid payment amount or refunded amount")
+    if status == PaymentStatus.REFUNDED:
+        if refunded_amount != amount:
+            raise ValueError("refunded payments must be fully refunded")
+        return Decimal("0.00")
+    if status == PaymentStatus.COMPLETED:
+        return quantize_money(amount - refunded_amount)
+    return Decimal("0.00")
 
 
 def to_minor_units(amount: Decimal, currency: str) -> int:

@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Date, DateTime, Enum, ForeignKey, ForeignKeyConstraint, Index, Numeric, String,
+    CheckConstraint, Date, DateTime, Enum, ForeignKey, ForeignKeyConstraint, Index, Numeric, String,
     Text, UniqueConstraint, text,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -118,6 +118,7 @@ class Payment(Base, TenantBusinessMixin):
     __tablename__ = "payments"
     __table_args__ = (
         Index("ix_payments_company_status", "company_id", "status"),
+        Index("ix_payments_company_payment_date_id", "company_id", "payment_date", "id"),
         ForeignKeyConstraint(
             ["invoice_id", "company_id"], ["invoices.id", "invoices.company_id"],
             name="fk_payments_invoice_id_tenant_scoped", ondelete="RESTRICT",
@@ -134,6 +135,52 @@ class Payment(Base, TenantBusinessMixin):
             "provider_payment_id",
             unique=True,
             postgresql_where=text("provider_payment_id IS NOT NULL"),
+        ),
+        ForeignKeyConstraint(
+            ["created_by", "company_id"], ["users.id", "users.company_id"],
+            name="fk_payments_created_by_tenant_scoped", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["updated_by", "company_id"], ["users.id", "users.company_id"],
+            name="fk_payments_updated_by_tenant_scoped", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["confirmed_by", "company_id"], ["users.id", "users.company_id"],
+            name="fk_payments_confirmed_by_tenant_scoped", ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["refunded_by", "company_id"], ["users.id", "users.company_id"],
+            name="fk_payments_refunded_by_tenant_scoped", ondelete="RESTRICT",
+        ),
+        CheckConstraint("amount <> 'NaN'::numeric AND amount > 0", name="payment_amount_positive"),
+        CheckConstraint(
+            "refunded_amount <> 'NaN'::numeric AND refunded_amount >= 0 AND refunded_amount <= amount",
+            name="payment_refund_bounds",
+        ),
+        CheckConstraint("currency ~ '^[A-Z]{3}$'", name="payment_currency_format"),
+        CheckConstraint(
+            "(status = 'REFUNDED' AND refunded_amount = amount) OR status <> 'REFUNDED'",
+            name="payment_refunded_is_full",
+        ),
+        CheckConstraint(
+            "(status IN ('COMPLETED', 'REFUNDED') AND confirmed_at IS NOT NULL) OR "
+            "(status IN ('PENDING', 'FAILED') AND confirmed_at IS NULL)",
+            name="payment_confirmation_state",
+        ),
+        CheckConstraint(
+            "(refunded_amount = 0 AND refunded_at IS NULL AND refunded_by IS NULL AND refund_reason IS NULL AND provider_refund_id IS NULL) OR "
+            "(refunded_amount > 0 AND refunded_at IS NOT NULL AND refund_reason IS NOT NULL AND btrim(refund_reason) <> '')",
+            name="payment_refund_metadata",
+        ),
+        CheckConstraint(
+            "(source = 'MANUAL' AND provider IS NULL AND provider_account_id IS NULL AND provider_payment_id IS NULL "
+            "AND provider_checkout_session_id IS NULL AND provider_refund_id IS NULL) OR "
+            "(source = 'PROVIDER' AND provider IS NOT NULL AND provider_account_id IS NOT NULL)",
+            name="payment_source_provider_state",
+        ),
+        CheckConstraint(
+            "(failure_code IS NULL AND failure_message IS NULL) OR status = 'FAILED'",
+            name="payment_failure_state",
         ),
     )
 
@@ -176,6 +223,14 @@ class Payment(Base, TenantBusinessMixin):
     )
     provider_refund_id: Mapped[str | None] = mapped_column(String(255))
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True,
+    )
+    refunded_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True,
+    )
+    refunded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    refund_reason: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
 
     invoice: Mapped["Invoice"] = relationship(
