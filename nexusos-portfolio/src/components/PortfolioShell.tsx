@@ -12,6 +12,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Atmosphere } from "@/components/atmosphere";
 import { useUiStore } from "@/stores/ui";
+import { NeuralBackground } from "~/animations/NeuralBackground";
 import { PortfolioNav, MobileNav } from "~/components/PortfolioNav";
 import { useActiveSection } from "~/components/useActiveSection";
 import { SECTIONS } from "~/sections/registry";
@@ -68,9 +69,12 @@ export function PortfolioShell({ children, onReplayIntro }: { children: ReactNod
           <div className="chassis-rail hidden md:block" aria-hidden="true" />
           <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
             <MobileNav active={active} onNavigate={goTo} />
-            <main ref={mainRef} id="main" className="portfolio-main flex-1 overflow-y-auto" tabIndex={-1}>
-              {children}
-            </main>
+            <div className="relative min-h-0 flex-1">
+              <NeuralBackground />
+              <main ref={mainRef} id="main" className="portfolio-main relative h-full overflow-y-auto" tabIndex={-1}>
+                {children}
+              </main>
+            </div>
           </div>
         </div>
       </div>
