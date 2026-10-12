@@ -1,0 +1,15 @@
+/* Portfolio-only additions. Everything else — tokens, surfaces, the space
+   field, the shell frame — comes from NexusOS globals.css. */
+
+.portfolio-main {
+  scroll-behavior: smooth;
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-main { scroll-behavior: auto; }
+}
+
+/* The shell sits on the dark ladder; the body behind the frame matches it
+   so overscroll never flashes a lighter colour. */
+body { background-color: hsl(var(--surface-0)); }
