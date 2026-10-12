@@ -52,11 +52,16 @@ tests/                           registry/privacy guard, star-entry wiring, app 
 3. Add an entry to the right folder in `src/data/assets.ts`. A new folder is a new object in `folders`.
 4. `npm test`. It fails if a published file is missing, or if a **withheld** file has been placed in `public/`.
 
-Planned slots that don't have material yet: `public/videos/nexusos/` (demo video), database/ER diagrams, test reports, changelogs, and the rest of the screenshot set listed in the screenshot manifest.
+Planned slots that don't have material yet: `public/videos/nexusos/` (demo video), database/ER diagrams, test reports and changelogs.
 
-### Withheld documents
+### Screenshots
 
-The degree certificate (Université de Strasbourg, 2020) is listed as **available on request** and is *not* in this repository. It shows the date and place of birth, the diploma number and signatures. To publish it, add `public/documents/education/licence-etudes-anglophones-strasbourg-2020.pdf` (plus a `.preview.webp`) and set `status: "published"` on `degree` in `src/data/assets.ts`.
+`public/images/screenshots/current-design/` holds the screenshots the site shows, captured from the running NexusOS frontend at 1600×1000 (2×) against a local API stub. `assets/screenshots/legacy/` keeps Waley's earlier-design originals, unmodified, as reference only. That folder is outside `public/`, so it is never served or shown.
+
+### Personal documents
+
+- **Degree certificate** is published as the original, byte-for-byte unchanged. It shows date and place of birth, the diploma number and signatures, so it has no preview image and is never embedded inline. Every view/download control renders the privacy notice from `DEGREE_PRIVACY_NOTICE` beside it, and `npm test` checks the served file's SHA-256 against the source.
+- **Software Developer Portfolio 2026** and **NexusOS Project Summary** are published only as redacted copies (`*-redacted.pdf`). Date of birth and age are removed from the page and the text layer, and links to the private repository are replaced with the public GitHub profile. The originals are not in this repository. `npm test` fails if the removed values reappear.
 
 ## Deploying to Vercel
 
@@ -65,7 +70,7 @@ The degree certificate (Université de Strasbourg, 2020) is listed as **availabl
 3. Under *Root Directory*, keep **"Include files outside of the Root Directory in the Build Step"** enabled (the default). The build reads NexusOS source from `../ai-business-os/ai-business-os/frontend`.
 4. No environment variables, backend, database or credentials are needed. The site is fully static.
 
-`vercel.json` adds `X-Robots-Tag: noindex` to `/documents/*` so the CV PDF is not indexed by search engines (it is still downloadable from the site).
+`vercel.json` adds `X-Robots-Tag: noindex` to `/documents/*` so the CV, degree and other PDFs are not indexed by search engines (it is still downloadable from the site).
 
 ## Limits
 

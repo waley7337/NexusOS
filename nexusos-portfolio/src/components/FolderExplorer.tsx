@@ -121,7 +121,7 @@ function AssetTile({ asset, onOpen }: { asset: Asset; onOpen: () => void }) {
     <Card interactive className="overflow-hidden">
       <button type="button" onClick={onOpen} className="focus-ring block w-full text-left" data-asset={asset.id}>
         <div className="aspect-[16/10] overflow-hidden border-b border-line-soft bg-surface-1">
-          {asset.preview && asset.status === "published" ? (
+          {asset.preview && asset.status === "published" && !asset.notice ? (
             <img
               src={asset.preview}
               alt=""
@@ -140,9 +140,13 @@ function AssetTile({ asset, onOpen }: { asset: Asset; onOpen: () => void }) {
             <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           </div>
           <p className="line-clamp-2 text-small text-muted-foreground">{asset.description}</p>
-          <Badge variant={asset.status === "withheld" ? "warning" : "default"}>
-            {asset.status === "withheld" ? "On request" : asset.meta}
-          </Badge>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge variant={asset.status === "withheld" ? "warning" : "default"}>
+              {asset.status === "withheld" ? "On request" : asset.meta}
+            </Badge>
+            {asset.label && <Badge variant={asset.notice ? "warning" : "accent"}>{asset.label}</Badge>}
+          </div>
+          {asset.notice && <p className="text-small text-muted-foreground">{asset.notice}</p>}
         </div>
       </button>
     </Card>

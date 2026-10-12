@@ -1,11 +1,10 @@
-import { GraduationCap, Lock } from "lucide-react";
+import { FileText, GraduationCap, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Row, RowGroup } from "@/components/ui/structure";
 import { degree } from "~/data/assets";
 import { education } from "~/data/profile";
 import { AssetActions } from "~/components/AssetPreviewDialog";
-import { DocumentPreview } from "~/components/DocumentPreview";
 import { Section } from "~/sections/Section";
 
 export function EducationSection() {
@@ -40,10 +39,17 @@ export function EducationSection() {
         </Card>
 
         {published ? (
-          <div className="space-y-3">
-            <DocumentPreview asset={degree} />
+          <Card className="flex h-fit flex-col gap-3 p-6" data-testid="degree-download">
+            <FileText className="h-[var(--icon-md)] w-[var(--icon-md)] text-muted-foreground" aria-hidden="true" />
+            <div className="space-y-1.5">
+              <p className="text-h4">Degree certificate</p>
+              <div className="flex flex-wrap gap-2">
+                <Badge>{degree.meta}</Badge>
+                {degree.label && <Badge variant="warning">{degree.label}</Badge>}
+              </div>
+            </div>
             <AssetActions asset={degree} />
-          </div>
+          </Card>
         ) : (
           <Card className="flex h-fit flex-col gap-3 border-dashed p-6" data-testid="degree-on-request">
             <Lock className="h-[var(--icon-md)] w-[var(--icon-md)] text-muted-foreground" aria-hidden="true" />

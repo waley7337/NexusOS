@@ -15,7 +15,7 @@ export const profile = {
   availability: "Full-time · remote preferred · willing to travel",
   email: "waleyelnagdi7@gmail.com",
   github: "https://github.com/waley7337",
-  repo: "https://github.com/waley7337/NexusOS",
+  phone: "+43 676 5119613",
 };
 
 export const approach = [

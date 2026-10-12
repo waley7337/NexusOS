@@ -1,4 +1,4 @@
-import { Github, Mail, MapPin } from "lucide-react";
+import { Github, Mail, MapPin, Phone } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Row, RowGroup } from "@/components/ui/structure";
@@ -14,6 +14,11 @@ export function ContactSection() {
             <Row marker={<Mail className="h-4 w-4" />} register="Email">
               <a className="focus-ring rounded-control text-sm hover:text-primary" href={`mailto:${profile.email}`}>
                 {profile.email}
+              </a>
+            </Row>
+            <Row marker={<Phone className="h-4 w-4" />} register="Phone">
+              <a className="focus-ring rounded-control text-sm hover:text-primary" href={`tel:${profile.phone.replace(/\s/g, "")}`}>
+                {profile.phone}
               </a>
             </Row>
             <Row marker={<Github className="h-4 w-4" />} register="GitHub">

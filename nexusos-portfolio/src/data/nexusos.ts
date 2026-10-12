@@ -39,12 +39,15 @@ export const nexusos = {
     },
   ],
   status: {
+    headline:
+      "NexusOS is an actively developed software platform with core modules implemented and further development ongoing.",
     implemented:
-      "Multi-tenant identity model, full authentication lifecycle, RBAC with database re-validation, the security middleware layer, and the frontend platform including the design system.",
-    prepared:
-      "38 domain model classes migrated for CRM, projects, finance, HR and inventory; a tenant-scoped repository implemented and tested; the dashboard interface complete against fixture data.",
-    notImplemented:
-      "Most product modules behind the sidebar, AI features (tables modelled, no inference code), and PostgreSQL row-level security.",
+      "Platform: multi-tenant identity model, full authentication lifecycle, RBAC with database re-validation, the security middleware layer, and the frontend shell with its design system. CRM: tenant-safe APIs and workspaces for customers, contacts, leads and deals, plus customer timeline notes. HR: an Employees API and workspace (list and detail).",
+    partial:
+      "HR covers employee records only so far. The dashboard shows live API and database probes, but its operations panel has no metrics source yet, and its module field still marks only CRM as operational.",
+    future:
+      "Projects, tasks, finance, inventory, documents, reports, settings and the AI assistant (routed today as honest placeholders), plus PostgreSQL row-level security. Tenant isolation is currently application-level and relational.",
+    asOf: "As of main @ 879e442 · HR Part 07.4",
   },
   stack: [
     { label: "Frontend", value: "React 19, TypeScript, Vite, React Router, TanStack Query, Zustand, Tailwind CSS, Radix UI" },
@@ -53,7 +56,7 @@ export const nexusos = {
     { label: "Infra & tests", value: "Docker Compose, GitHub Actions CI, pytest, Vitest + Testing Library, ruff, mypy" },
   ],
   interfaceNote:
-    "The dashboard is interface-complete but served by fixture data, pending an aggregate endpoint. The authentication screens run against the live API.",
+    "Current design, captured from the running NexusOS frontend against a local API stub with a demo identity — no production data. The full set of fifteen screens is in the library under System & interface.",
   architecture: {
     system:
       "Routers stay thin and delegate to services. Identity is resolved by dependencies rather than by each endpoint, so a new route cannot accidentally skip it. Every response returns in the same envelope, and one database session per request is committed on success and rolled back on any exception.",

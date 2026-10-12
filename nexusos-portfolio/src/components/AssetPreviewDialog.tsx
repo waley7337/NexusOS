@@ -1,4 +1,4 @@
-import { Download, ExternalLink, Lock, Mail } from "lucide-react";
+import { Download, ExternalLink, Lock, Mail, ShieldAlert } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -17,15 +17,21 @@ export function AssetPreviewDialog({ asset, onClose }: { asset: Asset | null; on
             <div className="flex flex-wrap items-center gap-2">
               <DialogPrimitive.Title className="text-h3">{asset.title}</DialogPrimitive.Title>
               <Badge>{asset.meta}</Badge>
+              {asset.label && <Badge variant={asset.notice ? "warning" : "accent"}>{asset.label}</Badge>}
             </div>
             <DialogPrimitive.Description className="text-sm text-muted-foreground">
               {asset.description}
             </DialogPrimitive.Description>
+            {asset.status === "published" && asset.note && (
+              <p className="text-small text-muted-foreground">{asset.note}</p>
+            )}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto rounded-plane border border-line-soft bg-surface-1">
-            <AssetBody asset={asset} />
-          </div>
+          {!asset.notice && (
+            <div className="min-h-0 flex-1 overflow-auto rounded-plane border border-line-soft bg-surface-1">
+              <AssetBody asset={asset} />
+            </div>
+          )}
 
           <AssetActions asset={asset} />
         </DialogContent>
@@ -74,16 +80,36 @@ export function AssetActions({ asset, className }: { asset: Asset; className?: s
     );
   }
   const filename = asset.src.split("/").pop();
+  const noticeId = asset.notice ? `${asset.id}-notice` : undefined;
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
-      <a className={buttonVariants({ variant: "primary" })} href={asset.src} target="_blank" rel="noreferrer">
-        <ExternalLink aria-hidden="true" />
-        {asset.kind === "image" ? "Open full resolution" : "Open PDF"}
-      </a>
-      <a className={buttonVariants({ variant: "secondary" })} href={asset.src} download={filename}>
-        <Download aria-hidden="true" />
-        Download
-      </a>
+    <div className={cn("flex flex-col gap-3", className)}>
+      {asset.notice && (
+        <p
+          id={noticeId}
+          role="note"
+          data-testid="privacy-notice"
+          className="flex gap-2 rounded-control border border-warning/40 bg-warning/10 p-3 text-small text-foreground"
+        >
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+          <span>{asset.notice}</span>
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <a
+          className={buttonVariants({ variant: "primary" })}
+          href={asset.src}
+          target="_blank"
+          rel="noreferrer"
+          aria-describedby={noticeId}
+        >
+          <ExternalLink aria-hidden="true" />
+          {asset.kind === "image" ? "Open full resolution" : "View PDF"}
+        </a>
+        <a className={buttonVariants({ variant: "secondary" })} href={asset.src} download={filename} aria-describedby={noticeId}>
+          <Download aria-hidden="true" />
+          Download
+        </a>
+      </div>
     </div>
   );
 }

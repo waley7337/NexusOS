@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Github } from "lucide-react";
+import { FileText, Github } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Row, RowGroup } from "@/components/ui/structure";
-import { interfaceShots, type Asset } from "~/data/assets";
+import { caseStudy, interfaceShots, type Asset } from "~/data/assets";
 import { nexusos } from "~/data/nexusos";
 import { profile } from "~/data/profile";
 import { AssetPreviewDialog } from "~/components/AssetPreviewDialog";
@@ -19,10 +19,16 @@ export function NexusOSSection() {
       title="NexusOS"
       subtitle="Featured project · multi-tenant business platform"
       action={
-        <a className={buttonVariants({ variant: "outline", size: "sm" })} href={profile.repo} target="_blank" rel="noreferrer">
-          <Github aria-hidden="true" />
-          Repository
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a className={buttonVariants({ variant: "outline", size: "sm" })} href={caseStudy.src} target="_blank" rel="noreferrer">
+            <FileText aria-hidden="true" />
+            Case study
+          </a>
+          <a className={buttonVariants({ variant: "outline", size: "sm" })} href={profile.github} target="_blank" rel="noreferrer">
+            <Github aria-hidden="true" />
+            GitHub profile
+          </a>
+        </div>
       }
     >
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -40,17 +46,21 @@ export function NexusOSSection() {
         </div>
         <Card className="p-5">
           <p className="eyebrow mb-1">Status — stated precisely</p>
-          <RowGroup>
+          <p className="text-small text-foreground" data-testid="project-status">
+            {nexusos.status.headline}
+          </p>
+          <RowGroup className="mt-2">
             <Row register={<Badge variant="success">Implemented</Badge>}>
               <p className="text-small text-muted-foreground">{nexusos.status.implemented}</p>
             </Row>
-            <Row register={<Badge variant="warning">Prepared</Badge>}>
-              <p className="text-small text-muted-foreground">{nexusos.status.prepared}</p>
+            <Row register={<Badge variant="warning">Partial</Badge>}>
+              <p className="text-small text-muted-foreground">{nexusos.status.partial}</p>
             </Row>
-            <Row register={<Badge>Not built</Badge>}>
-              <p className="text-small text-muted-foreground">{nexusos.status.notImplemented}</p>
+            <Row register={<Badge>Future</Badge>}>
+              <p className="text-small text-muted-foreground">{nexusos.status.future}</p>
             </Row>
           </RowGroup>
+          <p className="text-machine mt-3">{nexusos.status.asOf}</p>
         </Card>
       </div>
 
