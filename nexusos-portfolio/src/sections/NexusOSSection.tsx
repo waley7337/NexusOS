@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Github } from "lucide-react";
+import { FileText, Github, LogIn } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,17 @@ export function NexusOSSection() {
       subtitle="Featured project · multi-tenant business platform"
       action={
         <div className="flex flex-wrap gap-2">
+          <a
+            className={buttonVariants({ variant: "primary", size: "sm" })}
+            href={profile.liveApp.url}
+            target="_blank"
+            rel="noreferrer"
+            title={profile.liveApp.note}
+            data-testid="live-app-link"
+          >
+            <LogIn aria-hidden="true" />
+            Live app · sign in
+          </a>
           <a className={buttonVariants({ variant: "outline", size: "sm" })} href={caseStudy.src} target="_blank" rel="noreferrer">
             <FileText aria-hidden="true" />
             Case study
@@ -58,6 +69,19 @@ export function NexusOSSection() {
             </Row>
             <Row register={<Badge>Future</Badge>}>
               <p className="text-small text-muted-foreground">{nexusos.status.future}</p>
+            </Row>
+            <Row register={<Badge variant="accent">Live app</Badge>}>
+              <a
+                className="focus-ring rounded-control text-sm font-medium text-primary hover:underline"
+                href={profile.liveApp.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {profile.liveApp.host}/login
+              </a>
+              <p className="text-small text-muted-foreground" data-testid="live-app-note">
+                {profile.liveApp.note}
+              </p>
             </Row>
           </RowGroup>
           <p className="text-machine mt-3">{nexusos.status.asOf}</p>

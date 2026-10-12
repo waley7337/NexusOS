@@ -61,7 +61,11 @@ Planned slots that don't have material yet: `public/videos/nexusos/` (demo video
 ### Personal documents
 
 - **Degree certificate** is published as the original, byte-for-byte unchanged. It shows date and place of birth, the diploma number and signatures, so it has no preview image and is never embedded inline. Every view/download control renders the privacy notice from `DEGREE_PRIVACY_NOTICE` beside it, and `npm test` checks the served file's SHA-256 against the source.
-- **Software Developer Portfolio 2026** and **NexusOS Project Summary** are published only as redacted copies (`*-redacted.pdf`). Date of birth and age are removed from the page and the text layer, and links to the private repository are replaced with the public GitHub profile. The originals are not in this repository. `npm test` fails if the removed values reappear.
+- **Software Developer Portfolio 2026** and **NexusOS Project Summary** are published only as redacted copies (`*-redacted.pdf`). Date of birth and age are removed from the page and the text layer, and links to the private repository are replaced with the public GitHub profile. The wrong `nexusos.com` domain is corrected to `nexuops.com` and linked to the live sign-in page. The originals are not in this repository.
+
+### Live app
+
+`profile.liveApp` (`https://nexuops.com/login`) is the sign-in page of the live NexusOS deployment. It is linked from the NexusOS section and the Contact section with a note that no demo account or credentials are provided. Never add credentials here. `npm test` fails if the removed values reappear.
 
 ## Deploying to Vercel
 

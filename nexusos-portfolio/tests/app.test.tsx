@@ -36,4 +36,15 @@ describe("App", () => {
     );
     expect(screen.getByRole("link", { name: "+43 676 5119613" })).toHaveAttribute("href", "tel:+436765119613");
   });
+
+  it("links the live app's sign-in page without implying demo credentials", () => {
+    window.history.replaceState(null, "", "/#nexusos");
+    const { container } = render(<App />);
+    const live = [...container.querySelectorAll<HTMLAnchorElement>('a[href*="nexuops"]')];
+    expect(live.length).toBeGreaterThanOrEqual(3);
+    for (const a of live) expect(a.getAttribute("href")).toBe("https://nexuops.com/login");
+    expect(screen.getByTestId("live-app-link")).toHaveTextContent("Live app · sign in");
+    expect(screen.getByTestId("live-app-note")).toHaveTextContent("No demo account or credentials are provided.");
+    expect(container.textContent).not.toMatch(/demo (login|password|user)|password:|test@|nexusos\.com/i);
+  });
 });

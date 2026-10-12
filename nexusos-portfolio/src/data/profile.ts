@@ -16,6 +16,11 @@ export const profile = {
   email: "waleyelnagdi7@gmail.com",
   github: "https://github.com/waley7337",
   phone: "+43 676 5119613",
+  liveApp: {
+    url: "https://nexuops.com/login",
+    host: "nexuops.com",
+    note: "Opens the sign-in page of the live NexusOS app. No demo account or credentials are provided.",
+  },
 };
 
 export const approach = [

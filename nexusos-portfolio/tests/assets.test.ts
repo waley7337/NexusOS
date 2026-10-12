@@ -87,9 +87,10 @@ describe("personal documents", () => {
     expect(asset.src).toMatch(/-redacted\.pdf$/);
     const plain = pdfPlainBytes(served(asset.src));
     expect(plain).toContain("REDACTED COPY");
-    for (const gone of ["11/12/1997", "1997", "28 years", "waley7337/NexusOS"]) {
+    for (const gone of ["11/12/1997", "1997", "28 years", "waley7337/NexusOS", "nexusos.com"]) {
       expect(plain.includes(gone), `${asset.src} still contains ${gone}`).toBe(false);
     }
+    expect(plain).toContain("https://nexuops.com/login");
   });
 });
 
@@ -97,7 +98,9 @@ describe("links and screenshots", () => {
   it("never links the private repository", () => {
     const files = [...walk(path.join(root, "src")), path.join(root, "index.html")];
     for (const f of files) {
-      expect(fs.readFileSync(f, "utf8"), f).not.toMatch(/github\.com\/waley7337\/nexusos/i);
+      const text = fs.readFileSync(f, "utf8");
+      expect(text, f).not.toMatch(/github\.com\/waley7337\/nexusos/i);
+      expect(text, f).not.toMatch(/nexusos\.com/i);
     }
   });
 
