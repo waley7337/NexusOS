@@ -42,9 +42,9 @@ const MAX_DPR = 2;
 
 /** Density tiers; small screens get fewer nodes, shorter links and fewer pulses. */
 function tier(width: number) {
-  if (width < 640) return { area: 26000, max: 34, link: 105, pulses: 2 };
-  if (width < 1024) return { area: 20000, max: 56, link: 130, pulses: 3 };
-  return { area: 16000, max: 88, link: 150, pulses: 4 };
+  if (width < 640) return { area: 26000, max: 34, link: 120, pulses: 2 };
+  if (width < 1024) return { area: 20000, max: 56, link: 145, pulses: 3 };
+  return { area: 16000, max: 88, link: 165, pulses: 4 };
 }
 
 function tokenRgb(name: string, fallback: Rgb): Rgb {
@@ -184,7 +184,7 @@ export function createNeuralField(canvas: HTMLCanvasElement, opts: { random?: ()
   const draw = (withPulses: boolean) => {
     ctx.clearRect(0, 0, width, height);
     const max2 = linkDist * linkDist;
-    ctx.lineWidth = 0.6;
+    ctx.lineWidth = 0.7;
     for (let i = 0; i < nodes.length; i++) {
       const a = nodes[i];
       for (let j = i + 1; j < nodes.length; j++) {
@@ -195,7 +195,7 @@ export function createNeuralField(canvas: HTMLCanvasElement, opts: { random?: ()
         if (d2 > max2) continue;
         const near = 1 - Math.sqrt(d2) / linkDist;
         const flicker = 0.55 + 0.45 * Math.sin(time * 0.22 + (i * 7 + j * 13) * 0.37);
-        const alpha = near * near * Math.min(a.depth, b.depth) * flicker * 0.16;
+        const alpha = near ** 1.4 * Math.min(a.depth, b.depth) * flicker * 0.3;
         if (alpha < 0.004) continue;
         ctx.strokeStyle = rgba(colors.link, alpha);
         ctx.beginPath();
