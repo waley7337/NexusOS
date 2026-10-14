@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePermission } from "@/hooks/usePermission";
 import { InvoiceForm } from "../components/InvoiceForm";
+import { PaymentsSection } from "../components/PaymentsSection";
 import { useArchiveInvoice, useInvoice, useSendInvoice, useUpdateInvoice, useVoidInvoice } from "../hooks/useInvoices";
 import { invoiceFormErrors, type InvoiceFormErrors } from "../lib/invoiceValidation";
 import type { InvoiceStatus } from "../types";
@@ -173,6 +174,11 @@ export function InvoiceDetailPage() {
           </strong>
         </div>
       </section>
+      <PaymentsSection
+        invoiceId={invoice.id}
+        currency={invoice.currency}
+        invoiceStatus={invoice.status}
+      />
       <Drawer open={editOpen} onOpenChange={setEditOpen}>
         <DrawerContent side="right" className="max-w-2xl">
           <DrawerHeader title="Edit draft invoice" />

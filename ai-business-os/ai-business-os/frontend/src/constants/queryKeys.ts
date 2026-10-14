@@ -83,5 +83,54 @@ export const queryKeys = {
       list: (params: Record<string, unknown>) => ["finance", "invoices", "list", params] as const,
       detail: (id: string) => ["finance", "invoices", "detail", id] as const,
     },
+    payments: {
+      all: ["finance", "payments"] as const,
+      list: (invoiceId: string) => ["finance", "payments", "list", invoiceId] as const,
+      detail: (id: string) => ["finance", "payments", "detail", id] as const,
+    },
+  },
+  projects: {
+    all: ["projects"] as const,
+    lists: () => ["projects", "list"] as const,
+    list: (params: Record<string, unknown>) => ["projects", "list", params] as const,
+    details: () => ["projects", "detail"] as const,
+    detail: (id: string) => ["projects", "detail", id] as const,
+  },
+  tasks: {
+    all: ["tasks"] as const,
+    lists: () => ["tasks", "list"] as const,
+    list: (params: Record<string, unknown>) => ["tasks", "list", params] as const,
+    details: () => ["tasks", "detail"] as const,
+    detail: (id: string) => ["tasks", "detail", id] as const,
+  },
+  inventory: {
+    all: ["inventory"] as const,
+    products: {
+      all: ["inventory", "products"] as const,
+      lists: () => ["inventory", "products", "list"] as const,
+      list: (params: Record<string, unknown>) => ["inventory", "products", "list", params] as const,
+      detail: (id: string) => ["inventory", "products", "detail", id] as const,
+    },
+    warehouses: {
+      all: ["inventory", "warehouses"] as const,
+      list: () => ["inventory", "warehouses", "list"] as const,
+    },
+    stock: {
+      all: ["inventory", "stock"] as const,
+      list: (params: Record<string, unknown>) => ["inventory", "stock", "list", params] as const,
+    },
+  },
+  reports: {
+    all: ["reports"] as const,
+    summary: (params: Record<string, unknown>) => ["reports", "summary", params] as const,
+  },
+  settings: {
+    all: ["settings"] as const,
+    company: ["settings", "company"] as const,
+  },
+  assistant: {
+    all: ["assistant"] as const,
+    conversations: ["assistant", "conversations"] as const,
+    messages: (conversationId: string) => ["assistant", "messages", conversationId] as const,
   },
 } as const;

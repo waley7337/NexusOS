@@ -644,7 +644,16 @@ function ModuleTile({
   description: string;
   icon: LucideIcon;
 }) {
-  const operational = to === ROUTES.crm;
+  // Modules with confirmed backend ↔ frontend integration
+  const OPERATIONAL_ROUTES = new Set<string>([
+    ROUTES.crm,
+    ROUTES.hr,
+    ROUTES.finance,
+    ROUTES.inventory,
+    ROUTES.projects,
+    ROUTES.tasks,
+  ]);
+  const operational = OPERATIONAL_ROUTES.has(to);
   return (
     <Link
       to={to}

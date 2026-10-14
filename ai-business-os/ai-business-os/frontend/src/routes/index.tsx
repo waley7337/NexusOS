@@ -53,28 +53,28 @@ const EmployeesPage = lazy(() =>
 const EmployeeDetailPage = lazy(() =>
   import("@/pages/hr/EmployeeDetailPage").then((m) => ({ default: m.EmployeeDetailPage })),
 );
-const ProjectsPlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.ProjectsPlaceholder })),
+const ProjectsPage = lazy(() =>
+  import("@/pages/projects").then((m) => ({ default: m.ProjectsPage })),
 );
-const TasksPlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.TasksPlaceholder })),
+const TasksPage = lazy(() =>
+  import("@/pages/tasks").then((m) => ({ default: m.TasksPage })),
 );
 const InvoicesPage = lazy(() => import("@/features/finance").then((m) => ({ default: m.InvoicesPage })));
 const InvoiceDetailPage = lazy(() => import("@/features/finance").then((m) => ({ default: m.InvoiceDetailPage })));
-const InventoryPlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.InventoryPlaceholder })),
+const InventoryPage = lazy(() =>
+  import("@/pages/inventory").then((m) => ({ default: m.InventoryPage })),
+);
+const ReportsPage = lazy(() =>
+  import("@/pages/reports").then((m) => ({ default: m.ReportsPage })),
+);
+const AssistantPage = lazy(() =>
+  import("@/pages/assistant").then((m) => ({ default: m.AssistantPage })),
+);
+const SettingsPage = lazy(() =>
+  import("@/pages/settings").then((m) => ({ default: m.SettingsPage })),
 );
 const DocumentsPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.DocumentsPlaceholder })),
-);
-const ReportsPlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.ReportsPlaceholder })),
-);
-const AssistantPlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.AssistantPlaceholder })),
-);
-const SettingsPlaceholder = lazy(() =>
-  import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.SettingsPlaceholder })),
 );
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
@@ -159,8 +159,8 @@ export const router = createBrowserRouter([
             element: <PermissionRoute permission="deals.read" />,
             children: [{ path: ROUTES.crmDeals, element: <DealsPage /> }],
           },
-          { path: ROUTES.projects, element: <ProjectsPlaceholder /> },
-          { path: ROUTES.tasks, element: <TasksPlaceholder /> },
+          { path: ROUTES.projects, element: <ProjectsPage /> },
+          { path: ROUTES.tasks, element: <TasksPage /> },
           {
             element: <HrPermissionRoute />,
             children: [
@@ -177,13 +177,13 @@ export const router = createBrowserRouter([
               { path: ROUTES.financeInvoiceDetail, element: <InvoiceDetailPage /> },
             ],
           },
-          { path: ROUTES.inventory, element: <InventoryPlaceholder /> },
+          { path: ROUTES.inventory, element: <InventoryPage /> },
           { path: ROUTES.documents, element: <DocumentsPlaceholder /> },
-          { path: ROUTES.reports, element: <ReportsPlaceholder /> },
-          { path: ROUTES.assistant, element: <AssistantPlaceholder /> },
+          { path: ROUTES.reports, element: <ReportsPage /> },
+          { path: ROUTES.assistant, element: <AssistantPage /> },
           {
             element: <PermissionRoute permission="settings.view" />,
-            children: [{ path: ROUTES.settings, element: <SettingsPlaceholder /> }],
+            children: [{ path: ROUTES.settings, element: <SettingsPage /> }],
           },
         ],
       },

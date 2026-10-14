@@ -23,6 +23,8 @@ httpx==0.28.*
 sentry-sdk[fastapi]==2.65.0
 stripe==11.*
 
+resend==2.*
+
 # --- Dev / test ---
 pytest==8.*
 pytest-asyncio==0.25.*
