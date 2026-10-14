@@ -24,6 +24,7 @@ sentry-sdk[fastapi]==2.65.0
 stripe==11.*
 
 resend==2.*
+openai>=1.0,<2.0
 
 # --- Dev / test ---
 pytest==8.*

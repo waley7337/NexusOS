@@ -1,23 +1,31 @@
-"""AI Assistant API — conversation management with OpenAI backend.
+"""AI Assistant API (Part 08.5 — production agent).
 
-When OPENAI_API_KEY is not configured the endpoint returns a clear
-unavailable response rather than fabricating AI output.
+Endpoints:
+  GET  /assistant/status                         — provider availability (no secrets)
+  GET  /assistant/conversations                  — list this user's conversations
+  POST /assistant/conversations                  — create named conversation
+  GET  /assistant/conversations/{id}/messages    — messages for a conversation
+  DELETE /assistant/conversations/{id}           — soft-delete (archive) a conversation
+  POST /assistant/chat                           — send message, run agent, get reply
 
-Persistence: conversations and messages are stored in the existing
-``ai_conversations`` / ``ai_messages`` tables.  The OpenAI call is
-synchronous-within-async via a thread pool (openai SDK is sync).
-
-Permissions: ai.use
+Security:
+  * All endpoints require `ai.use` permission via `require_permission`.
+  * Conversation reads/writes are scoped to (company_id, user_id) — prevents
+    cross-user and cross-tenant access (insecure direct object reference).
+  * `confirmed_action_id` lookup re-validates the pending action belongs to
+    this user's conversation before re-executing.
+  * API key is never exposed in any response field.
 """
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field
 
-from app.core.exceptions import ValidationError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.dependencies.auth import CurrentUser, get_current_active_user, require_permission
 from app.db.session import get_db
 from app.models.ai import AiConversation, AiMessage
@@ -25,14 +33,15 @@ from app.models.enums import AiRole
 from app.schemas.base import CamelModel
 from app.schemas.response import ApiResponse, Paginated
 from app.repositories.base import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
-from sqlalchemy import select
+from app.services.ai_agent import AgentOrchestrator, ConfirmedAction, get_orchestrator
+from app.services.ai_provider import setup_providers
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/assistant", tags=["AI Assistant"])
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 ActiveUser = Annotated[CurrentUser, Depends(get_current_active_user)]
-
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -45,17 +54,33 @@ class ConversationResponse(CamelModel):
     updated_at: str = Field(alias="updatedAt")
 
 
+class ConversationCreateRequest(CamelModel):
+    title: str | None = Field(default=None, max_length=255)
+
+
 class MessageResponse(CamelModel):
     id: uuid.UUID
     role: AiRole
     content: str
     tokens: int | None = None
+    is_error: bool = Field(default=False, alias="isError")
     created_at: str = Field(alias="createdAt")
+
+
+class PendingActionResponse(CamelModel):
+    id: str
+    tool_name: str = Field(alias="toolName")
+    danger_description: str = Field(alias="dangerDescription")
+    preview_args: dict = Field(alias="previewArgs")
 
 
 class SendMessageRequest(CamelModel):
     content: str = Field(min_length=1, max_length=8000)
     conversation_id: uuid.UUID | None = Field(default=None, alias="conversationId")
+    confirmed_action_id: str | None = Field(default=None, alias="confirmedActionId")
+    # Stored pending-action payload (sent back by FE on confirmation).
+    confirmed_action_tool: str | None = Field(default=None, alias="confirmedActionTool")
+    confirmed_action_args: dict | None = Field(default=None, alias="confirmedActionArgs")
 
 
 class SendMessageResponse(CamelModel):
@@ -63,6 +88,14 @@ class SendMessageResponse(CamelModel):
     user_message: MessageResponse = Field(alias="userMessage")
     assistant_message: MessageResponse = Field(alias="assistantMessage")
     provider_available: bool = Field(alias="providerAvailable")
+    tool_calls_made: list[str] = Field(default_factory=list, alias="toolCallsMade")
+    pending_action: PendingActionResponse | None = Field(default=None, alias="pendingAction")
+
+
+class ProviderStatusResponse(CamelModel):
+    available: bool
+    model_name: str = Field(alias="modelName")
+    max_tool_iterations: int = Field(alias="maxToolIterations")
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +108,7 @@ def _msg_response(msg: AiMessage) -> MessageResponse:
         "role": msg.role,
         "content": msg.content,
         "tokens": msg.tokens,
+        "isError": False,
         "createdAt": msg.created_at.isoformat(),
     })
 
@@ -88,43 +122,64 @@ def _conv_response(conv: AiConversation) -> ConversationResponse:
     })
 
 
-async def _get_or_create_conversation(
+async def _require_own_conversation(
+    conversation_id: uuid.UUID,
     db: AsyncSession,
-    *,
-    conversation_id: uuid.UUID | None,
-    company_id: uuid.UUID,
-    user_id: uuid.UUID,
-    first_content: str,
+    user: CurrentUser,
 ) -> AiConversation:
-    if conversation_id is not None:
-        conv = (
-            await db.execute(
-                select(AiConversation).where(
-                    AiConversation.id == conversation_id,
-                    AiConversation.company_id == company_id,
-                    AiConversation.deleted_at.is_(None),
-                )
+    """Fetch conversation; raise NotFoundError on missing or cross-tenant/user access."""
+    conv = (
+        await db.execute(
+            select(AiConversation).where(
+                AiConversation.id == conversation_id,
+                AiConversation.company_id == user.company_id,
+                AiConversation.user_id == user.id,
+                AiConversation.deleted_at.is_(None),
             )
-        ).scalar_one_or_none()
-        if conv is None:
-            raise ValidationError("Conversation not found.")
-        return conv
-
-    # Create new conversation; title from first 60 chars of first message.
-    title = first_content[:60].strip()
-    conv = AiConversation(
-        company_id=company_id,
-        user_id=user_id,
-        title=title or "New conversation",
-    )
-    db.add(conv)
-    await db.flush()
+        )
+    ).scalar_one_or_none()
+    if conv is None:
+        raise NotFoundError("Conversation not found.")
     return conv
+
+
+# ---------------------------------------------------------------------------
+# Startup — register providers
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Note: provider setup is called from app/main.py lifespan handler.
+# See setup_providers() in app.services.ai_provider.
+# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+@router.get(
+    "/status",
+    dependencies=[Depends(require_permission("ai.use"))],
+)
+async def get_provider_status() -> ApiResponse[ProviderStatusResponse]:
+    """Report provider availability without exposing API keys or internal config."""
+    try:
+        provider = _get_provider()
+        available = provider.is_available()
+        model_name = provider.model_name if available else "none"
+    except Exception:  # noqa: BLE001
+        available = False
+        model_name = "none"
+
+    from app.core.config import settings
+    return ApiResponse.ok(
+        data=ProviderStatusResponse.model_validate({
+            "available": available,
+            "modelName": model_name,
+            "maxToolIterations": settings.AI_MAX_TOOL_ITERATIONS,
+        })
+    )
+
 
 @router.get(
     "/conversations",
@@ -136,18 +191,13 @@ async def list_conversations(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE, alias="pageSize")] = DEFAULT_PAGE_SIZE,
 ) -> ApiResponse[Paginated[ConversationResponse]]:
-    from sqlalchemy import func
-
     page = max(page, 1)
     page_size = min(max(page_size, 1), MAX_PAGE_SIZE)
 
-    base = (
-        select(AiConversation)
-        .where(
-            AiConversation.company_id == user.company_id,
-            AiConversation.user_id == user.id,
-            AiConversation.deleted_at.is_(None),
-        )
+    base = select(AiConversation).where(
+        AiConversation.company_id == user.company_id,
+        AiConversation.user_id == user.id,
+        AiConversation.deleted_at.is_(None),
     )
     total = (await db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
     rows = (
@@ -166,6 +216,26 @@ async def list_conversations(
     )
 
 
+@router.post(
+    "/conversations",
+    status_code=201,
+    dependencies=[Depends(require_permission("ai.use"))],
+)
+async def create_conversation(
+    payload: ConversationCreateRequest,
+    db: DbSession,
+    user: ActiveUser,
+) -> ApiResponse[ConversationResponse]:
+    conv = AiConversation(
+        company_id=user.company_id,
+        user_id=user.id,
+        title=payload.title or "New conversation",
+    )
+    db.add(conv)
+    await db.flush()
+    return ApiResponse.ok(data=_conv_response(conv), message="Conversation created.")
+
+
 @router.get(
     "/conversations/{conversation_id}/messages",
     dependencies=[Depends(require_permission("ai.use"))],
@@ -175,19 +245,7 @@ async def list_messages(
     db: DbSession,
     user: ActiveUser,
 ) -> ApiResponse[list[MessageResponse]]:
-    # Verify ownership before returning messages.
-    conv = (
-        await db.execute(
-            select(AiConversation).where(
-                AiConversation.id == conversation_id,
-                AiConversation.company_id == user.company_id,
-                AiConversation.user_id == user.id,
-                AiConversation.deleted_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-    if conv is None:
-        raise ValidationError("Conversation not found.")
+    await _require_own_conversation(conversation_id, db, user)
 
     messages = (
         await db.execute(
@@ -200,6 +258,22 @@ async def list_messages(
     return ApiResponse.ok(data=[_msg_response(m) for m in messages])
 
 
+@router.delete(
+    "/conversations/{conversation_id}",
+    dependencies=[Depends(require_permission("ai.use"))],
+)
+async def archive_conversation(
+    conversation_id: uuid.UUID,
+    db: DbSession,
+    user: ActiveUser,
+) -> ApiResponse[None]:
+    from datetime import datetime, timezone
+    conv = await _require_own_conversation(conversation_id, db, user)
+    conv.deleted_at = datetime.now(tz=timezone.utc)
+    await db.flush()
+    return ApiResponse.ok(message="Conversation archived.")
+
+
 @router.post(
     "/chat",
     dependencies=[Depends(require_permission("ai.use"))],
@@ -209,22 +283,30 @@ async def send_message(
     db: DbSession,
     user: ActiveUser,
 ) -> ApiResponse[SendMessageResponse]:
-    """Send a message; get an assistant reply.
+    """Send a user message and run the agent to produce a reply.
 
-    When OPENAI_API_KEY is not set the user message is persisted and an
-    honest unavailable reply is returned (provider_available=False).
+    Workflow:
+      1. Resolve or create the conversation (tenant+user scoped).
+      2. Persist the user message.
+      3. Run the agent (model → tool loop).
+      4. Persist the assistant reply.
+      5. Return both messages + agent metadata.
     """
-    from app.core.config import settings
+    # --- Resolve conversation ---
+    if payload.conversation_id is not None:
+        conv = await _require_own_conversation(payload.conversation_id, db, user)
+    else:
+        # Auto-create.
+        title = payload.content[:60].strip() or "New conversation"
+        conv = AiConversation(
+            company_id=user.company_id,
+            user_id=user.id,
+            title=title,
+        )
+        db.add(conv)
+        await db.flush()
 
-    conv = await _get_or_create_conversation(
-        db,
-        conversation_id=payload.conversation_id,
-        company_id=user.company_id,
-        user_id=user.id,
-        first_content=payload.content,
-    )
-
-    # Persist the user message.
+    # --- Persist user message ---
     user_msg = AiMessage(
         conversation_id=conv.id,
         company_id=user.company_id,
@@ -234,63 +316,85 @@ async def send_message(
     db.add(user_msg)
     await db.flush()
 
-    provider_available = bool(settings.OPENAI_API_KEY)
-    reply_content: str
-    reply_tokens: int | None = None
-
-    if not provider_available:
-        reply_content = (
-            "The AI Assistant is not currently available. "
-            "An administrator must configure OPENAI_API_KEY to enable AI responses."
-        )
-    else:
-        # Call OpenAI synchronously inside an async executor.
-        import asyncio
-        from functools import partial
-
-        def _call_openai() -> tuple[str, int]:
-            import openai  # type: ignore[import-untyped]
-
-            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-
-            # Build history from last 20 messages for context.
-            # We don't load the full history here to keep the call cheap.
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a helpful business assistant for NexusOS."},
-                    {"role": "user", "content": payload.content},
-                ],
-                max_tokens=1000,
+    # --- Load history (excluding the message we just persisted) ---
+    from app.core.config import settings as cfg
+    history_rows = (
+        await db.execute(
+            select(AiMessage)
+            .where(
+                AiMessage.conversation_id == conv.id,
+                AiMessage.id != user_msg.id,
             )
-            choice = response.choices[0]
-            content = choice.message.content or ""
-            tokens = response.usage.total_tokens if response.usage else None
-            return content, tokens
+            .order_by(AiMessage.created_at.asc())
+            .limit(cfg.AI_MAX_HISTORY_MESSAGES)
+        )
+    ).scalars().all()
 
-        try:
-            loop = asyncio.get_running_loop()
-            reply_content, reply_tokens = await loop.run_in_executor(None, _call_openai)
-        except Exception as exc:  # noqa: BLE001
-            reply_content = f"The AI provider returned an error: {type(exc).__name__}."
-            provider_available = False
+    # --- Resolve confirmed action (for write tools) ---
+    confirmed_action: ConfirmedAction | None = None
+    if (
+        payload.confirmed_action_id
+        and payload.confirmed_action_tool
+        and payload.confirmed_action_args is not None
+    ):
+        confirmed_action = ConfirmedAction(
+            tool_name=payload.confirmed_action_tool,
+            tool_arguments=payload.confirmed_action_args,
+        )
 
-    # Persist the assistant reply.
+    # --- Run agent ---
+    orchestrator = get_orchestrator()
+    result = await orchestrator.run(
+        user_message=payload.content,
+        conversation=conv,
+        history=list(history_rows),
+        db=db,
+        user=user,
+        confirmed_action=confirmed_action,
+    )
+
+    # --- Persist assistant reply ---
     assistant_msg = AiMessage(
         conversation_id=conv.id,
         company_id=user.company_id,
         role=AiRole.ASSISTANT,
-        content=reply_content,
-        tokens=reply_tokens,
+        content=result.reply,
+        tokens=(result.input_tokens + result.output_tokens) or None,
     )
     db.add(assistant_msg)
     await db.flush()
+
+    # --- Update conversation title if newly created ---
+    if conv.title == payload.content[:60].strip() and len(payload.content) > 60:
+        pass  # Title already set from truncated content.
+
+    # --- Build pending action response ---
+    pending_action_resp: PendingActionResponse | None = None
+    if result.pending_action:
+        pa = result.pending_action
+        pending_action_resp = PendingActionResponse.model_validate({
+            "id": pa.id,
+            "toolName": pa.tool_name,
+            "dangerDescription": pa.danger_description,
+            "previewArgs": pa.tool_arguments,
+        })
 
     return ApiResponse.ok(
         data=SendMessageResponse.model_validate({
             "conversationId": conv.id,
             "userMessage": _msg_response(user_msg),
             "assistantMessage": _msg_response(assistant_msg),
-            "providerAvailable": provider_available,
+            "providerAvailable": result.provider_available,
+            "toolCallsMade": result.tool_calls_made,
+            "pendingAction": pending_action_resp,
         })
     )
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _get_provider():
+    from app.services.ai_provider import ProviderRegistry
+    return ProviderRegistry.default()

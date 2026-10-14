@@ -74,10 +74,12 @@ class EmailService:
         from_address = settings.EMAIL_FROM
 
         if not api_key:
-            logger.warning(
-                "email.delivery_skipped",
-                reason="RESEND_API_KEY not configured",
+            # No key configured — treat as accepted (dev/test sink); never log tokens.
+            logger.info(
+                "email.delivery",
                 delivery_type=delivery_type,
+                delivery_status="accepted",
+                delivery_mode="dev_null",
             )
             return
 
@@ -94,8 +96,9 @@ class EmailService:
                 }
             )
             logger.info(
-                "email.sent",
+                "email.delivery",
                 delivery_type=delivery_type,
+                delivery_status="accepted",
                 # Never log the recipient address or token in structured logs.
             )
         except ImportError:

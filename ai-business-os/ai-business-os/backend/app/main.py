@@ -42,6 +42,9 @@ if settings.SENTRY_DSN:
 async def lifespan(app: FastAPI):
     configure_logging()
     logger.info("startup", app=settings.APP_NAME, env=settings.ENVIRONMENT)
+    # Register AI providers (no-op when API key absent; logs warning).
+    from app.services.ai_provider import setup_providers
+    setup_providers()
     yield
     await engine.dispose()  # release pooled connections bound to this loop
     await close_redis_client()

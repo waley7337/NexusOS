@@ -180,6 +180,11 @@ class Settings(BaseSettings):
 
     # --- AI ---
     OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    AI_MAX_TOOL_ITERATIONS: int = 5       # max model→tool→model loops per request
+    AI_MAX_HISTORY_MESSAGES: int = 20     # conversation messages sent as context
+    AI_REQUEST_TIMEOUT_SECONDS: int = 60  # per-request provider timeout
+    AI_MAX_INPUT_CHARS: int = 16_000      # total chars across all messages before truncation
 
     # --- Email ---
     RESEND_API_KEY: str | None = None
