@@ -4,6 +4,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Literal
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,12 +30,35 @@ _ENTITLED = frozenset(
     }
 )
 
+# Linked Stripe subscription exists — never open a second Checkout Session.
+_BLOCK_NEW_CHECKOUT = frozenset(
+    {
+        PlatformSubscriptionStatus.ACTIVE,
+        PlatformSubscriptionStatus.TRIALING,
+        PlatformSubscriptionStatus.PAST_DUE,
+        PlatformSubscriptionStatus.INCOMPLETE,
+        PlatformSubscriptionStatus.PAUSED,
+    }
+)
+
+# Plan changes on the existing subscription (price + Stripe proration).
+_ALLOW_IN_PLACE_PLAN_CHANGE = frozenset(
+    {
+        PlatformSubscriptionStatus.ACTIVE,
+        PlatformSubscriptionStatus.TRIALING,
+        PlatformSubscriptionStatus.PAST_DUE,
+    }
+)
+
+CheckoutMode = Literal["checkout", "subscription_updated"]
+
 
 @dataclass(frozen=True, slots=True)
 class BillingCheckoutSession:
-    checkout_url: str
-    checkout_session_id: str
+    checkout_url: str | None
+    checkout_session_id: str | None
     plan: PlatformPlan
+    mode: CheckoutMode = "checkout"
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,15 +124,42 @@ class PlatformBillingService:
         if not success_path.startswith("/") or not cancel_path.startswith("/"):
             raise ValidationError("Billing return paths must be relative.")
         price_id = price_id_for_plan(plan)
-        profile = await self.repo.get_authoritative()
-        if (
-            profile.status in _ENTITLED
-            and profile.plan == plan
-            and profile.stripe_subscription_id
-        ):
+        # Serialize concurrent checkout/upgrade attempts for this company.
+        profile = await self.repo.get_authoritative_for_update()
+
+        if profile.stripe_subscription_id and profile.status in _BLOCK_NEW_CHECKOUT:
+            if profile.plan == plan and profile.status in _ENTITLED:
+                raise ConflictError(
+                    "Company already has an active subscription for this plan.",
+                    details={"reason": "subscription_already_active"},
+                )
+            if profile.status == PlatformSubscriptionStatus.INCOMPLETE:
+                raise ConflictError(
+                    "An incomplete subscription already exists. Complete payment via the "
+                    "billing portal — a second checkout would create a duplicate subscription.",
+                    details={"reason": "subscription_incomplete"},
+                )
+            if profile.status == PlatformSubscriptionStatus.PAUSED:
+                raise ConflictError(
+                    "Subscription is paused. Resume or change plans via the billing portal.",
+                    details={"reason": "subscription_paused"},
+                )
+            if profile.plan == plan and profile.status == PlatformSubscriptionStatus.PAST_DUE:
+                raise ConflictError(
+                    "Subscription payment failed. Update payment method via the billing portal.",
+                    details={"reason": "subscription_past_due"},
+                )
+            if profile.status in _ALLOW_IN_PLACE_PLAN_CHANGE and profile.plan != plan:
+                return await self._upgrade_existing_subscription(
+                    profile,
+                    plan=plan,
+                    price_id=price_id,
+                    idempotency_key=idempotency_key,
+                    api_key=api_key,
+                )
             raise ConflictError(
-                "Company already has an active subscription for this plan.",
-                details={"reason": "subscription_already_active"},
+                "Company already has a Stripe subscription. Use plan change or the billing portal.",
+                details={"reason": "subscription_already_linked"},
             )
 
         stripe = stripe_module(api_key=api_key)
@@ -122,6 +173,14 @@ class PlatformBillingService:
             profile.stripe_customer_id = customer_id
             await self.db.flush()
             await self.db.commit()
+            # Re-lock after commit so concurrent callers still serialize.
+            profile = await self.repo.get_authoritative_for_update()
+            if profile.stripe_subscription_id and profile.status in _BLOCK_NEW_CHECKOUT:
+                raise ConflictError(
+                    "Company already has a Stripe subscription. Use plan change or the billing portal.",
+                    details={"reason": "subscription_already_linked"},
+                )
+            customer_id = profile.stripe_customer_id or customer_id
 
         frontend = settings.FRONTEND_URL.rstrip("/")
         try:
@@ -161,6 +220,69 @@ class PlatformBillingService:
             checkout_url=str(session["url"] if isinstance(session, dict) else session.url),
             checkout_session_id=str(session["id"] if isinstance(session, dict) else session.id),
             plan=plan,
+            mode="checkout",
+        )
+
+    async def _upgrade_existing_subscription(
+        self,
+        profile: PlatformBillingProfile,
+        *,
+        plan: PlatformPlan,
+        price_id: str,
+        idempotency_key: str,
+        api_key: str,
+    ) -> BillingCheckoutSession:
+        """Change price on the linked subscription — never create a second subscription."""
+        stripe = stripe_module(api_key=api_key)
+        subscription_id = profile.stripe_subscription_id
+        assert subscription_id  # guarded by caller
+        try:
+            remote = stripe.Subscription.retrieve(subscription_id)
+            data = remote if isinstance(remote, dict) else remote.to_dict()
+            items = (data.get("items") or {}).get("data") or []
+            if not items:
+                raise ConflictError(
+                    "Existing subscription has no billable items.",
+                    details={"reason": "subscription_items_missing"},
+                )
+            item_id = str(items[0].get("id") or "")
+            if not item_id:
+                raise ConflictError(
+                    "Existing subscription has no billable items.",
+                    details={"reason": "subscription_items_missing"},
+                )
+            updated = stripe.Subscription.modify(
+                subscription_id,
+                items=[{"id": item_id, "price": price_id}],
+                proration_behavior="create_prorations",
+                cancel_at_period_end=False,
+                metadata={
+                    "domain": "platform_billing",
+                    "company_id": str(self.company_id),
+                    "plan": plan.value,
+                },
+                idempotency_key=idempotency_key,
+            )
+        except ConflictError:
+            raise
+        except Exception as exc:
+            logger.warning(
+                "platform_subscription_upgrade_failed",
+                company_id=str(self.company_id),
+                error_type=type(exc).__name__,
+            )
+            raise ConflictError(
+                "Unable to update the existing subscription.",
+                details={"reason": "stripe_subscription_update_failed"},
+            ) from None
+
+        await self.apply_subscription_snapshot(updated, event_id=None, fallback_plan=plan)
+        await self.db.commit()
+        return BillingCheckoutSession(
+            checkout_url=None,
+            checkout_session_id=None,
+            plan=plan,
+            mode="subscription_updated",
         )
 
     async def create_portal(self, *, return_path: str = "/settings?billing=portal") -> BillingPortalSession:

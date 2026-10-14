@@ -28,3 +28,16 @@ class PlatformBillingProfileRepository:
         if profile is None:
             raise BillingProfileInvariantError()
         return profile
+
+    async def get_authoritative_for_update(self) -> PlatformBillingProfile:
+        """Lock the company billing profile row for concurrent checkout safety."""
+        profile = (
+            await self.db.execute(
+                select(PlatformBillingProfile)
+                .where(PlatformBillingProfile.company_id == self.company_id)
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if profile is None:
+            raise BillingProfileInvariantError()
+        return profile

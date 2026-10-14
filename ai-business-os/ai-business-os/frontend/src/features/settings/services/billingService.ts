@@ -23,9 +23,11 @@ export interface BillingStatus {
 }
 
 export interface BillingCheckoutSession {
-  checkoutUrl: string;
-  checkoutSessionId: string;
+  checkoutUrl: string | null;
+  checkoutSessionId: string | null;
   plan: PlatformPlan;
+  /** "checkout" opens Stripe Checkout; "subscription_updated" changed the existing sub in place. */
+  mode: "checkout" | "subscription_updated";
 }
 
 export interface BillingPortalSession {
