@@ -950,3 +950,71 @@ async def test_snapshot_ignores_other_subscription_id():
     )
     assert profile.stripe_subscription_id == "sub_live"
     assert profile.plan == PlatformPlan.STARTER
+
+
+@pytest.mark.asyncio
+async def test_elements_checkout_returns_client_secret_not_hosted_url(monkeypatch):
+    """Custom UI uses Checkout Session ui_mode=elements; no premature entitlement."""
+    _enable_billing(monkeypatch)
+    monkeypatch.setattr(
+        "app.payments.platform.billing_service.settings.STRIPE_PLATFORM_PUBLISHABLE_KEY",
+        "pk_test_mock",
+    )
+    profile = _profile(stripe_customer_id="cus_1")
+    service, company_id = _service(profile)
+    session_create = MagicMock(
+        return_value={
+            "id": "cs_elements",
+            "client_secret": "cs_elements_secret_123",
+            "url": None,
+        }
+    )
+    stripe = _stripe_mock(session_create=session_create)
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        result = await service.create_checkout(
+            plan=PlatformPlan.STARTER,
+            idempotency_key="idem-elements",
+            ui_mode="elements",
+        )
+
+    assert result.mode == "checkout"
+    assert result.ui_mode == "elements"
+    assert result.checkout_url is None
+    assert result.client_secret == "cs_elements_secret_123"
+    assert result.publishable_key == "pk_test_mock"
+    kwargs = session_create.call_args.kwargs
+    assert kwargs["ui_mode"] == "elements"
+    assert "return_url" in kwargs
+    assert "success_url" not in kwargs
+    assert kwargs["metadata"]["company_id"] == str(company_id)
+    # Creating a session does not mark the company entitled.
+    assert service.is_entitled(profile) is True  # free plan remains entitled
+    assert profile.plan == PlatformPlan.FREE
+
+
+@pytest.mark.asyncio
+async def test_elements_checkout_past_due_still_blocked(monkeypatch):
+    """Elements mode must not bypass portal recovery for past_due."""
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.PAST_DUE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
+    stripe = _stripe_mock()
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        with pytest.raises(ConflictError) as exc:
+            await service.create_checkout(
+                plan=PlatformPlan.PRO,
+                idempotency_key="idem-el-pd",
+                ui_mode="elements",
+            )
+
+    assert exc.value.details["reason"] == "subscription_past_due"
+    stripe.checkout.Session.create.assert_not_called()
+    assert service.is_entitled(profile) is False

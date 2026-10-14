@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "@/api/client";
+import { ROUTES } from "@/constants/routes";
 import { useAuthStore } from "@/stores/auth";
 import { BILLING_ENV_VAR_NAMES, BillingSection } from "../BillingSection";
 
@@ -20,6 +21,7 @@ vi.mock("../../services/billingService", () => ({
   createBillingCheckout: api.createBillingCheckout,
   createBillingPortal: api.createBillingPortal,
   cancelBillingSubscription: api.cancelBillingSubscription,
+  billingErrorReason: () => undefined,
 }));
 vi.mock("@/features/auth", async () => ({
   ...(await vi.importActual<object>("@/features/auth")),
@@ -65,7 +67,13 @@ function renderBilling(path = "/settings", permissions: string[] = ["settings.vi
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
-        <BillingSection />
+        <Routes>
+          <Route path={ROUTES.settings} element={<BillingSection />} />
+          <Route
+            path={ROUTES.billingCheckout}
+            element={<div data-testid="billing-checkout-route">Checkout</div>}
+          />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -127,59 +135,13 @@ describe("BillingSection", () => {
     expect(screen.queryByText(/session_id/i)).not.toBeInTheDocument();
   });
 
-  it("starts server-side checkout only when billing is enabled", async () => {
+  it("opens the custom Elements checkout page when billing is enabled", async () => {
     const user = userEvent.setup();
     api.getBillingStatus.mockResolvedValue({ ...status, billingEnabled: true });
-    api.createBillingCheckout.mockResolvedValue({
-      checkoutUrl: "https://checkout.stripe.test/session",
-      checkoutSessionId: "cs_1",
-      plan: "starter",
-      mode: "checkout",
-    });
-    const assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign });
 
     renderBilling();
     await user.click(await screen.findByRole("button", { name: "Upgrade starter" }));
-    await waitFor(() => expect(api.createBillingCheckout).toHaveBeenCalledWith("starter"));
-    expect(assign).toHaveBeenCalledWith("https://checkout.stripe.test/session");
-    vi.unstubAllGlobals();
-  });
-
-  it("refreshes status when server updates an existing subscription in place", async () => {
-    const user = userEvent.setup();
-    api.getBillingStatus
-      .mockResolvedValueOnce({
-        ...status,
-        plan: "starter",
-        status: "active",
-        billingEnabled: true,
-        stripeCustomerLinked: true,
-      })
-      .mockResolvedValue({
-        ...status,
-        plan: "pro",
-        status: "active",
-        entitled: true,
-        billingEnabled: true,
-        stripeCustomerLinked: true,
-      });
-    api.createBillingCheckout.mockResolvedValue({
-      checkoutUrl: null,
-      checkoutSessionId: null,
-      plan: "pro",
-      mode: "subscription_updated",
-    });
-    const assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign });
-
-    renderBilling();
-    await user.click(await screen.findByRole("button", { name: "Upgrade pro" }));
-    await waitFor(() => expect(api.createBillingCheckout).toHaveBeenCalledWith("pro"));
-    expect(assign).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith("Plan updated on your existing subscription."),
-    );
-    vi.unstubAllGlobals();
+    expect(await screen.findByTestId("billing-checkout-route")).toBeInTheDocument();
+    expect(api.createBillingCheckout).not.toHaveBeenCalled();
   });
 });
