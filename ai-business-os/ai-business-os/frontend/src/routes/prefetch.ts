@@ -2,6 +2,9 @@ import { ROUTES } from "@/constants/routes";
 
 type PrefetchFn = () => void;
 
+/** Live Finance feature chunk — must stay aligned with the static imports below. */
+export const FINANCE_FEATURE_MODULE_ID = "@/features/finance" as const;
+
 const prefetchRegistry: Partial<Record<string, PrefetchFn>> = {
   [ROUTES.home]: () => void import("@/pages/dashboard/DashboardPage"),
   [ROUTES.login]: () => void import("@/pages/auth/LoginPage"),
@@ -15,7 +18,9 @@ const prefetchRegistry: Partial<Record<string, PrefetchFn>> = {
   [ROUTES.tasks]: () => void import("@/pages/placeholders/ModulePlaceholders"),
   [ROUTES.hr]: () => void import("@/pages/hr/EmployeesPage"),
   [ROUTES.hrEmployees]: () => void import("@/pages/hr/EmployeesPage"),
-  [ROUTES.finance]: () => void import("@/pages/placeholders/ModulePlaceholders"),
+  // Vite requires a string literal here; FINANCE_FEATURE_MODULE_ID documents the target.
+  [ROUTES.finance]: () => void import("@/features/finance"),
+  [ROUTES.financeInvoices]: () => void import("@/features/finance"),
   [ROUTES.inventory]: () => void import("@/pages/placeholders/ModulePlaceholders"),
   [ROUTES.documents]: () => void import("@/pages/placeholders/ModulePlaceholders"),
   [ROUTES.reports]: () => void import("@/pages/placeholders/ModulePlaceholders"),

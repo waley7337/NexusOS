@@ -29,12 +29,81 @@ function renderAt(path: string, permissions: string[]) {
 describe("Invoices workspace", () => {
   beforeEach(() => { vi.clearAllMocks(); api.customers.mockResolvedValue({ items: [{ id: "c1", companyName: "Exact Customer Name" }], meta: { page: 1, pageSize: 100, total: 1, totalPages: 1 } }); api.create.mockResolvedValue(invoice); });
   it("gates workspace access with invoices.read", async () => { api.list.mockResolvedValue(page([])); renderAt("/finance/invoices", []); expect(await screen.findByRole("heading", { name: "Access denied" })).toBeInTheDocument(); expect(api.list).not.toHaveBeenCalled(); });
-  it("distinguishes loading, empty, and API-backed populated states", async () => { let resolve!: (value: ReturnType<typeof page>) => void; api.list.mockReturnValue(new Promise((done) => { resolve = done; })); const view = renderAt("/finance/invoices", ["invoices.read"]); expect(await screen.findByLabelText("Loading invoices")).toBeInTheDocument(); resolve(page([])); expect(await screen.findByText("No invoices yet")).toBeInTheDocument(); expect(screen.getByPlaceholderText("Search invoice number…")).toBeInTheDocument(); view.unmount(); api.list.mockResolvedValue(page([invoice])); renderAt("/finance/invoices", ["invoices.read"]); expect(await screen.findByText("Exact Customer Name")).toBeInTheDocument(); expect(screen.getByText("USD 0.31")).toBeInTheDocument(); expect(screen.getByRole("link", { name: "INV-001" })).toHaveAttribute("href", "/finance/invoices/i1"); expect(screen.queryByRole("link", { name: /Exact Customer Name/ })).not.toBeInTheDocument(); });
+  it("distinguishes loading, empty, and API-backed populated states", async () => { let resolve!: (value: ReturnType<typeof page>) => void; api.list.mockReturnValue(new Promise((done) => { resolve = done; })); const view = renderAt("/finance/invoices", ["invoices.read"]); expect(await screen.findByLabelText("Loading invoices")).toBeInTheDocument(); resolve(page([])); expect(await screen.findByText("No invoices yet")).toBeInTheDocument(); expect(screen.getByPlaceholderText("Search invoice number…")).toBeInTheDocument(); view.unmount(); api.list.mockResolvedValue(page([invoice])); renderAt("/finance/invoices", ["invoices.read"]); expect(await screen.findByRole("link", { name: "INV-001" })).toHaveAttribute("href", "/finance/invoices/i1"); expect(screen.getByText("USD 0.31")).toBeInTheDocument(); expect(screen.getAllByText("Exact Customer Name").length).toBeGreaterThanOrEqual(1); expect(screen.queryByRole("link", { name: /Exact Customer Name/ })).not.toBeInTheDocument(); });
   it("keeps API failures distinct from empty results", async () => { api.list.mockRejectedValue(new Error("offline")); renderAt("/finance/invoices", ["invoices.read"]); expect(await screen.findByText("Invoices could not be loaded")).toBeInTheDocument(); expect(screen.queryByText("No invoices yet")).not.toBeInTheDocument(); });
-  it("sends status filters and pagination to the API", async () => { const user = userEvent.setup(); api.list.mockResolvedValue({ items: [invoice], meta: { page: 1, pageSize: 20, total: 40, totalPages: 2 } }); renderAt("/finance/invoices", ["invoices.read"]); await screen.findByText("Exact Customer Name"); await user.selectOptions(screen.getByLabelText("Filter invoices by status"), "draft"); await waitFor(() => expect(api.list.mock.calls.some(([params]) => params.status === "draft")).toBe(true)); await user.click(screen.getByRole("button", { name: "Next page" })); await waitFor(() => expect(api.list.mock.calls.some(([params]) => params.page === 2)).toBe(true)); });
+  it("sends status filters and pagination to the API", async () => { const user = userEvent.setup(); api.list.mockResolvedValue({ items: [invoice], meta: { page: 1, pageSize: 20, total: 40, totalPages: 2 } }); renderAt("/finance/invoices", ["invoices.read"]); await screen.findByRole("link", { name: "INV-001" }); await user.selectOptions(screen.getByLabelText("Filter invoices by status"), "draft"); await waitFor(() => expect(api.list.mock.calls.some(([params]) => params.status === "draft")).toBe(true)); await user.click(screen.getByRole("button", { name: "Next page" })); await waitFor(() => expect(api.list.mock.calls.some(([params]) => params.page === 2)).toBe(true)); });
+  it("sends customerId to the API and resets pagination when the customer filter changes", async () => {
+    const user = userEvent.setup();
+    api.customers.mockResolvedValue({
+      items: [
+        { id: "c1", companyName: "Exact Customer Name" },
+        { id: "c2", companyName: "Second Customer" },
+      ],
+      meta: { page: 1, pageSize: 100, total: 2, totalPages: 1 },
+    });
+    api.list.mockResolvedValue({ items: [invoice], meta: { page: 2, pageSize: 20, total: 40, totalPages: 2 } });
+    renderAt("/finance/invoices?page=2", ["invoices.read"]);
+    await screen.findByRole("link", { name: "INV-001" });
+    await waitFor(() => expect(screen.getByRole("option", { name: "Second Customer" })).toBeInTheDocument());
+    await user.selectOptions(screen.getByLabelText("Filter invoices by customer"), "c2");
+    await waitFor(() =>
+      expect(
+        api.list.mock.calls.some(
+          ([params]) => params.customerId === "c2" && params.page === 1,
+        ),
+      ).toBe(true),
+    );
+  });
+  it("treats customer-only filters as filtered empty state", async () => {
+    api.customers.mockResolvedValue({
+      items: [{ id: "c2", companyName: "Second Customer" }],
+      meta: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
+    });
+    api.list.mockResolvedValue(page([]));
+    renderAt("/finance/invoices?customerId=c2", ["invoices.read"]);
+    expect(await screen.findByText("No matching invoices")).toBeInTheDocument();
+    expect(screen.getByText(/status, or customer filter/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.list.mock.calls.some(([params]) => params.customerId === "c2")).toBe(true),
+    );
+  });
   it("shows create only with invoices.create and submits string money fields", async () => { const user = userEvent.setup(); api.list.mockResolvedValue(page([])); api.get.mockResolvedValue(invoice); renderAt("/finance/invoices", ["invoices.read", "invoices.create"]); await user.click(await screen.findByRole("button", { name: "New invoice" })); await user.type(screen.getByLabelText(/^Invoice number/), "INV-001"); await user.selectOptions(screen.getByLabelText(/^Customer/), "c1"); await user.type(screen.getByLabelText(/^Issue date/), "2026-08-01"); await user.type(screen.getByLabelText(/^Due date/), "2026-08-31"); await user.type(screen.getByLabelText(/^Description/), "Precision"); await user.clear(screen.getByLabelText(/^Quantity/)); await user.type(screen.getByLabelText(/^Quantity/), "0.1"); await user.clear(screen.getByLabelText(/^Unit price/)); await user.type(screen.getByLabelText(/^Unit price/), "3.00"); await user.click(screen.getByRole("button", { name: "Create invoice" })); await waitFor(() => expect(api.create).toHaveBeenCalled()); expect(api.create.mock.calls[0][0]).toEqual(expect.objectContaining({ tax: "0", items: [expect.objectContaining({ quantity: "0.1", unitPrice: "3" })] })); });
-  it("renders exact backend totals and permission-gated draft lifecycle controls", async () => { api.get.mockResolvedValue(invoice); renderAt("/finance/invoices/i1", ["invoices.read", "invoices.update", "invoices.send", "invoices.delete"]); expect(await screen.findByText("Exact Customer Name")).toBeInTheDocument(); expect(screen.getByText("0.31")).toBeInTheDocument(); expect(screen.getByRole("button", { name: /Edit draft/ })).toBeInTheDocument(); expect(screen.getByRole("button", { name: /Mark as sent/ })).toBeInTheDocument(); expect(screen.getByRole("button", { name: /Void/ })).toBeInTheDocument(); expect(screen.getByRole("button", { name: /Archive/ })).toBeInTheDocument(); });
+  it("renders exact backend totals and permission-gated draft lifecycle controls", async () => { api.get.mockResolvedValue(invoice); renderAt("/finance/invoices/i1", ["invoices.read", "invoices.update", "invoices.send", "invoices.delete"]); expect(await screen.findByText("Exact Customer Name")).toBeInTheDocument(); expect(screen.getByText("0.31")).toBeInTheDocument(); expect(screen.getByTestId("invoice-amount-paid")).toHaveTextContent("USD 0.00"); expect(screen.getByTestId("invoice-outstanding-balance")).toHaveTextContent("USD 0.31"); expect(screen.getByRole("button", { name: /Edit draft/ })).toBeInTheDocument(); expect(screen.getByRole("button", { name: /Mark as sent/ })).toBeInTheDocument(); expect(screen.getByRole("button", { name: /Void/ })).toBeInTheDocument(); expect(screen.getByRole("button", { name: /Archive/ })).toBeInTheDocument(); });
+  it("renders API-provided payment summary without recomputing totals", async () => {
+    api.get.mockResolvedValue({
+      ...invoice,
+      status: "partially_paid",
+      amountPaid: "12.50",
+      outstandingBalance: "87.50",
+      total: "100.00",
+    });
+    renderAt("/finance/invoices/i1", ["invoices.read"]);
+    expect(await screen.findByTestId("invoice-amount-paid")).toHaveTextContent("USD 12.50");
+    expect(screen.getByTestId("invoice-outstanding-balance")).toHaveTextContent("USD 87.50");
+    expect(screen.getByText("100.00")).toBeInTheDocument();
+  });
   it("renders detail errors and hides draft-only actions for sent invoices", async () => { api.get.mockRejectedValueOnce(new Error("missing")); const view = renderAt("/finance/invoices/missing", ["invoices.read"]); expect(await screen.findByText("Invoice unavailable")).toBeInTheDocument(); view.unmount(); api.get.mockResolvedValue({ ...invoice, status: "sent", sentAt: "2026-08-18T10:00:00Z" }); renderAt("/finance/invoices/i1", ["invoices.read", "invoices.update", "invoices.send", "invoices.delete"]); await screen.findByText("Exact Customer Name"); expect(screen.queryByRole("button", { name: /Edit draft/ })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: /Mark as sent/ })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: /Archive/ })).not.toBeInTheDocument(); expect(screen.getByRole("button", { name: /Void/ })).toBeInTheDocument(); });
+  it("hides void for paid, void, and partially_paid while keeping it for eligible statuses", async () => {
+    for (const status of ["paid", "void", "partially_paid"] as const) {
+      api.get.mockResolvedValue({ ...invoice, status });
+      const view = renderAt("/finance/invoices/i1", ["invoices.read", "invoices.update"]);
+      await screen.findByText("Exact Customer Name");
+      expect(screen.queryByRole("button", { name: /^Void$/ })).not.toBeInTheDocument();
+      view.unmount();
+    }
+    for (const status of ["draft", "sent", "overdue"] as const) {
+      api.get.mockResolvedValue({ ...invoice, status, sentAt: status === "draft" ? null : "2026-08-18T10:00:00Z" });
+      const view = renderAt("/finance/invoices/i1", ["invoices.read", "invoices.update"]);
+      expect(await screen.findByRole("button", { name: /^Void$/ })).toBeInTheDocument();
+      view.unmount();
+    }
+  });
+  it("still requires invoices.update permission to show void on eligible invoices", async () => {
+    api.get.mockResolvedValue({ ...invoice, status: "sent", sentAt: "2026-08-18T10:00:00Z" });
+    renderAt("/finance/invoices/i1", ["invoices.read"]);
+    await screen.findByText("Exact Customer Name");
+    expect(screen.queryByRole("button", { name: /^Void$/ })).not.toBeInTheDocument();
+  });
   it("confirms send as an internal transition and refreshes detail", async () => { const user = userEvent.setup(); api.get.mockResolvedValue(invoice); api.send.mockResolvedValue({ ...invoice, status: "sent", sentAt: "2026-08-18T10:00:00Z" }); renderAt("/finance/invoices/i1", ["invoices.read", "invoices.send"]); await user.click(await screen.findByRole("button", { name: /Mark as sent/ })); expect(screen.getByText(/does not email the customer or create a PDF/i)).toBeInTheDocument(); await user.click(screen.getByRole("button", { name: "Mark as sent" })); await waitFor(() => expect(api.send).toHaveBeenCalled()); expect(api.send.mock.calls[0][0]).toBe("i1"); });
   it("confirms and completes a successful void transition", async () => { const user = userEvent.setup(); api.get.mockResolvedValue(invoice); api.voidInvoice.mockResolvedValue({ ...invoice, status: "void", voidedAt: "2026-08-18T11:00:00Z" }); renderAt("/finance/invoices/i1", ["invoices.read", "invoices.update"]); await user.click(await screen.findByRole("button", { name: "Void" })); expect(screen.getByText(/move to VOID.*does not delete/i)).toBeInTheDocument(); await user.click(screen.getByRole("button", { name: "Void invoice" })); await waitFor(() => expect(api.voidInvoice).toHaveBeenCalled()); expect(api.voidInvoice.mock.calls[0][0]).toBe("i1"); expect(await screen.findByText("void")).toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Void" })).not.toBeInTheDocument(); });
   it("confirms and completes a successful draft soft-archive", async () => { const user = userEvent.setup(); api.get.mockResolvedValue(invoice); api.archive.mockResolvedValue(undefined); api.list.mockResolvedValue(page([])); renderAt("/finance/invoices/i1", ["invoices.read", "invoices.delete"]); await user.click(await screen.findByRole("button", { name: "Archive" })); expect(screen.getByText(/soft-archived and removed from the active list/i)).toBeInTheDocument(); await user.click(screen.getByRole("button", { name: "Archive draft" })); await waitFor(() => expect(api.archive).toHaveBeenCalled()); expect(api.archive.mock.calls[0][0]).toBe("i1"); expect(await screen.findByText("No invoices yet")).toBeInTheDocument(); });
