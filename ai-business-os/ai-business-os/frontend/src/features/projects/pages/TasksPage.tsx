@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CheckSquare, Plus, Search } from "lucide-react";
+import { ApiRequestError } from "@/api/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -28,13 +29,17 @@ import {
 
 const PAGE_SIZE = 20;
 
+const errorMessage = (error: unknown) =>
+  error instanceof ApiRequestError ? error.message : "Could not complete this request.";
+
 function TaskStatusBadge({ status }: { status: TaskStatus }) {
   const variants: Record<TaskStatus, "default" | "warning" | "success" | "danger" | "info" | "accent"> = {
+    backlog: "default",
     todo: "info",
     in_progress: "accent",
     in_review: "warning",
     done: "success",
-    cancelled: "danger",
+    canceled: "danger",
   };
   return <Badge variant={variants[status]}>{TASK_STATUS_LABELS[status]}</Badge>;
 }
@@ -154,23 +159,35 @@ export function TasksPage() {
   function closeDrawer() { setDrawerMode(null); setEditTarget(null); }
 
   async function handleCreate(payload: TaskCreatePayload) {
-    await createMutation.mutateAsync(payload);
-    toast.success("Task created.");
-    closeDrawer();
+    try {
+      await createMutation.mutateAsync(payload);
+      toast.success("Task created.");
+      closeDrawer();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
   }
 
   async function handleUpdate(payload: TaskCreatePayload) {
     if (!editTarget) return;
-    await updateMutation.mutateAsync(payload);
-    toast.success("Task updated.");
-    closeDrawer();
+    try {
+      await updateMutation.mutateAsync(payload);
+      toast.success("Task updated.");
+      closeDrawer();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    toast.success("Task deleted.");
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Task deleted.");
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
   }
 
   function setPage(p: number) {
@@ -222,7 +239,7 @@ export function TasksPage() {
           ))}
         </div>
       ) : isError ? (
-        <ErrorState title="Failed to load tasks" description={String(error)} />
+        <ErrorState title="Failed to load tasks" description={errorMessage(error)} />
       ) : !data?.items.length ? (
         <EmptyState
           icon={CheckSquare}

@@ -27,7 +27,7 @@
   }
 }
 
-@theme {
+@theme inline {
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -95,11 +95,14 @@
   --color-chart-5: hsl(var(--chart-5));
   --color-chart-6: hsl(var(--chart-6));
 
-  --radius-btn: var(--radius-btn);
-  --radius-input: var(--radius-input);
-  --radius-card: var(--radius-card);
-  --radius-dialog: var(--radius-dialog);
-  --radius-surface: var(--radius-surface);
+  /* Radius/shadow theme keys must NOT self-reference --radius-* / --shadow-*
+     (that emitted empty circular vars and broke rounded-* / shadow-* utilities).
+     Point at the underlying token sources; :root/.dark still own the aliases. */
+  --radius-btn: var(--r-control);
+  --radius-input: var(--r-control);
+  --radius-card: var(--r-surface);
+  --radius-dialog: var(--r-surface);
+  --radius-surface: var(--r-surface);
   --radius-control: var(--r-control);
   --radius-plane: var(--r-surface);
   --radius-none: 0px;
@@ -111,14 +114,14 @@
   --radius-2xl: var(--r-surface);
   --radius-3xl: var(--r-surface);
 
-  --shadow-sm: var(--shadow-sm);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
-  --shadow-hover: var(--shadow-hover);
-  --shadow-dropdown: var(--shadow-dropdown);
-  --shadow-modal: var(--shadow-modal);
-  --shadow-surface: var(--shadow-surface);
-  --shadow-lift: var(--shadow-lift);
+  --shadow-sm: var(--occlusion-1);
+  --shadow-md: var(--occlusion-1), var(--occlusion-2);
+  --shadow-lg: var(--occlusion-2), var(--occlusion-3);
+  --shadow-hover: var(--occlusion-2);
+  --shadow-dropdown: var(--occlusion-2), var(--occlusion-3);
+  --shadow-modal: var(--occlusion-3);
+  --shadow-surface: var(--surface-inset), var(--occlusion-1), var(--occlusion-2);
+  --shadow-lift: var(--surface-inset-strong), var(--occlusion-2), var(--occlusion-3);
   --shadow-inset: var(--surface-inset);
 
   --z-index-sticky: var(--z-sticky);
@@ -136,9 +139,10 @@
   --transition-duration-reveal: var(--duration-reveal);
 
   --ease-brand: var(--ease);
-  --ease-out-expo: var(--ease-out-expo);
-  --ease-out-quart: var(--ease-out-quart);
-  --ease-in-out-quint: var(--ease-in-out-quint);
+  /* Same anti-circular rule as radius/shadow: do not self-ref --ease-out-*. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
 
   --backdrop-blur-overlay: var(--overlay-blur);
 
@@ -408,216 +412,79 @@
   );
 }
 
-@utility space-field {
-  /* ================================================================
-     THE SPATIAL ENVIRONMENT
-
-     One fixed layer, mounted outside the router (see SpaceField), that
-     serves BOTH the sign-in route and the auth-success cinematic. It is
-     one object in two phases rather than two objects that resemble each
-     other, because the phases are separated by a route change and any
-     seam there is a visible cut.
-
-       [data-space-stage="idle"]    behind the sign-in surface
-       [data-space-stage="travel"]  the camera move
-       [data-elevated="true"]       now above the application
-
-     Everything below animates transform and opacity only. No filter, no
-     backdrop-filter, no animated box-shadow, no layout properties. Five
-     animated elements total, plus one canvas.
-     ================================================================ */
+/* Spatial environment + auth shell surfaces restored as component
+   classes (not @utility). Tailwind v4 @utility nesting broke travel-stage
+   descendant animations and separated keyframes from their consumers. */
+@layer components {
+.space-field {
   position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
   contain: strict;
-  /* The lift above the application. Discrete, and it happens exactly when
-     the sign-in route unmounts — earlier would bury the card while it is
-     still receding, later would expose the mounting shell. */
-  &[data-elevated='true'] {
-    z-index: 60;
-  }
-
-  /* ---- TRAVEL ----
-     The camera move. The stars carry the actual sense of motion (they are
-     the only thing with real parallax); these layers carry scale and
-     depth. Timings are the ones in lib/auth-cinematic.ts. */
-  &[data-space-stage='travel'] .space-lights {
-    animation: space-travel-lights 1500ms var(--ease-cinematic) both;
-  }
-  &[data-space-stage='travel'] .space-vignette {
-    animation: space-travel-vignette 1500ms var(--ease-cinematic) both;
-  }
-  /* HANDOFF, NOT A CROSS-DISSOLVE.
-     The space clears between 62% and 96% of the timeline (930ms → 1440ms),
-     and by 930ms the real shell underneath has finished painting. So this
-     fade IS the reveal: one fade, over a complete interface, rather than
-     several stacked fades over a half-painted one.
-
-     Two earlier attempts are worth recording. Fading the space out over a
-     shell still at opacity 0 exposed the workspace's own background, which
-     is WHITE in the light theme — the cinematic went to mid-grey on its
-     way in. Stacking a second dark layer inside the shell to hide that
-     left the shell ~90% covered three-quarters of the way through its own
-     reveal. Ordering the two (shell first, space second) is what actually
-     solves it. */
-  &[data-space-stage='travel'] .space-base {
-    animation: space-travel-handoff 1500ms linear both;
-  }
-  &[data-space-stage='travel'] .space-stars {
-    animation: space-travel-handoff 1500ms linear both;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    &[data-space-stage='travel'] .space-lights {
-      animation: none;
-      transform: none;
-      opacity: 1;
-    }
-    &[data-space-stage='travel'] .space-vignette {
-      animation: none;
-      transform: none;
-      opacity: 1;
-    }
-    &[data-space-stage='travel'] .space-stars {
-      animation: none;
-      transform: none;
-      opacity: 1;
-    }
-    &[data-space-stage='travel'] .space-base {
-      animation: space-reduced-out 220ms linear both;
-    }
-  }
+}
+/* The lift above the application. Discrete, and it happens exactly when
+   the sign-in route unmounts — earlier would bury the card while it is
+   still receding, later would expose the mounting shell. */
+.space-field[data-elevated="true"] {
+  z-index: 60;
 }
 
-@utility space-base {
-  /* Opaque ground. On the sign-in route it is simply the page background;
-     during travel it is what keeps the mounting shell out of sight, and it
-     dissolves as the shell resolves. */
+/* Opaque ground. On the sign-in route it is simply the page background;
+   during travel it is what keeps the mounting shell out of sight, and it
+   dissolves as the shell resolves. */
+.space-base {
   position: absolute;
   inset: 0;
   background: #010308;
-  /* HANDOFF, NOT A CROSS-DISSOLVE.
-     The space clears between 62% and 96% of the timeline (930ms → 1440ms),
-     and by 930ms the real shell underneath has finished painting. So this
-     fade IS the reveal: one fade, over a complete interface, rather than
-     several stacked fades over a half-painted one.
-
-     Two earlier attempts are worth recording. Fading the space out over a
-     shell still at opacity 0 exposed the workspace's own background, which
-     is WHITE in the light theme — the cinematic went to mid-grey on its
-     way in. Stacking a second dark layer inside the shell to hide that
-     left the shell ~90% covered three-quarters of the way through its own
-     reveal. Ordering the two (shell first, space second) is what actually
-     solves it. */
-  .space-field[data-space-stage='travel'] & {
-    animation: space-travel-handoff 1500ms linear both;
-  }
-  .space-field--reduce[data-space-stage='travel'] & {
-    animation: space-reduced-out 220ms linear both;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .space-field[data-space-stage='travel'] & {
-      animation: space-reduced-out 220ms linear both;
-    }
-  }
 }
 
-@utility space-stars {
+.space-stars {
   position: absolute;
   inset: 0;
   /* A slow fade-in on first mount only — the sky resolves as your eyes
-       adjust rather than snapping on with the page. One-shot, not a loop. */
+     adjust rather than snapping on with the page. One-shot, not a loop. */
   animation: space-stars-in 1400ms var(--ease-standard) both;
-
-  .space-field[data-space-stage='travel'] & {
-    animation: space-travel-handoff 1500ms linear both;
-  }
-
-  /* Reduced motion: the environment is still there, it just does not
-     travel. A short cross-dissolve replaces the camera move. */
-  .space-field--reduce & {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-
-  .space-field--reduce[data-space-stage='travel'] & {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    opacity: 1;
-
-    .space-field[data-space-stage='travel'] & {
-      animation: none;
-      transform: none;
-      opacity: 1;
-    }
-  }
+}
+@keyframes space-stars-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-@utility space-lights {
-  /* Three light volumes with their sources outside the frame. Offscreen
-     illumination, not blobs on the page. */
+/* Three light volumes with their sources outside the frame. Offscreen
+   illumination, not blobs on the page. */
+.space-lights {
   position: absolute;
   inset: -14%;
   transform: translate3d(0, 0, 0) scale(1);
-
-  /* ---- TRAVEL ----
-     The camera move. The stars carry the actual sense of motion (they are
-     the only thing with real parallax); these layers carry scale and
-     depth. Timings are the ones in lib/auth-cinematic.ts. */
-  .space-field[data-space-stage='travel'] & {
-    animation: space-travel-lights 1500ms var(--ease-cinematic) both;
-  }
-
-  .space-field--reduce[data-space-stage='travel'] & {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .space-field[data-space-stage='travel'] & {
-      animation: none;
-      transform: none;
-      opacity: 1;
-    }
-  }
 }
-
-@utility space-light {
+.space-light {
   position: absolute;
   inset: 0;
 }
-
-@utility space-light--cobalt {
+.space-light--cobalt {
   background: radial-gradient(
     ellipse 105% 65% at 50% 112%,
     rgb(37 99 235 / 0.42),
     transparent 56%
   );
 }
-
-@utility space-light--cyan {
+.space-light--cyan {
   background: radial-gradient(
     ellipse 65% 52% at 88% -8%,
     rgb(56 189 248 / 0.17),
     transparent 58%
   );
 }
-
-@utility space-light--violet {
+.space-light--violet {
   background: radial-gradient(
     ellipse 42% 36% at 8% 42%,
     rgb(99 102 241 / 0.08),
     transparent 60%
   );
 }
-
-@utility space-vignette {
+.space-vignette {
   position: absolute;
   inset: 0;
   background: radial-gradient(
@@ -625,98 +492,108 @@
     transparent 30%,
     rgb(1 3 8 / 0.8) 100%
   );
-  .space-field[data-space-stage='travel'] & {
-    animation: space-travel-vignette 1500ms var(--ease-cinematic) both;
-  }
-
-  .space-field--reduce[data-space-stage='travel'] & {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .space-field[data-space-stage='travel'] & {
-      animation: none;
-      transform: none;
-      opacity: 1;
-    }
-  }
 }
 
-@utility space-field--reduce {
-  /* Reduced motion: the environment is still there, it just does not
-     travel. A short cross-dissolve replaces the camera move. */
-  & .space-stars {
+/* ---- TRAVEL ----
+   The camera move. The stars carry the actual sense of motion (they are
+   the only thing with real parallax); these layers carry scale and
+   depth. Timings are the ones in lib/auth-cinematic.ts. */
+.space-field[data-space-stage="travel"] .space-lights {
+  animation: space-travel-lights 1500ms var(--ease-cinematic) both;
+}
+@keyframes space-travel-lights {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  45%  { transform: translate3d(0, -1.5%, 0) scale(1.16); opacity: 1; }
+  62%  { transform: translate3d(0, -2.4%, 0) scale(1.24); opacity: 1; }
+  96%  { transform: translate3d(0, -3.8%, 0) scale(1.34); opacity: 0; }
+  100% { transform: translate3d(0, -4%, 0) scale(1.36); opacity: 0; }
+}
+.space-field[data-space-stage="travel"] .space-vignette {
+  animation: space-travel-vignette 1500ms var(--ease-cinematic) both;
+}
+@keyframes space-travel-vignette {
+  0%   { opacity: 1; transform: scale(1); }
+  62%  { opacity: 1; transform: scale(1.09); }
+  96%  { opacity: 0; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.16); }
+}
+/* HANDOFF, NOT A CROSS-DISSOLVE.
+   The space clears between 62% and 96% of the timeline (930ms → 1440ms),
+   and by 930ms the real shell underneath has finished painting. So this
+   fade IS the reveal: one fade, over a complete interface, rather than
+   several stacked fades over a half-painted one.
+
+   Two earlier attempts are worth recording. Fading the space out over a
+   shell still at opacity 0 exposed the workspace's own background, which
+   is WHITE in the light theme — the cinematic went to mid-grey on its
+   way in. Stacking a second dark layer inside the shell to hide that
+   left the shell ~90% covered three-quarters of the way through its own
+   reveal. Ordering the two (shell first, space second) is what actually
+   solves it. */
+.space-field[data-space-stage="travel"] .space-base,
+.space-field[data-space-stage="travel"] .space-stars {
+  animation: space-travel-handoff 1500ms linear both;
+}
+@keyframes space-travel-handoff {
+  0%   { opacity: 1; }
+  62%  { opacity: 1; }
+  96%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* Reduced motion: the environment is still there, it just does not
+   travel. A short cross-dissolve replaces the camera move. */
+.space-field--reduce .space-stars,
+.space-field--reduce[data-space-stage="travel"] .space-lights,
+.space-field--reduce[data-space-stage="travel"] .space-vignette,
+.space-field--reduce[data-space-stage="travel"] .space-stars {
+  animation: none;
+  transform: none;
+  opacity: 1;
+}
+.space-field--reduce[data-space-stage="travel"] .space-base {
+  animation: space-reduced-out 220ms linear both;
+}
+@keyframes space-reduced-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .space-stars { animation: none; opacity: 1; }
+  .space-field[data-space-stage="travel"] .space-lights,
+  .space-field[data-space-stage="travel"] .space-vignette,
+  .space-field[data-space-stage="travel"] .space-stars {
     animation: none;
     transform: none;
     opacity: 1;
   }
-  &[data-space-stage='travel'] .space-lights {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-  &[data-space-stage='travel'] .space-vignette {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-  &[data-space-stage='travel'] .space-stars {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-  &[data-space-stage='travel'] .space-base {
+  .space-field[data-space-stage="travel"] .space-base {
     animation: space-reduced-out 220ms linear both;
   }
 }
 
-@utility starfield {
-  /* The canvas itself. CSS only places it — every pixel is drawn in JS. */
+/* The canvas itself. CSS only places it — every pixel is drawn in JS. */
+.starfield {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-@utility auth-world {
-  /* ================================================================
-     THE SIGN-IN ROUTE
+/* ================================================================
+   THE SIGN-IN ROUTE
 
-     One centred column in an empty environment: identity, then the
-     surface. There is no second column and no product mock — the space
-     is the composition. The page paints no background of its own; the
-     environment behind it does.
-     ================================================================ */
+   One centred column in an empty environment: identity, then the
+   surface. There is no second column and no product mock — the space
+   is the composition. The page paints no background of its own; the
+   environment behind it does.
+   ================================================================ */
+.auth-world {
   background: transparent;
   display: grid;
   place-items: center;
   padding: max(2rem, 6vh) 1rem max(2rem, 6vh);
-
-  /* The exit. This is why the navigate is deferred: the surface can only
-     recede while its route is still mounted. */
-  &[data-auth-stage='leaving'] .auth-panel {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.965);
-    pointer-events: none;
-  }
-  &[data-auth-stage='leaving'] .auth-identity {
-    opacity: 0;
-    transform: translate3d(0, 6px, 0) scale(0.985);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &[data-auth-stage='leaving'] .auth-panel {
-      transition: opacity 160ms linear;
-      transform: none;
-    }
-    &[data-auth-stage='leaving'] .auth-identity {
-      transition: opacity 160ms linear;
-      transform: none;
-    }
-  }
 }
-
-@utility auth-column {
+.auth-column {
   position: relative;
   z-index: 1;
   width: 100%;
@@ -726,8 +603,7 @@
   align-items: center;
   gap: clamp(1.75rem, 5vh, 3.25rem);
 }
-
-@utility auth-identity {
+.auth-identity {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -736,48 +612,39 @@
   transition:
     opacity 260ms var(--ease-standard),
     transform 320ms var(--ease-cinematic);
-  .auth-world[data-auth-stage='leaving'] & {
-    opacity: 0;
-    transform: translate3d(0, 6px, 0) scale(0.985);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .auth-world[data-auth-stage='leaving'] & {
-      transition: opacity 160ms linear;
-      transform: none;
-    }
-  }
 }
-
-@utility auth-tagline {
+.auth-tagline {
   font-size: 0.8125rem;
   color: hsl(var(--muted-foreground));
 }
-
-@utility auth-panel {
+.auth-panel {
   width: 100%;
   transition:
     opacity 260ms var(--ease-standard),
     transform 320ms var(--ease-cinematic);
-
-  /* The exit. This is why the navigate is deferred: the surface can only
-     recede while its route is still mounted. */
-  .auth-world[data-auth-stage='leaving'] & {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.965);
-    pointer-events: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .auth-world[data-auth-stage='leaving'] & {
-      transition: opacity 160ms linear;
-      transform: none;
-    }
-  }
 }
 
-@utility auth-surface {
-  /* Floating authentication surface — opaque, no animated blur. */
+/* The exit. This is why the navigate is deferred: the surface can only
+   recede while its route is still mounted. */
+.auth-world[data-auth-stage="leaving"] .auth-panel {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0) scale(0.965);
+  pointer-events: none;
+}
+.auth-world[data-auth-stage="leaving"] .auth-identity {
+  opacity: 0;
+  transform: translate3d(0, 6px, 0) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-world[data-auth-stage="leaving"] .auth-panel,
+  .auth-world[data-auth-stage="leaving"] .auth-identity {
+    transition: opacity 160ms linear;
+    transform: none;
+  }
+}
+/* Floating authentication surface — opaque, no animated blur. */
+.auth-surface {
   width: 100%;
   max-width: 26rem;
   border-radius: var(--r-panel);
@@ -790,10 +657,12 @@
     0 0 0 1px rgb(37 99 235 / 0.06),
     0 32px 64px -28px rgb(0 4 12 / 0.88);
   padding: 1.75rem 1.5rem;
-  @media (min-width: 640px) {
-    padding: 2.25rem 2.5rem;
-  }
 }
+@media (min-width: 640px) {
+  .auth-surface { padding: 2.25rem 2.5rem; }
+}
+}
+
 
 @utility surface {
   /* ----------------------------------------------------------------
@@ -1053,8 +922,7 @@
   height: 2.25rem;
 }
 
-@layer utilities {
-  /* ------------------------------------------------------------------
+/* ------------------------------------------------------------------
    CHASSIS GEOMETRY (V3).
 
    --sidebar-w is registered so it can be ANIMATED. A bare custom
@@ -1071,53 +939,16 @@
 
    Declared outside @layer so the registration is never tree-shaken.
    ------------------------------------------------------------------ */
-  @property --sidebar-w {
-    syntax: '<length>';
-    inherits: true;
-    initial-value: 270px;
-  }
-
-  /* ============================================================
-   NexusOS Design Tokens — Part 4, single source of truth.
-   Source hex values are documented next to each token.
-
-   LifeOS Visual Convergence, Commit A (colour + surface tokens).
-   Three structural changes land here, all at token level so every
-   existing consumer inherits them through var() with no code edits:
-
-   1. SURFACE LADDER. Previously the product had one surface: page
-      #0F0F0F and literally everything else #1A1A1A (measured — the
-      sidebar, the hero, and all 12 dashboard cards were the same
-      colour). Depth was impossible to express. There is now a six-step
-      ladder, --surface-0..5, and the shadcn-style aliases
-      (--background/--card/--muted/--secondary/--accent) are defined as
-      var() references INTO that ladder, so the ladder is the single
-      source of truth and the aliases stay backward-compatible.
-
-   2. TRANSLUCENT LINES. --line/--line-soft/--line-strong are complete
-      rgb() values carrying alpha, so a border reads as a lit edge over
-      whatever surface sits beneath it rather than a fixed grey. The
-      legacy --border/--input stay HSL triplets (unchanged mechanism,
-      set to the composited equivalent) because seven call sites still
-      use hsl(var(--border)); those migrate in Commits C/D.
-
-   3. TWO-STEP VIOLET. --primary carries the accent violet, which is
-      mode-aware because the contrast requirements invert: on near-black
-      the accent must be LIGHT to be legible as text (#7C74FF = 5.80:1),
-      on white it must be DARK (#5B51E8 = 5.49:1). --primary-foreground
-      is likewise mode-aware so `bg-primary text-primary-foreground`
-      passes AA in BOTH themes with no component change. --primary-fill
-      is the deep violet reserved for filled controls carrying white
-      labels; Button adopts it in Commit C.
-
-   Deliberate deviation from the LifeOS reference: LifeOS's ink scale
-   carries a ~1.2% cool tint (rgb(11,11,14) — blue channel +3). The
-   ladder below is 0% saturation, genuinely neutral, per the explicit
-   "true black and neutral near-black" requirement. Depth comes from the
-   shadow/inset/border system, not from hue. Re-tinting is a one-line
-   change to the ladder if that reads too clinical.
-   ============================================================ */
+@property --sidebar-w {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 270px;
 }
+
+/* ============================================================
+   NexusOS Design Tokens — Part 4, single source of truth.
+   (Token values live in @layer base below.)
+   ============================================================ */
 @layer base {
   :root {
     /* --- Surface ladder (light) — the single source of truth for every
@@ -1581,12 +1412,35 @@
       radial-gradient(1100px 600px at 100% 0%, var(--glow-ambient-2), transparent 55%);
   }
 
-  /* Dark-theme autofill: keep typed/autofilled text on the input surface
-     instead of the browser's default cream wash. Does not change values. */
-  input:-webkit-autofill,
-  textarea:-webkit-autofill,
-  select:-webkit-autofill {
+  /* Dark-theme autofill + paste: keep bg/text/caret readable. Chromium
+     paste/autofill can flash a light field; without -webkit-text-fill-color
+     light text on that wash (or white wash on dark text) reads as blank
+     until the next keystroke. Does not change values. */
+  .dark input,
+  .dark textarea,
+  .dark select,
+  .auth-shell input,
+  .auth-shell textarea,
+  .auth-shell select {
+    color: hsl(var(--foreground));
     -webkit-text-fill-color: hsl(var(--foreground));
+    caret-color: hsl(var(--foreground));
+    color-scheme: dark;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:autofill,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  textarea:autofill,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus,
+  select:autofill {
+    -webkit-text-fill-color: hsl(var(--foreground)) !important;
     caret-color: hsl(var(--foreground));
     box-shadow: 0 0 0 1000px hsl(var(--surface-2)) inset;
     transition: background-color 99999s ease-out;
@@ -1615,36 +1469,6 @@
 }
 
 /* --- Type scale (§4.5) — Inter, documented weights & tracking --- */
-@layer components {
-  @keyframes space-stars-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes space-travel-lights {
-    0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
-    45%  { transform: translate3d(0, -1.5%, 0) scale(1.16); opacity: 1; }
-    62%  { transform: translate3d(0, -2.4%, 0) scale(1.24); opacity: 1; }
-    96%  { transform: translate3d(0, -3.8%, 0) scale(1.34); opacity: 0; }
-    100% { transform: translate3d(0, -4%, 0) scale(1.36); opacity: 0; }
-  }
-  @keyframes space-travel-vignette {
-    0%   { opacity: 1; transform: scale(1); }
-    62%  { opacity: 1; transform: scale(1.09); }
-    96%  { opacity: 0; transform: scale(1.15); }
-    100% { opacity: 0; transform: scale(1.16); }
-  }
-  @keyframes space-travel-handoff {
-    0%   { opacity: 1; }
-    62%  { opacity: 1; }
-    96%  { opacity: 0; }
-    100% { opacity: 0; }
-  }
-  @keyframes space-reduced-out {
-    from { opacity: 1; }
-    to   { opacity: 0; }
-  }
-}
-
 
 /* Entrance keyframes (LifeOS convergence). Defined in Commit A alongside
    the tokens they use; consumed by the motion system in Commit E. */
