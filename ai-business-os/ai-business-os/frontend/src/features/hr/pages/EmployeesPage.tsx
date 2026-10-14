@@ -27,6 +27,7 @@ import { PageLoading } from "@/components/page-loading";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuthMe } from "@/hooks/usePermission";
 import { useAuthStore } from "@/stores/auth";
+import { HrTabs } from "@/features/hr/components/HrTabs";
 import { EmployeesTable } from "@/features/hr/components/EmployeesTable";
 import {
   EmployeeForm,
@@ -232,6 +233,7 @@ export function EmployeesPage() {
           </Can>
         }
       />
+      <HrTabs />
 
       {!access.isSelfOnlyView && (
         <div className="flex flex-wrap items-center gap-2">

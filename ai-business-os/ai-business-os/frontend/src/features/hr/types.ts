@@ -1,4 +1,4 @@
-/** HR Employees — wire types matching backend 07.2 contracts. */
+/** HR Employees — wire types matching backend 07.2+ contracts. */
 
 export const EMPLOYEE_STATUSES = ["active", "on_leave", "terminated"] as const;
 export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
@@ -74,4 +74,77 @@ export function employeeIncludesCompensation(
   employee: Employee,
 ): employee is Employee & { salaryGrade: string | null } {
   return Object.prototype.hasOwnProperty.call(employee, "salaryGrade");
+}
+
+export const LEAVE_TYPES = [
+  "vacation",
+  "sick",
+  "personal",
+  "parental",
+  "unpaid",
+] as const;
+export type LeaveType = (typeof LEAVE_TYPES)[number];
+
+export const APPROVAL_STATUSES = ["pending", "approved", "rejected"] as const;
+export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
+
+export interface LeaveRequest {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+  approvalStatus: ApprovalStatus;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  deletedAt?: string | null;
+}
+
+export interface LeaveRequestListParams {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDesc?: boolean;
+  employeeId?: string;
+  approvalStatus?: ApprovalStatus;
+  leaveType?: LeaveType;
+}
+
+export interface LeaveRequestCreatePayload {
+  employeeId?: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason?: string | null;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  date: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  hoursWorked: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  deletedAt?: string | null;
+}
+
+export interface AttendanceListParams {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDesc?: boolean;
+  employeeId?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }

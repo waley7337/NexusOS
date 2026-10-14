@@ -159,6 +159,7 @@ export function MobileSidebar({
     onNotifications: () => void;
     onLogout: () => void;
     logoutPending?: boolean;
+    unreadNotifications?: number;
   };
 }) {
   const open = useUiStore((s) => s.isMobileSidebarOpen);
@@ -200,11 +201,21 @@ export function MobileSidebar({
                 type="button"
                 variant="ghost"
                 size="icon"
-                aria-label="Notifications"
-                className="shrink-0"
+                aria-label={
+                  (chrome.unreadNotifications ?? 0) > 0
+                    ? `Notifications, ${chrome.unreadNotifications} unread`
+                    : "Notifications"
+                }
+                className="relative shrink-0"
                 onClick={() => closeThen(chrome.onNotifications)}
               >
                 <Bell />
+                {(chrome.unreadNotifications ?? 0) > 0 ? (
+                  <span
+                    className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-info"
+                    aria-hidden="true"
+                  />
+                ) : null}
               </Button>
               <Button
                 type="button"

@@ -53,6 +53,12 @@ const EmployeesPage = lazy(() =>
 const EmployeeDetailPage = lazy(() =>
   import("@/pages/hr/EmployeeDetailPage").then((m) => ({ default: m.EmployeeDetailPage })),
 );
+const LeaveRequestsPage = lazy(() =>
+  import("@/pages/hr/LeaveRequestsPage").then((m) => ({ default: m.LeaveRequestsPage })),
+);
+const AttendancePage = lazy(() =>
+  import("@/pages/hr/AttendancePage").then((m) => ({ default: m.AttendancePage })),
+);
 const ProjectsPage = lazy(() =>
   import("@/pages/projects").then((m) => ({ default: m.ProjectsPage })),
 );
@@ -61,6 +67,7 @@ const TasksPage = lazy(() =>
 );
 const InvoicesPage = lazy(() => import("@/features/finance").then((m) => ({ default: m.InvoicesPage })));
 const InvoiceDetailPage = lazy(() => import("@/features/finance").then((m) => ({ default: m.InvoiceDetailPage })));
+const ExpensesPage = lazy(() => import("@/features/finance").then((m) => ({ default: m.ExpensesPage })));
 const InventoryPage = lazy(() =>
   import("@/pages/inventory").then((m) => ({ default: m.InventoryPage })),
 );
@@ -167,6 +174,8 @@ export const router = createBrowserRouter([
               { path: ROUTES.hr, element: <EmployeesPage /> },
               { path: ROUTES.hrEmployees, element: <EmployeesPage /> },
               { path: ROUTES.hrEmployeeDetail, element: <EmployeeDetailPage /> },
+              { path: ROUTES.hrLeave, element: <LeaveRequestsPage /> },
+              { path: ROUTES.hrAttendance, element: <AttendancePage /> },
             ],
           },
           {
@@ -176,6 +185,10 @@ export const router = createBrowserRouter([
               { path: ROUTES.financeInvoices, element: <InvoicesPage /> },
               { path: ROUTES.financeInvoiceDetail, element: <InvoiceDetailPage /> },
             ],
+          },
+          {
+            element: <PermissionRoute permission="expenses.read" />,
+            children: [{ path: ROUTES.financeExpenses, element: <ExpensesPage /> }],
           },
           { path: ROUTES.inventory, element: <InventoryPage /> },
           { path: ROUTES.documents, element: <DocumentsPlaceholder /> },

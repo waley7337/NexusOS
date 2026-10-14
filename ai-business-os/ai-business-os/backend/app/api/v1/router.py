@@ -34,3 +34,15 @@ api_router.include_router(reports_module.router)
 # AI Assistant — conversational assistant backed by OpenAI.
 from app.api.v1 import assistant as assistant_module  # noqa: E402
 api_router.include_router(assistant_module.router)
+# Dashboard metrics — tenant-scoped operational KPIs.
+from app.api.v1 import dashboard as dashboard_module  # noqa: E402
+api_router.include_router(dashboard_module.router)
+# In-app notifications — current-user inbox.
+from app.api.v1 import notifications as notifications_module  # noqa: E402
+api_router.include_router(notifications_module.router)
+# Platform SaaS billing (NexusOS subscription — separate from tenant invoice payments).
+from app.api.v1 import billing as billing_module  # noqa: E402
+api_router.include_router(billing_module.router)
+# Stripe webhooks (signature-verified; unauthenticated).
+from app.api.v1.webhooks import stripe as stripe_webhooks  # noqa: E402
+api_router.include_router(stripe_webhooks.router)

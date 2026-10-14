@@ -27,6 +27,10 @@ import { useRouteFocus } from "@/hooks/useRouteFocus";
 import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { useCaptureActions } from "@/hooks/useCaptureActions";
 import { useLogout } from "@/features/auth";
+import {
+  NotificationPanel,
+  useUnreadNotificationCount,
+} from "@/features/notifications";
 import { ROUTES } from "@/constants/routes";
 import { CommandPalette } from "@/components/command-palette";
 import {
@@ -183,6 +187,13 @@ export function AppLayout() {
     .slice(0, 1)
     .toUpperCase();
 
+  const unreadQuery = useUnreadNotificationCount(Boolean(user));
+  const unreadCount = unreadQuery.data?.count ?? 0;
+  const hasUnread = unreadCount > 0;
+  const notificationsLabel = hasUnread
+    ? `Notifications, ${unreadCount} unread`
+    : "Notifications";
+
   return (
     // h-dvh + overflow-hidden makes the shell a fixed frame with its own
     // internal scroll (Part 04 convergence, Commit C). This is what lets the
@@ -208,6 +219,7 @@ export function AppLayout() {
           onNotifications: () => setNotificationPanelOpen(true),
           onLogout: () => void handleLogout(),
           logoutPending: logoutMutation.isPending,
+          unreadNotifications: unreadCount,
         }}
       />
 
@@ -215,11 +227,7 @@ export function AppLayout() {
         <DrawerContent>
           <DrawerHeader title="Notifications" />
           <DrawerBody>
-            <EmptyState
-              icon={Bell}
-              title="No notifications yet"
-              description="You'll see mentions, overdue items, and updates from your team here."
-            />
+            <NotificationPanel open={notificationPanelOpen} />
           </DrawerBody>
         </DrawerContent>
       </Drawer>
@@ -487,16 +495,22 @@ export function AppLayout() {
             </button>
             </IconTooltip>
 
-            <IconTooltip label="Notifications" side={collapsed ? "right" : "top"}>
+            <IconTooltip label={notificationsLabel} side={collapsed ? "right" : "top"}>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Notifications"
-              className="shrink-0"
+              aria-label={notificationsLabel}
+              className="relative shrink-0"
               onClick={toggleNotificationPanel}
             >
               <Bell />
+              {hasUnread ? (
+                <span
+                  className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-info"
+                  aria-hidden="true"
+                />
+              ) : null}
             </Button>
             </IconTooltip>
 

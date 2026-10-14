@@ -174,7 +174,8 @@ describe("HR shell routing", () => {
     const user = userEvent.setup();
     renderShell(["employees.read"], ROUTES.hr);
     expect(await screen.findByText("No employees yet")).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Employees" }));
+    const employeesLinks = screen.getAllByRole("link", { name: "Employees" });
+    await user.click(employeesLinks[employeesLinks.length - 1]!);
     await waitFor(() => {
       expect(screen.getByText("No employees yet")).toBeInTheDocument();
     });

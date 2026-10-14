@@ -53,3 +53,42 @@ def test_legacy_hr_permissions_not_in_catalog():
     names = expand("*")
     assert "hr.read" not in names
     assert "hr.manage" not in names
+
+
+def test_leave_and_attendance_permissions_in_catalog():
+    names = expand("*")
+    for perm in (
+        "leave_requests.read",
+        "leave_requests.read_self",
+        "leave_requests.read_team",
+        "leave_requests.create",
+        "leave_requests.approve",
+        "attendance.read",
+        "attendance.read_self",
+        "attendance.read_team",
+        "attendance.clock",
+        "attendance.manage",
+    ):
+        assert perm in names
+
+
+def test_manager_leave_attendance_grants_exclude_company_wide_manage():
+    names = expand(DEFAULT_ROLES["Manager"])
+    assert "leave_requests.read_team" in names
+    assert "leave_requests.approve" in names
+    assert "leave_requests.create" in names
+    assert "leave_requests.read" not in names
+    assert "attendance.read_team" in names
+    assert "attendance.clock" in names
+    assert "attendance.manage" not in names
+    assert "attendance.read" not in names
+
+
+def test_employee_leave_attendance_self_only():
+    names = expand(DEFAULT_ROLES["Employee"])
+    assert "leave_requests.read_self" in names
+    assert "leave_requests.create" in names
+    assert "leave_requests.approve" not in names
+    assert "attendance.read_self" in names
+    assert "attendance.clock" in names
+    assert "attendance.manage" not in names

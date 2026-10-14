@@ -1,5 +1,11 @@
 export { EmployeesPage } from "./pages/EmployeesPage";
 export { EmployeeDetailPage } from "./pages/EmployeeDetailPage";
+export { LeaveRequestsPage } from "./pages/LeaveRequestsPage";
+export { AttendancePage } from "./pages/AttendancePage";
 export * from "./types";
 export * from "./hooks/useEmployees";
+export * from "./hooks/useLeaveRequests";
+export * from "./hooks/useAttendance";
 export * from "./services/employeesService";
+export * from "./services/leaveRequestsService";
+export * from "./services/attendanceService";

@@ -190,12 +190,25 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str | None = None
     EMAIL_FROM: str = "no-reply@example.com"
 
-    # --- Stripe (Part 08.1 foundation — optional until billing phases) ---
+    # --- Stripe (tenant invoice payments + NexusOS SaaS billing) ---
+    # Live processing is fail-closed until the matching *_ENABLED flag is true
+    # AND the required secrets/price IDs are present. Never set secrets here.
     STRIPE_PLATFORM_SECRET_KEY: SecretStr | None = None
     STRIPE_PLATFORM_PUBLISHABLE_KEY: str | None = None
     STRIPE_PLATFORM_WEBHOOK_SECRET: SecretStr | None = None
     STRIPE_CONNECT_WEBHOOK_SECRET: SecretStr | None = None
     STRIPE_API_VERSION: str | None = None
+    STRIPE_HTTP_TIMEOUT_SECONDS: float = 30.0
+    # Tenant invoice Checkout (Connect direct charges). Requires an active
+    # PaymentProviderAccount with charges_enabled — never routes tenant funds
+    # to the platform balance.
+    STRIPE_TENANT_PAYMENTS_ENABLED: bool = False
+    # NexusOS SaaS Billing/Checkout (platform account only — no Connect).
+    STRIPE_BILLING_ENABLED: bool = False
+    # Server-controlled plan → Price ID mapping (Stripe Dashboard Price IDs).
+    STRIPE_PRICE_STARTER: str | None = None
+    STRIPE_PRICE_PRO: str | None = None
+    STRIPE_PRICE_ENTERPRISE: str | None = None
     PAYMENTS_IDEMPOTENCY_TTL_HOURS: int = 24
 
     @property

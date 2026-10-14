@@ -7,6 +7,7 @@ export const queryKeys = {
   dashboard: {
     all: ["dashboard"] as const,
     summary: ["dashboard"] as const,
+    metrics: ["dashboard", "metrics"] as const,
   },
   notifications: {
     all: ["notifications"] as const,
@@ -75,6 +76,20 @@ export const queryKeys = {
       detail: (id: string) => ["hr", "employees", "detail", id] as const,
       options: () => ["hr", "employees", "options"] as const,
     },
+    leaveRequests: {
+      all: ["hr", "leave-requests"] as const,
+      lists: () => ["hr", "leave-requests", "list"] as const,
+      list: (params: Record<string, unknown>) =>
+        ["hr", "leave-requests", "list", params] as const,
+      detail: (id: string) => ["hr", "leave-requests", "detail", id] as const,
+    },
+    attendance: {
+      all: ["hr", "attendance"] as const,
+      lists: () => ["hr", "attendance", "list"] as const,
+      list: (params: Record<string, unknown>) =>
+        ["hr", "attendance", "list", params] as const,
+      detail: (id: string) => ["hr", "attendance", "detail", id] as const,
+    },
   },
   finance: {
     invoices: {
@@ -88,6 +103,19 @@ export const queryKeys = {
       list: (invoiceId: string) => ["finance", "payments", "list", invoiceId] as const,
       detail: (id: string) => ["finance", "payments", "detail", id] as const,
     },
+    expenses: {
+      all: ["finance", "expenses"] as const,
+      lists: () => ["finance", "expenses", "list"] as const,
+      list: (params: Record<string, unknown>) => ["finance", "expenses", "list", params] as const,
+      detail: (id: string) => ["finance", "expenses", "detail", id] as const,
+    },
+    paymentProviders: {
+      stripe: ["finance", "payment-providers", "stripe"] as const,
+    },
+  },
+  billing: {
+    all: ["billing"] as const,
+    subscription: ["billing", "subscription"] as const,
   },
   projects: {
     all: ["projects"] as const,

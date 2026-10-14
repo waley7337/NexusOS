@@ -25,8 +25,13 @@ def test_manager_has_finance_view_and_invoice_read_only():
     assert "payments.read" not in names
     assert "payments.create" not in names
     assert "payments.refund" not in names
+    assert "payment_providers.read" not in names
     assert "payment_providers.manage" not in names
+    # Intentional: Managers do not automatically receive expenses.* (Stripe work must not change this).
+    assert "expenses.read" not in names
     assert "expenses.create" not in names
+    assert "expenses.update" not in names
+    assert "expenses.delete" not in names
 
 
 def test_employee_has_no_finance_permissions():

@@ -10,7 +10,7 @@ from typing import AbstractSet
 
 from app.models.hr import Employee
 
-# Seven active v1 employee permissions (leave/attendance deferred).
+# Employee directory permissions (Part 07.1) + leave/attendance (07.4).
 EMPLOYEES_READ = "employees.read"
 EMPLOYEES_READ_COMPENSATION = "employees.read_compensation"
 EMPLOYEES_READ_SELF = "employees.read_self"
@@ -18,6 +18,18 @@ EMPLOYEES_READ_TEAM = "employees.read_team"
 EMPLOYEES_CREATE = "employees.create"
 EMPLOYEES_UPDATE = "employees.update"
 EMPLOYEES_DELETE = "employees.delete"
+
+LEAVE_READ = "leave_requests.read"
+LEAVE_READ_SELF = "leave_requests.read_self"
+LEAVE_READ_TEAM = "leave_requests.read_team"
+LEAVE_CREATE = "leave_requests.create"
+LEAVE_APPROVE = "leave_requests.approve"
+
+ATTENDANCE_READ = "attendance.read"
+ATTENDANCE_READ_SELF = "attendance.read_self"
+ATTENDANCE_READ_TEAM = "attendance.read_team"
+ATTENDANCE_CLOCK = "attendance.clock"
+ATTENDANCE_MANAGE = "attendance.manage"
 
 EMPLOYEE_V1_PERMISSIONS: frozenset[str] = frozenset(
     {
@@ -86,3 +98,79 @@ def can_view_compensation(
     ):
         return True
     return False
+
+
+def can_access_employee_scoped_record(
+    *,
+    company_wide_perm: str,
+    self_perm: str,
+    team_perm: str,
+    permissions: AbstractSet[str],
+    employee: Employee,
+    caller_employee_id: uuid.UUID | None,
+    acting_user_id: uuid.UUID,
+) -> bool:
+    """Shared self/team/company gate for leave requests and attendance."""
+    if company_wide_perm in permissions:
+        return True
+    if self_perm in permissions and employee.user_id == acting_user_id:
+        return True
+    if (
+        team_perm in permissions
+        and caller_employee_id is not None
+        and employee.manager_id == caller_employee_id
+    ):
+        return True
+    return False
+
+
+def can_read_leave_for_employee(
+    *,
+    permissions: AbstractSet[str],
+    employee: Employee,
+    caller_employee_id: uuid.UUID | None,
+    acting_user_id: uuid.UUID,
+) -> bool:
+    return can_access_employee_scoped_record(
+        company_wide_perm=LEAVE_READ,
+        self_perm=LEAVE_READ_SELF,
+        team_perm=LEAVE_READ_TEAM,
+        permissions=permissions,
+        employee=employee,
+        caller_employee_id=caller_employee_id,
+        acting_user_id=acting_user_id,
+    )
+
+
+def can_approve_leave_for_employee(
+    *,
+    permissions: AbstractSet[str],
+    employee: Employee,
+    caller_employee_id: uuid.UUID | None,
+) -> bool:
+    if LEAVE_APPROVE not in permissions:
+        return False
+    if LEAVE_READ in permissions:
+        return True
+    return (
+        caller_employee_id is not None
+        and employee.manager_id == caller_employee_id
+    )
+
+
+def can_read_attendance_for_employee(
+    *,
+    permissions: AbstractSet[str],
+    employee: Employee,
+    caller_employee_id: uuid.UUID | None,
+    acting_user_id: uuid.UUID,
+) -> bool:
+    return can_access_employee_scoped_record(
+        company_wide_perm=ATTENDANCE_READ,
+        self_perm=ATTENDANCE_READ_SELF,
+        team_perm=ATTENDANCE_READ_TEAM,
+        permissions=permissions,
+        employee=employee,
+        caller_employee_id=caller_employee_id,
+        acting_user_id=acting_user_id,
+    )

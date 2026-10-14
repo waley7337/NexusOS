@@ -1,2 +1,3 @@
 export { useDashboard } from "./hooks/useDashboard";
-export type { DashboardSnapshot } from "./types";
+export { useDashboardMetrics } from "./hooks/useDashboardMetrics";
+export type { DashboardSnapshot, DashboardMetrics } from "./types";

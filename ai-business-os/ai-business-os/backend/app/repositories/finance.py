@@ -13,7 +13,8 @@ from sqlalchemy.orm import selectinload
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.models.crm import Customer
 from app.models.enums import InvoiceStatus
-from app.models.finance import Invoice, InvoiceItem, Payment
+from app.models.finance import Expense, Invoice, InvoiceItem, Payment
+from app.models.user import User
 from app.payments.currency import normalize_currency
 from app.payments.money import effective_payment_amount, invoice_subtotal, invoice_total, line_total, quantize_money
 from app.repositories.base import DEFAULT_PAGE_SIZE, BaseRepository
@@ -349,3 +350,73 @@ class InvoiceRepository(BaseRepository[Invoice]):
         )
         outstanding = quantize_money(invoice.total - paid)
         return paid, outstanding
+
+
+class ExpenseRepository(BaseRepository[Expense]):
+    """Tenant-scoped expense CRUD with optional paid_by validation."""
+
+    model = Expense
+    SORT_FIELDS = {
+        "created_at": Expense.created_at,
+        "date": Expense.date,
+        "amount": Expense.amount,
+        "category": Expense.category,
+    }
+
+    async def ensure_paid_by_in_tenant(self, user_id: uuid.UUID) -> None:
+        """Reject paid_by users that are missing, soft-deleted, inactive, or other-tenant."""
+        self._require_tenant_context()
+        stmt = select(User.id).where(
+            User.id == user_id,
+            User.company_id == self.company_id,
+            User.deleted_at.is_(None),
+            User.is_active.is_(True),
+        )
+        found = (await self.db.execute(stmt)).scalar_one_or_none()
+        if found is None:
+            raise ValidationError("Paid-by user must belong to the current company.")
+
+    async def list_filtered(
+        self,
+        *,
+        page: int = 1,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        sort_by: str | None = None,
+        sort_desc: bool = False,
+        category: str | None = None,
+        search: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> tuple[List[Expense], int]:
+        page, page_size = self._clamp_pagination(page, page_size)
+        stmt = self._base_query()
+
+        if category is not None:
+            stmt = stmt.where(Expense.category == category.strip())
+
+        if date_from is not None:
+            stmt = stmt.where(Expense.date >= date_from)
+        if date_to is not None:
+            stmt = stmt.where(Expense.date <= date_to)
+
+        if search:
+            term = search.strip()[:_MAX_SEARCH_LEN]
+            if term:
+                pattern = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                stmt = stmt.where(
+                    Expense.category.ilike(f"%{pattern}%", escape="\\")
+                    | Expense.description.ilike(f"%{pattern}%", escape="\\")
+                )
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = (await self.db.execute(count_stmt)).scalar_one()
+
+        resolved_order = self._safe_order_by(sort_by, sort_desc)
+        if resolved_order is not None:
+            stmt = stmt.order_by(resolved_order)
+        else:
+            stmt = stmt.order_by(Expense.date.desc(), Expense.created_at.desc())
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all()), total

@@ -1,4 +1,4 @@
-"""Thin Stripe SDK client construction — no live calls in foundation."""
+"""Centralized Stripe SDK client — timeouts, API version, no secret logging."""
 from __future__ import annotations
 
 from typing import Any
@@ -6,27 +6,28 @@ from typing import Any
 import stripe
 
 from app.core.config import settings
+from app.payments.stripe_config import http_timeout_seconds, platform_secret_key
 
 
-def _resolve_secret(value: str | Any | None) -> str | None:
-    if value is None:
-        return None
-    if hasattr(value, "get_secret_value"):
-        return value.get_secret_value()
-    return str(value)
+def configure_stripe(*, api_key: str | None = None) -> None:
+    key = api_key or platform_secret_key()
+    if not key:
+        raise RuntimeError("Stripe secret key is not configured")
+    stripe.api_key = key
+    stripe.max_network_retries = 1
+    # Official SDK reads default timeout from stripe.default_http_client when set.
+    timeout = http_timeout_seconds()
+    if stripe.default_http_client is None:
+        stripe.default_http_client = stripe.http_client.RequestsClient(timeout=timeout)
+    if settings.STRIPE_API_VERSION:
+        stripe.api_version = settings.STRIPE_API_VERSION
 
 
-def configure_stripe_api_key(api_key: str | None = None) -> None:
-    key = api_key or _resolve_secret(settings.STRIPE_PLATFORM_SECRET_KEY)
-    if key:
-        stripe.api_key = key
-
-
-def stripe_client_for_platform() -> Any:
-    configure_stripe_api_key()
+def stripe_module(*, api_key: str | None = None) -> Any:
+    configure_stripe(api_key=api_key)
     return stripe
 
 
-def stripe_client_for_connected_account(connected_account_id: str) -> dict[str, str]:
+def connected_account_options(connected_account_id: str) -> dict[str, str]:
     """Request options for direct charges on a connected account."""
     return {"stripe_account": connected_account_id}

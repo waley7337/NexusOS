@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.dependencies.auth import CurrentUser, get_current_active_user
-from app.repositories.finance import InvoiceRepository
+from app.repositories.finance import ExpenseRepository, InvoiceRepository
 from app.repositories.payments import PaymentRepository
 from app.services.payment_service import PaymentService
 
@@ -23,6 +23,16 @@ def get_invoice_repository(
 
 
 InvoiceRepo = Annotated[InvoiceRepository, Depends(get_invoice_repository)]
+
+
+def get_expense_repository(
+    db: DbSession,
+    user: ActiveUser,
+) -> ExpenseRepository:
+    return ExpenseRepository(db, company_id=user.company_id, user_id=user.id)
+
+
+ExpenseRepo = Annotated[ExpenseRepository, Depends(get_expense_repository)]
 
 
 def get_payment_repository(

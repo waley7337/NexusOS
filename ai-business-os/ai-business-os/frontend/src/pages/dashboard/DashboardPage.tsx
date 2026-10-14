@@ -21,6 +21,7 @@ import { useUiStore } from "@/stores/ui";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { useRevealOnScroll } from "@/hooks/useRevealOnScroll";
 import { useDashboard } from "@/features/dashboard";
+import { useDashboardMetrics } from "@/features/dashboard";
 import { MODULE_SUMMARIES } from "@/features/dashboard/constants";
 import { discoverableNavItems, NAV_ITEMS, ROUTES } from "@/constants/routes";
 import { useAuthMe } from "@/hooks/usePermission";
@@ -57,6 +58,11 @@ const CAPABILITY_SECTIONS = [
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const { data, isPending, isError, dataUpdatedAt, refetch } = useDashboard();
+  const {
+    data: metrics,
+    isPending: metricsPending,
+    isError: metricsError,
+  } = useDashboardMetrics();
   const setCaptureOpen = useUiStore((s) => s.setCaptureOpen);
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
   const prefersReducedMotion = useReducedMotion();
@@ -198,20 +204,94 @@ export function DashboardPage() {
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Operations
                       </p>
-                      <h2 className="mt-2 text-h3 text-foreground">
-                        No operational metrics yet
-                      </h2>
-                      <p className="mt-1.5 max-w-[48ch] text-body text-muted-foreground">
-                        Revenue, pipeline, tasks, and activity appear here when
-                        those modules have APIs. Nothing below is estimated.
-                      </p>
+                      {metricsPending ? (
+                        <Skeleton className="mt-2 h-7 w-40" />
+                      ) : metricsError || !metrics ? (
+                        <h2 className="mt-2 text-h3 text-foreground">
+                          Metrics unavailable
+                        </h2>
+                      ) : (
+                        <h2 className="mt-2 text-h3 text-foreground">
+                          {metrics.finance.openInvoiceCount > 0
+                            ? `${metrics.finance.openInvoiceCount} open invoice${metrics.finance.openInvoiceCount !== 1 ? "s" : ""}`
+                            : metrics.crm.customerCount > 0
+                              ? `${metrics.crm.customerCount} customer${metrics.crm.customerCount !== 1 ? "s" : ""}`
+                              : metrics.projects.activeProjectCount > 0
+                                ? `${metrics.projects.activeProjectCount} active project${metrics.projects.activeProjectCount !== 1 ? "s" : ""}`
+                                : "All clear"}
+                        </h2>
+                      )}
+                      {metricsPending ? (
+                        <Skeleton className="mt-1.5 h-4 w-60" />
+                      ) : metricsError || !metrics ? (
+                        <p className="mt-1.5 max-w-[48ch] text-body text-muted-foreground">
+                          Could not load operational metrics. They will appear once the database is reachable.
+                        </p>
+                      ) : (
+                        <p className="mt-1.5 max-w-[48ch] text-body text-muted-foreground">
+                          Live data as of today · {metrics.asOf}. Nothing here is estimated.
+                        </p>
+                      )}
                     </div>
                     <span className="shrink-0 rounded-full border border-line-soft bg-surface-3/80 px-2.5 py-1 text-xs text-muted-foreground">
-                      No metrics source
+                      {metricsPending ? "Loading…" : metricsError ? "Unavailable" : "Live"}
                     </span>
                   </div>
 
-                  <AmbientWaveform />
+                  {/* Metrics grid — loading skeleton / real values / error placeholder */}
+                  <div className="relative mt-5">
+                    {metricsPending ? (
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div key={i} className="rounded-[var(--r-surface)] border border-line-soft bg-surface-0/50 px-3 py-2.5">
+                            <Skeleton className="h-3 w-16" />
+                            <Skeleton className="mt-1.5 h-5 w-10" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : metricsError || !metrics ? (
+                      <AmbientWaveform />
+                    ) : (
+                      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        <MetricChip
+                          label="Open invoices"
+                          value={metrics.finance.openInvoiceCount}
+                          warn={metrics.finance.overdueInvoiceCount > 0}
+                          hint={
+                            metrics.finance.overdueInvoiceCount > 0
+                              ? `${metrics.finance.overdueInvoiceCount} overdue`
+                              : undefined
+                          }
+                        />
+                        <MetricChip
+                          label="Customers"
+                          value={metrics.crm.customerCount}
+                        />
+                        <MetricChip
+                          label="Open leads"
+                          value={metrics.crm.openLeadCount}
+                        />
+                        <MetricChip
+                          label="Active projects"
+                          value={metrics.projects.activeProjectCount}
+                        />
+                        <MetricChip
+                          label="Open tasks"
+                          value={metrics.projects.openTaskCount}
+                          warn={metrics.projects.overdueTaskCount > 0}
+                          hint={
+                            metrics.projects.overdueTaskCount > 0
+                              ? `${metrics.projects.overdueTaskCount} overdue`
+                              : undefined
+                          }
+                        />
+                        <MetricChip
+                          label="Employees"
+                          value={metrics.hr.employeeCount}
+                        />
+                      </dl>
+                    )}
+                  </div>
 
                   <div className="relative mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
                     <button
@@ -261,8 +341,8 @@ export function DashboardPage() {
                     <dl className="min-w-0 flex-1 space-y-3">
                       <ReadinessRow
                         label="Operational modules"
-                        value="1"
-                        hint="CRM · Customers"
+                        value="6"
+                        hint="CRM · HR · Finance · Inventory · Projects · Tasks"
                       />
                       <ReadinessRow
                         label="Last probe"
@@ -487,6 +567,38 @@ function SignalPanel({
         )}
       </div>
     </Plane>
+  );
+}
+
+/** Single metric chip shown in the Operations panel. */
+function MetricChip({
+  label,
+  value,
+  warn,
+  hint,
+}: {
+  label: string;
+  value: number;
+  warn?: boolean;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-[var(--r-surface)] border border-line-soft bg-surface-0/50 px-3 py-2.5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd
+        className={cn(
+          "mt-0.5 text-lg font-semibold tabular-nums leading-tight",
+          warn ? "text-warning" : "text-foreground",
+        )}
+      >
+        {value}
+      </dd>
+      {hint && (
+        <p className="mt-0.5 text-[10px] leading-tight text-disabled-foreground">
+          {hint}
+        </p>
+      )}
+    </div>
   );
 }
 

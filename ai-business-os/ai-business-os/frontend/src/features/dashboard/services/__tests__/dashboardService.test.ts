@@ -5,7 +5,7 @@ vi.mock("@/api/client", () => ({
 }));
 
 import { request } from "@/api/client";
-import { getDashboard } from "../dashboardService";
+import { getDashboard, getDashboardMetrics } from "../dashboardService";
 
 const mockedRequest = vi.mocked(request);
 
@@ -46,3 +46,46 @@ describe("getDashboard", () => {
     });
   });
 });
+
+describe("getDashboardMetrics", () => {
+  beforeEach(() => {
+    mockedRequest.mockReset();
+  });
+
+  it("calls GET /dashboard/metrics and returns the payload", async () => {
+    const mockMetrics = {
+      asOf: "2026-10-14",
+      monthStart: "2026-10-01",
+      finance: {
+        openInvoiceCount: 3,
+        overdueInvoiceCount: 1,
+        outstandingAmount: "1500.00",
+        collectedThisMonth: "3200.00",
+        collectedPaymentCount: 4,
+      },
+      crm: { customerCount: 12, openLeadCount: 5, openDealCount: 2 },
+      projects: {
+        activeProjectCount: 3,
+        totalProjectCount: 5,
+        openTaskCount: 8,
+        overdueTaskCount: 2,
+      },
+      hr: { employeeCount: 7 },
+      inventory: { lowStockCount: 1 },
+    };
+    mockedRequest.mockResolvedValueOnce(mockMetrics);
+
+    const result = await getDashboardMetrics();
+    expect(result).toEqual(mockMetrics);
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "GET", url: "/dashboard/metrics" }),
+    );
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("propagates errors so callers can handle unavailability", async () => {
+    mockedRequest.mockRejectedValueOnce(new Error("401 Unauthorized"));
+    await expect(getDashboardMetrics()).rejects.toThrow("401 Unauthorized");
+  });
+});
+

@@ -81,3 +81,49 @@ export interface ManualRefundPayload {
   amount: string;
   reason: string;
 }
+
+// ---------------------------------------------------------------------------
+// Expenses
+// ---------------------------------------------------------------------------
+
+export const EXPENSE_SORT_FIELDS = ["created_at", "date", "amount", "category"] as const;
+export type ExpenseSortField = (typeof EXPENSE_SORT_FIELDS)[number];
+
+export interface Expense {
+  id: string;
+  companyId: string;
+  category: string;
+  amount: string;
+  currency: string;
+  description: string | null;
+  date: string;
+  paidBy: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedAt: string | null;
+}
+
+export interface ExpenseListParams {
+  page?: number;
+  pageSize?: number;
+  sortBy?: ExpenseSortField;
+  sortDesc?: boolean;
+  category?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface ExpensePayload {
+  category: string;
+  amount: string;
+  currency: string;
+  description?: string | null;
+  date: string;
+  paidBy?: string | null;
+}
+
+export type ExpenseUpdatePayload = Partial<ExpensePayload>;

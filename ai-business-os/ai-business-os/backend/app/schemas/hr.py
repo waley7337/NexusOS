@@ -13,9 +13,11 @@ from typing import AbstractSet
 
 from pydantic import EmailStr, Field
 
+from decimal import Decimal
+
 from app.hr.authorization import can_view_compensation
-from app.models.enums import EmployeeStatus, EmploymentType
-from app.models.hr import Employee
+from app.models.enums import ApprovalStatus, EmployeeStatus, EmploymentType, LeaveType
+from app.models.hr import Attendance, Employee, LeaveRequest
 from app.models.user import User
 from app.schemas.base import CamelModel
 
@@ -146,3 +148,66 @@ def employee_to_authorized_response(
             salaryGrade=employee.salary_grade,
         )
     return base
+
+
+class LeaveRequestCreate(CamelModel):
+    employee_id: uuid.UUID | None = Field(default=None, alias="employeeId")
+    leave_type: LeaveType = Field(alias="leaveType")
+    start_date: date = Field(alias="startDate")
+    end_date: date = Field(alias="endDate")
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class LeaveRequestResponse(CamelModel):
+    id: uuid.UUID
+    company_id: uuid.UUID = Field(alias="companyId")
+    employee_id: uuid.UUID = Field(alias="employeeId")
+    leave_type: LeaveType = Field(alias="leaveType")
+    start_date: date = Field(alias="startDate")
+    end_date: date = Field(alias="endDate")
+    reason: str | None = None
+    approval_status: ApprovalStatus = Field(alias="approvalStatus")
+    is_active: bool = Field(alias="isActive")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+    created_by: uuid.UUID | None = Field(default=None, alias="createdBy")
+    updated_by: uuid.UUID | None = Field(default=None, alias="updatedBy")
+    deleted_at: datetime | None = Field(default=None, alias="deletedAt")
+
+
+def leave_request_to_response(row: LeaveRequest) -> LeaveRequestResponse:
+    return LeaveRequestResponse.model_validate(row)
+
+
+class AttendanceCreate(CamelModel):
+    employee_id: uuid.UUID = Field(alias="employeeId")
+    date: date
+    clock_in: datetime | None = Field(default=None, alias="clockIn")
+    clock_out: datetime | None = Field(default=None, alias="clockOut")
+    hours_worked: Decimal | None = Field(default=None, alias="hoursWorked")
+
+
+class AttendanceUpdate(CamelModel):
+    clock_in: datetime | None = Field(default=None, alias="clockIn")
+    clock_out: datetime | None = Field(default=None, alias="clockOut")
+    hours_worked: Decimal | None = Field(default=None, alias="hoursWorked")
+
+
+class AttendanceResponse(CamelModel):
+    id: uuid.UUID
+    company_id: uuid.UUID = Field(alias="companyId")
+    employee_id: uuid.UUID = Field(alias="employeeId")
+    date: date
+    clock_in: datetime | None = Field(default=None, alias="clockIn")
+    clock_out: datetime | None = Field(default=None, alias="clockOut")
+    hours_worked: Decimal | None = Field(default=None, alias="hoursWorked")
+    is_active: bool = Field(alias="isActive")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+    created_by: uuid.UUID | None = Field(default=None, alias="createdBy")
+    updated_by: uuid.UUID | None = Field(default=None, alias="updatedBy")
+    deleted_at: datetime | None = Field(default=None, alias="deletedAt")
+
+
+def attendance_to_response(row: Attendance) -> AttendanceResponse:
+    return AttendanceResponse.model_validate(row)

@@ -1,5 +1,5 @@
 import { request } from "@/api/client";
-import type { DashboardSnapshot } from "../types";
+import type { DashboardSnapshot, DashboardMetrics } from "../types";
 
 interface HealthPayload {
   status: string;
@@ -32,4 +32,13 @@ export async function getDashboard(): Promise<DashboardSnapshot> {
     environment: api.environment,
     database,
   };
+}
+
+/**
+ * Tenant-scoped operational KPIs for the dashboard Operations panel.
+ * Calls GET /api/v1/dashboard/metrics — requires authentication only.
+ * Returns null if the user is not authenticated or the endpoint errors.
+ */
+export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+  return request<DashboardMetrics>({ method: "GET", url: "/dashboard/metrics" });
 }

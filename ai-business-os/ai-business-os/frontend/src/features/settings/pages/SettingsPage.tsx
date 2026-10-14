@@ -1,6 +1,7 @@
 /**
  * Settings page — company profile persistence (Part 08).
  * Calls GET /settings/company and PATCH /settings/company.
+ * Also hosts SaaS billing + Stripe Connect status (separate domains).
  */
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BillingSection } from "../components/BillingSection";
+import { StripeConnectSection } from "../components/StripeConnectSection";
 
 interface CompanySettings {
   id: string;
@@ -158,6 +161,9 @@ export function SettingsPage() {
           </div>
         </form>
       )}
+
+      <BillingSection />
+      <StripeConnectSection />
     </div>
   );
 }

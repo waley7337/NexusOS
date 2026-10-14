@@ -60,6 +60,28 @@ def effective_payment_amount(
     return Decimal("0.00")
 
 
+_ZERO_DECIMAL = frozenset(
+    {
+        "BIF",
+        "CLP",
+        "DJF",
+        "GNF",
+        "JPY",
+        "KMF",
+        "KRW",
+        "MGA",
+        "PYG",
+        "RWF",
+        "UGX",
+        "VND",
+        "VUV",
+        "XAF",
+        "XOF",
+        "XPF",
+    }
+)
+
+
 def to_minor_units(amount: Decimal, currency: str) -> int:
     """Convert decimal amount to provider minor units.
 
@@ -67,7 +89,16 @@ def to_minor_units(amount: Decimal, currency: str) -> int:
     blindly multiply every currency by 100.
     """
     code = currency.strip().upper()
-    zero_decimal = {"BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF"}
-    if code in zero_decimal:
+    if code in _ZERO_DECIMAL:
         return int(quantize_money(amount))
     return int(quantize_money(amount) * 100)
+
+
+def from_minor_units(amount_minor: int, currency: str) -> Decimal:
+    """Convert provider minor units back to a quantized Decimal amount."""
+    if amount_minor < 0:
+        raise ValueError("minor units must be >= 0")
+    code = currency.strip().upper()
+    if code in _ZERO_DECIMAL:
+        return quantize_money(Decimal(amount_minor))
+    return quantize_money(Decimal(amount_minor) / Decimal(100))

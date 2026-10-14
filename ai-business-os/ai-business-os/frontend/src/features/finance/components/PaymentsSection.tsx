@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CreditCard, Plus } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ApiRequestError } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePermission } from "@/hooks/usePermission";
 import {
+  useCreateInvoiceCheckout,
   useInvoicePayments,
   useRecordManualPayment,
   useRefundManualPayment,
@@ -43,12 +45,32 @@ export function PaymentsSection({
   const paymentsQuery = useInvoicePayments(canRead ? invoiceId : undefined);
   const record = useRecordManualPayment(invoiceId);
   const refund = useRefundManualPayment();
+  const checkout = useCreateInvoiceCheckout(invoiceId);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [recordOpen, setRecordOpen] = useState(false);
   const [refundTarget, setRefundTarget] = useState<Payment | null>(null);
   const [refundAmount, setRefundAmount] = useState("");
   const [refundReason, setRefundReason] = useState("");
 
   const eligible = PAYMENT_ELIGIBLE_INVOICE_STATUSES.has(invoiceStatus);
+
+  // Browser redirect is not confirmation — refresh authoritative backend state.
+  useEffect(() => {
+    const checkoutState = searchParams.get("checkout");
+    if (!checkoutState) return;
+    void paymentsQuery.refetch();
+    toast.message(
+      checkoutState === "success"
+        ? "Payment submitted. Status updates after Stripe confirms the charge."
+        : "Checkout canceled. No payment was recorded.",
+    );
+    const next = new URLSearchParams(searchParams);
+    next.delete("checkout");
+    next.delete("session_id");
+    setSearchParams(next, { replace: true });
+    // Intentional: run once when return query params are present.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!canRead) {
     return (
@@ -87,9 +109,28 @@ export function PaymentsSection({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Payments</h2>
         {canCreate && eligible && (
-          <Button size="sm" onClick={() => setRecordOpen(true)}>
-            <Plus /> Record payment
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              loading={checkout.isPending}
+              onClick={() => {
+                void (async () => {
+                  try {
+                    const session = await checkout.mutateAsync();
+                    window.location.assign(session.checkoutUrl);
+                  } catch (error) {
+                    toast.error(errorMessage(error));
+                  }
+                })();
+              }}
+            >
+              <CreditCard /> Pay with Stripe
+            </Button>
+            <Button size="sm" onClick={() => setRecordOpen(true)}>
+              <Plus /> Record payment
+            </Button>
+          </div>
         )}
       </div>
       {!eligible && (

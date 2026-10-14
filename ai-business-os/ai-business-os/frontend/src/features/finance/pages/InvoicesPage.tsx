@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCustomerOptions } from "@/features/crm/hooks/useCustomerOptions";
 import { useDebounce } from "@/hooks/useDebounce";
 import { usePermission } from "@/hooks/usePermission";
+import { FinanceTabs } from "../components/FinanceTabs";
 import { InvoiceForm } from "../components/InvoiceForm";
 import { InvoicesTable } from "../components/InvoicesTable";
 import { useCreateInvoice, useInvoices } from "../hooks/useInvoices";
@@ -85,6 +86,7 @@ export function InvoicesPage() {
           ) : undefined
         }
       />
+      <FinanceTabs />
       <div className="flex flex-wrap gap-2">
         <div className="relative min-w-52 flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

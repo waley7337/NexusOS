@@ -21,6 +21,7 @@ const prefetchRegistry: Partial<Record<string, PrefetchFn>> = {
   // Vite requires a string literal here; FINANCE_FEATURE_MODULE_ID documents the target.
   [ROUTES.finance]: () => void import("@/features/finance"),
   [ROUTES.financeInvoices]: () => void import("@/features/finance"),
+  [ROUTES.financeExpenses]: () => void import("@/features/finance"),
   [ROUTES.inventory]: () => void import("@/pages/placeholders/ModulePlaceholders"),
   [ROUTES.documents]: () => void import("@/pages/placeholders/ModulePlaceholders"),
   [ROUTES.reports]: () => void import("@/pages/placeholders/ModulePlaceholders"),

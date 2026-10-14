@@ -11,5 +11,6 @@ describe("finance route prefetch", () => {
     const feature = await import("@/features/finance");
     expect(feature.InvoicesPage).toBeTypeOf("function");
     expect(feature.InvoiceDetailPage).toBeTypeOf("function");
+    expect(feature.ExpensesPage).toBeTypeOf("function");
   });
 });

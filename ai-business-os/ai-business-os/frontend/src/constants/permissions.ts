@@ -18,6 +18,8 @@ const MODULES = {
     "update",
     "delete",
   ],
+  leave_requests: ["read", "read_self", "read_team", "create", "approve"],
+  attendance: ["read", "read_self", "read_team", "clock", "manage"],
   finance: ["view", "manage"],
   invoices: ["read", "create", "update", "delete", "send"],
   payments: ["read", "create", "refund"],
@@ -59,9 +61,15 @@ export function hasAnyPermission(
   return required.some((perm) => permissions.includes(perm));
 }
 
-/** Permissions that grant entry to the operational HR workspace (07.2). */
+/** Permissions that grant entry to the operational HR workspace (07.2+). */
 export const HR_WORKSPACE_PERMISSIONS = [
   "employees.read",
   "employees.read_self",
   "employees.read_team",
+  "leave_requests.read",
+  "leave_requests.read_self",
+  "leave_requests.read_team",
+  "attendance.read",
+  "attendance.read_self",
+  "attendance.read_team",
 ] as const satisfies readonly Permission[];

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 import re
-from datetime import date, datetime
+from datetime import date as Date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Annotated
 
@@ -15,7 +15,10 @@ from app.payments.money import quantize_money
 from app.schemas.base import CamelModel
 
 if TYPE_CHECKING:
-    from app.models.finance import Invoice, Payment
+    from app.models.finance import Expense, Invoice, Payment
+
+# Keep `date` available for existing invoice/payment field annotations.
+date = Date
 
 
 class InvoiceItemInput(CamelModel):
@@ -203,6 +206,152 @@ def payment_to_response(payment: Payment) -> PaymentResponse:
             "notes": payment.notes,
             "createdAt": payment.created_at,
             "updatedAt": payment.updated_at,
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Expenses
+# ---------------------------------------------------------------------------
+
+_MAX_EXPENSE_AMOUNT = Decimal("999999999999.99")
+
+
+def _expense_amount(value: object) -> Decimal:
+    """Coerce and validate a positive expense amount (NUMERIC 14,2)."""
+    if isinstance(value, Decimal):
+        amount = value
+    elif isinstance(value, (int, float, str)):
+        amount = Decimal(str(value))
+    else:
+        raise ValueError("Amount must be a decimal number.")
+    try:
+        if not amount.is_finite():
+            raise ValueError
+        amount = quantize_money(amount)
+    except (ArithmeticError, ValueError) as exc:
+        raise ValueError("Amount must be a finite decimal.") from exc
+    if amount <= 0:
+        raise ValueError("Amount must be greater than zero.")
+    if amount > _MAX_EXPENSE_AMOUNT:
+        raise ValueError("Amount exceeds NUMERIC(14,2) capacity.")
+    return amount
+
+
+class ExpenseCreate(CamelModel):
+    category: str = Field(min_length=1, max_length=100)
+    amount: Decimal
+    currency: str = Field(default="USD", min_length=3, max_length=3)
+    description: str | None = Field(default=None, max_length=2000)
+    date: Date
+    paid_by: uuid.UUID | None = Field(default=None, alias="paidBy")
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def validate_amount(cls, value: object) -> Decimal:
+        return _expense_amount(value)
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        category = value.strip()
+        if not category:
+            raise ValueError("Category is required.")
+        return category
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, value: str) -> str:
+        from app.payments.currency import normalize_currency
+
+        return normalize_currency(value)
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+
+class ExpenseUpdate(CamelModel):
+    category: str | None = Field(default=None, min_length=1, max_length=100)
+    amount: Decimal | None = None
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    description: str | None = Field(default=None, max_length=2000)
+    date: Date | None = None
+    paid_by: uuid.UUID | None = Field(default=None, alias="paidBy")
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def validate_amount(cls, value: object) -> Decimal | None:
+        if value is None:
+            return None
+        return _expense_amount(value)
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        category = value.strip()
+        if not category:
+            raise ValueError("Category is required.")
+        return category
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        from app.payments.currency import normalize_currency
+
+        return normalize_currency(value)
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+
+class ExpenseResponse(CamelModel):
+    id: uuid.UUID
+    company_id: uuid.UUID = Field(alias="companyId")
+    category: str
+    amount: str
+    currency: str
+    description: str | None = None
+    date: Date
+    paid_by: uuid.UUID | None = Field(default=None, alias="paidBy")
+    is_active: bool = Field(alias="isActive")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+    created_by: uuid.UUID | None = Field(default=None, alias="createdBy")
+    updated_by: uuid.UUID | None = Field(default=None, alias="updatedBy")
+    deleted_at: datetime | None = Field(default=None, alias="deletedAt")
+
+
+def expense_to_response(expense: Expense) -> ExpenseResponse:
+    return ExpenseResponse.model_validate(
+        {
+            "id": expense.id,
+            "companyId": expense.company_id,
+            "category": expense.category,
+            "amount": format(expense.amount, ".2f"),
+            "currency": expense.currency,
+            "description": expense.description,
+            "date": expense.date,
+            "paidBy": expense.paid_by,
+            "isActive": expense.is_active,
+            "createdAt": expense.created_at,
+            "updatedAt": expense.updated_at,
+            "createdBy": expense.created_by,
+            "updatedBy": expense.updated_by,
+            "deletedAt": expense.deleted_at,
         }
     )
 

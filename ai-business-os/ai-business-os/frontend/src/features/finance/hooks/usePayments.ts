@@ -46,3 +46,18 @@ export function useRefundManualPayment() {
     onSuccess: (payment) => invalidatePaymentViews(client, payment),
   });
 }
+
+export function useCreateInvoiceCheckout(invoiceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => service.createInvoiceCheckout(invoiceId),
+    onSuccess: () => {
+      void client.invalidateQueries({
+        queryKey: queryKeys.finance.payments.list(invoiceId),
+      });
+      void client.invalidateQueries({
+        queryKey: queryKeys.finance.invoices.detail(invoiceId),
+      });
+    },
+  });
+}

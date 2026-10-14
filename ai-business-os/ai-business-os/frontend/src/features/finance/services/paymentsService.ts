@@ -59,3 +59,24 @@ export function refundManualPayment(
     headers: { "Idempotency-Key": idempotencyKey },
   });
 }
+
+export interface InvoiceCheckoutSession {
+  paymentId: string;
+  checkoutSessionId: string;
+  checkoutUrl: string;
+  amount: string;
+  currency: string;
+  reused: boolean;
+}
+
+/** Starts Stripe Checkout for the server-computed outstanding balance. */
+export function createInvoiceCheckout(
+  invoiceId: string,
+  idempotencyKey: string = newIdempotencyKey(),
+): Promise<InvoiceCheckoutSession> {
+  return request({
+    method: "POST",
+    url: `/finance/invoices/${invoiceId}/checkout`,
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+}
