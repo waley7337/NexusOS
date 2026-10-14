@@ -41,12 +41,12 @@ _BLOCK_NEW_CHECKOUT = frozenset(
     }
 )
 
-# Plan changes on the existing subscription (price + Stripe proration).
+# In-place plan changes only when payment is current. past_due → billing portal
+# recovery first (Stripe: unpaid updates can apply then leave the sub past_due).
 _ALLOW_IN_PLACE_PLAN_CHANGE = frozenset(
     {
         PlatformSubscriptionStatus.ACTIVE,
         PlatformSubscriptionStatus.TRIALING,
-        PlatformSubscriptionStatus.PAST_DUE,
     }
 )
 
@@ -144,9 +144,10 @@ class PlatformBillingService:
                     "Subscription is paused. Resume or change plans via the billing portal.",
                     details={"reason": "subscription_paused"},
                 )
-            if profile.plan == plan and profile.status == PlatformSubscriptionStatus.PAST_DUE:
+            if profile.status == PlatformSubscriptionStatus.PAST_DUE:
                 raise ConflictError(
-                    "Subscription payment failed. Update payment method via the billing portal.",
+                    "Subscription payment failed. Update payment method via the billing portal "
+                    "before changing plans.",
                     details={"reason": "subscription_past_due"},
                 )
             if profile.status in _ALLOW_IN_PLACE_PLAN_CHANGE and profile.plan != plan:
@@ -232,7 +233,14 @@ class PlatformBillingService:
         idempotency_key: str,
         api_key: str,
     ) -> BillingCheckoutSession:
-        """Change price on the linked subscription — never create a second subscription."""
+        """Change price on the linked subscription — never create a second subscription.
+
+        Entitlement authority:
+        - Local plan/status sync from the Stripe subscription object (modify response or webhook).
+        - ``is_entitled`` still requires ACTIVE/TRIALING — past_due/incomplete never grant access.
+        - Uses ``payment_behavior=pending_if_incomplete`` + ``always_invoice`` so a failed
+          upgrade payment leaves items unchanged (pending_update) instead of looking paid.
+        """
         stripe = stripe_module(api_key=api_key)
         subscription_id = profile.stripe_subscription_id
         assert subscription_id  # guarded by caller
@@ -251,10 +259,26 @@ class PlatformBillingService:
                     "Existing subscription has no billable items.",
                     details={"reason": "subscription_items_missing"},
                 )
+            item0 = items[0] if isinstance(items[0], dict) else {}
+            current_price = (item0.get("price") or {}).get("id") if item0 else None
+            # Safe retry after Stripe success + DB commit failure: already on target price
+            # → sync only, do not create another proration invoice.
+            if str(current_price or "") == price_id and not data.get("pending_update"):
+                await self.apply_subscription_snapshot(data, event_id=None, fallback_plan=plan)
+                await self.db.commit()
+                return BillingCheckoutSession(
+                    checkout_url=None,
+                    checkout_session_id=None,
+                    plan=plan,
+                    mode="subscription_updated",
+                )
             updated = stripe.Subscription.modify(
                 subscription_id,
                 items=[{"id": item_id, "price": price_id}],
-                proration_behavior="create_prorations",
+                # Invoice immediately + pending updates: plan items apply only if payment succeeds.
+                # See https://docs.stripe.com/billing/subscriptions/pending-updates-reference
+                proration_behavior="always_invoice",
+                payment_behavior="pending_if_incomplete",
                 cancel_at_period_end=False,
                 metadata={
                     "domain": "platform_billing",
@@ -276,12 +300,31 @@ class PlatformBillingService:
                 details={"reason": "stripe_subscription_update_failed"},
             ) from None
 
-        await self.apply_subscription_snapshot(updated, event_id=None, fallback_plan=plan)
+        updated_data = updated if isinstance(updated, dict) else updated.to_dict()
+        # Payment failed / requires action: Stripe did not apply item changes.
+        if updated_data.get("pending_update"):
+            await self.apply_subscription_snapshot(
+                updated_data, event_id=None, fallback_plan=None
+            )
+            await self.db.commit()
+            raise ConflictError(
+                "Plan change requires payment. Update your payment method via the billing portal.",
+                details={"reason": "subscription_upgrade_payment_required"},
+            )
+
+        await self.apply_subscription_snapshot(updated_data, event_id=None, fallback_plan=plan)
         await self.db.commit()
+        # Never treat API success alone as paid access if Stripe status is not entitled.
+        synced = await self.repo.get_authoritative()
+        if not self.is_entitled(synced):
+            raise ConflictError(
+                "Subscription is not active after the plan change. Complete payment via the billing portal.",
+                details={"reason": "subscription_upgrade_not_entitled", "status": synced.status.value},
+            )
         return BillingCheckoutSession(
             checkout_url=None,
             checkout_session_id=None,
-            plan=plan,
+            plan=synced.plan,
             mode="subscription_updated",
         )
 

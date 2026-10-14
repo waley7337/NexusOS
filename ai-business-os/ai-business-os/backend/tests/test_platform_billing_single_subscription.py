@@ -181,7 +181,8 @@ async def test_upgrade_updates_existing_subscription_without_second_checkout(mon
     modify.assert_called_once()
     kwargs = modify.call_args.kwargs
     assert kwargs["items"] == [{"id": "si_1", "price": "price_pro"}]
-    assert kwargs["proration_behavior"] == "create_prorations"
+    assert kwargs["proration_behavior"] == "always_invoice"
+    assert kwargs["payment_behavior"] == "pending_if_incomplete"
     assert kwargs["idempotency_key"] == "idem-upgrade"
     assert profile.stripe_subscription_id == "sub_1"
     assert profile.stripe_customer_id == "cus_1"
@@ -359,7 +360,8 @@ async def test_past_due_same_plan_blocks_checkout_no_entitlement(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_past_due_upgrade_updates_existing_not_new_checkout(monkeypatch):
+async def test_past_due_plan_change_blocked_portal_recovery(monkeypatch):
+    """past_due must recover payment via portal — no create_prorations / plan change."""
     _enable_billing(monkeypatch)
     profile = _profile(
         plan=PlatformPlan.STARTER,
@@ -368,24 +370,106 @@ async def test_past_due_upgrade_updates_existing_not_new_checkout(monkeypatch):
         stripe_customer_id="cus_1",
     )
     service, _ = _service(profile)
+    stripe = _stripe_mock()
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        with pytest.raises(ConflictError) as exc:
+            await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-pd-up")
+
+    assert exc.value.details["reason"] == "subscription_past_due"
+    assert profile.plan == PlatformPlan.STARTER
+    assert service.is_entitled(profile) is False
+    stripe.Subscription.modify.assert_not_called()
+    stripe.checkout.Session.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_upgrade_payment_required_does_not_grant_new_plan(monkeypatch):
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.ACTIVE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
     modify = MagicMock(
         return_value={
             "id": "sub_1",
-            "status": "past_due",
+            "status": "active",
             "customer": "cus_1",
             "cancel_at_period_end": False,
-            "items": {"data": [{"id": "si_1", "price": {"id": "price_pro"}}]},
+            "pending_update": {
+                "subscription_items": [{"id": "si_1", "price": "price_pro"}],
+            },
+            "items": {"data": [{"id": "si_1", "price": {"id": "price_starter"}}]},
         }
     )
     stripe = _stripe_mock(subscription_modify=modify)
 
     with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
-        result = await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-pd-up")
+        with pytest.raises(ConflictError) as exc:
+            await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-pay")
+
+    assert exc.value.details["reason"] == "subscription_upgrade_payment_required"
+    assert profile.plan == PlatformPlan.STARTER
+    assert profile.status == PlatformSubscriptionStatus.ACTIVE
+    assert service.is_entitled(profile) is True  # still entitled to existing paid plan
+    stripe.checkout.Session.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_upgrade_stripe_failure_does_not_change_local_plan(monkeypatch):
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.ACTIVE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
+    stripe = _stripe_mock(subscription_modify=MagicMock(side_effect=RuntimeError("stripe down")))
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        with pytest.raises(ConflictError) as exc:
+            await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-fail")
+
+    assert exc.value.details["reason"] == "stripe_subscription_update_failed"
+    assert profile.plan == PlatformPlan.STARTER
+    assert profile.stripe_price_id == "price_starter"
+
+
+@pytest.mark.asyncio
+async def test_retry_after_stripe_success_skips_duplicate_proration(monkeypatch):
+    """Stripe modify succeeded earlier; local commit failed — retry must not re-prorate."""
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.ACTIVE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
+    retrieve = MagicMock(
+        return_value={
+            "id": "sub_1",
+            "status": "active",
+            "customer": "cus_1",
+            "cancel_at_period_end": False,
+            "items": {"data": [{"id": "si_1", "price": {"id": "price_pro"}}]},
+        }
+    )
+    stripe = _stripe_mock(subscription_retrieve=retrieve)
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        result = await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-retry")
 
     assert result.mode == "subscription_updated"
     assert profile.plan == PlatformPlan.PRO
-    assert profile.status == PlatformSubscriptionStatus.PAST_DUE
-    assert service.is_entitled(profile) is False
+    stripe.Subscription.modify.assert_not_called()
     stripe.checkout.Session.create.assert_not_called()
 
 
@@ -543,3 +627,326 @@ async def test_cancel_still_modifies_existing_subscription(monkeypatch):
     assert result.cancel_at_period_end is True
     assert result.stripe_subscription_id == "sub_1"
     modify.assert_called_once_with("sub_1", cancel_at_period_end=True)
+
+
+@pytest.mark.asyncio
+async def test_trialing_upgrade_modifies_existing_not_checkout(monkeypatch):
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.TRIALING,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
+    stripe = _stripe_mock()
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        result = await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-trial")
+
+    assert result.mode == "subscription_updated"
+    assert service.is_entitled(profile) is True
+    stripe.checkout.Session.create.assert_not_called()
+    stripe.Subscription.modify.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_unpaid_status_blocks_like_past_due(monkeypatch):
+    """Stripe unpaid maps to PAST_DUE locally — no second checkout / upgrade modify."""
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.PAST_DUE,  # mapped from Stripe unpaid
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+    )
+    service, _ = _service(profile)
+    stripe = _stripe_mock()
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        with pytest.raises(ConflictError) as exc:
+            await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-unpaid")
+
+    assert exc.value.details["reason"] == "subscription_past_due"
+    assert service.is_entitled(profile) is False
+    stripe.Subscription.modify.assert_not_called()
+    stripe.checkout.Session.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_upgrade_commit_failure_leaves_local_plan_until_retry(monkeypatch):
+    """Stripe modify OK but DB commit fails — local plan must not look upgraded yet."""
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.ACTIVE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
+
+    async def fail_commit():
+        raise RuntimeError("db commit failed")
+
+    service.db.commit = fail_commit  # type: ignore[method-assign]
+    modify = MagicMock(
+        return_value={
+            "id": "sub_1",
+            "status": "active",
+            "customer": "cus_1",
+            "cancel_at_period_end": False,
+            "items": {"data": [{"id": "si_1", "price": {"id": "price_pro"}}]},
+        }
+    )
+    stripe = _stripe_mock(subscription_modify=modify)
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        with pytest.raises(RuntimeError, match="db commit failed"):
+            await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-commit")
+
+    # Snapshot may have mutated the in-memory profile before commit; durable store
+    # would roll back. Retry path (retrieve already on price_pro) is covered separately.
+    modify.assert_called_once()
+    stripe.checkout.Session.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_retry_same_idempotency_key_multiple_times_reconciles(monkeypatch):
+    """First retry syncs from Stripe; subsequent same-plan call is already_active (no re-modify)."""
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.ACTIVE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
+    retrieve = MagicMock(
+        return_value={
+            "id": "sub_1",
+            "status": "active",
+            "customer": "cus_1",
+            "cancel_at_period_end": False,
+            "items": {"data": [{"id": "si_1", "price": {"id": "price_pro"}}]},
+        }
+    )
+    stripe = _stripe_mock(subscription_retrieve=retrieve)
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        first = await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-multi")
+        with pytest.raises(ConflictError) as exc:
+            await service.create_checkout(plan=PlatformPlan.PRO, idempotency_key="idem-multi")
+
+    assert first.mode == "subscription_updated"
+    assert profile.plan == PlatformPlan.PRO
+    assert exc.value.details["reason"] == "subscription_already_active"
+    stripe.Subscription.modify.assert_not_called()
+    stripe.checkout.Session.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_out_of_order_subscription_webhook_ignored_after_cancel():
+    from app.payments.platform import webhook_handlers as handlers
+
+    company_id = uuid.uuid4()
+    profile = _profile(
+        plan=PlatformPlan.FREE,
+        status=PlatformSubscriptionStatus.CANCELED,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    db = MagicMock()
+
+    async def flush():
+        return None
+
+    db.flush = flush
+
+    class FakeBilling:
+        def __init__(self, *_a, **_k):
+            pass
+
+        async def apply_subscription_snapshot(self, subscription, *, event_id, fallback_plan=None):
+            service = PlatformBillingService(db, company_id=company_id)
+
+            async def get_authoritative():
+                return profile
+
+            service.repo.get_authoritative = get_authoritative  # type: ignore[method-assign]
+            return await service.apply_subscription_snapshot(
+                subscription, event_id=event_id, fallback_plan=fallback_plan
+            )
+
+    with patch.object(handlers, "PlatformBillingService", FakeBilling):
+        with patch.object(
+            handlers,
+            "_company_from_subscription",
+            return_value=company_id,
+        ):
+            await handlers._dispatch(
+                db,
+                "customer.subscription.updated",
+                {
+                    "data": {
+                        "object": {
+                            "id": "sub_1",
+                            "status": "active",
+                            "customer": "cus_1",
+                            "cancel_at_period_end": False,
+                            "items": {"data": [{"id": "si_1", "price": {"id": "price_pro"}}]},
+                            "metadata": {"company_id": str(company_id)},
+                        }
+                    }
+                },
+                event_id="evt_stale_active",
+            )
+
+    assert profile.status == PlatformSubscriptionStatus.CANCELED
+    assert profile.plan == PlatformPlan.FREE
+    # FREE plan remains entitled regardless of canceled paid-sub history.
+    assert PlatformBillingService(db, company_id=company_id).is_entitled(profile) is True
+
+
+@pytest.mark.asyncio
+async def test_invoice_paid_promotes_past_due_exactly_once():
+    from app.payments.platform import webhook_handlers as handlers
+
+    company_id = uuid.uuid4()
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.PAST_DUE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+    )
+    db = MagicMock()
+    flush_count = 0
+
+    async def flush():
+        nonlocal flush_count
+        flush_count += 1
+
+    db.flush = flush
+    entitlement = PlatformBillingService(db, company_id=company_id)
+
+    class FakeBilling:
+        def __init__(self, *_a, **_k):
+            pass
+
+        async def get_profile(self):
+            return profile
+
+    with patch.object(handlers, "PlatformBillingService", FakeBilling):
+        with patch.object(handlers, "_company_from_invoice", return_value=company_id):
+            await handlers._dispatch(
+                db,
+                "invoice.paid",
+                {"data": {"object": {"subscription": "sub_1", "customer": "cus_1"}}},
+                event_id="evt_paid_1",
+            )
+            assert profile.status == PlatformSubscriptionStatus.ACTIVE
+            assert entitlement.is_entitled(profile) is True
+            first_flushes = flush_count
+            # Second paid event while already ACTIVE is a no-op (status gate).
+            await handlers._dispatch(
+                db,
+                "invoice.paid",
+                {"data": {"object": {"subscription": "sub_1", "customer": "cus_1"}}},
+                event_id="evt_paid_2",
+            )
+
+    assert profile.status == PlatformSubscriptionStatus.ACTIVE
+    assert flush_count == first_flushes  # no second mutation
+
+
+@pytest.mark.asyncio
+async def test_invoice_payment_failed_does_not_grant_entitlement():
+    from app.payments.platform import webhook_handlers as handlers
+
+    company_id = uuid.uuid4()
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.ACTIVE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+    )
+    db = MagicMock()
+
+    async def flush():
+        return None
+
+    db.flush = flush
+
+    class FakeBilling:
+        def __init__(self, *_a, **_k):
+            pass
+
+        async def get_profile(self):
+            return profile
+
+    with patch.object(handlers, "PlatformBillingService", FakeBilling):
+        with patch.object(handlers, "_company_from_invoice", return_value=company_id):
+            await handlers._dispatch(
+                db,
+                "invoice.payment_failed",
+                {"data": {"object": {"subscription": "sub_1", "customer": "cus_1"}}},
+                event_id="evt_fail",
+            )
+
+    assert profile.status == PlatformSubscriptionStatus.PAST_DUE
+    assert PlatformBillingService(db, company_id=company_id).is_entitled(profile) is False
+
+
+@pytest.mark.asyncio
+async def test_pending_update_expired_keeps_old_plan_on_snapshot(monkeypatch):
+    """After pending_update expires, Stripe items remain on old price — do not grant upgrade."""
+    _enable_billing(monkeypatch)
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.ACTIVE,
+        stripe_subscription_id="sub_1",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
+    await service.apply_subscription_snapshot(
+        {
+            "id": "sub_1",
+            "status": "active",
+            "customer": "cus_1",
+            "cancel_at_period_end": False,
+            "pending_update": None,
+            "items": {"data": [{"id": "si_1", "price": {"id": "price_starter"}}]},
+        },
+        event_id="evt_expired_pending",
+        fallback_plan=None,
+    )
+    assert profile.plan == PlatformPlan.STARTER
+    assert profile.stripe_price_id == "price_starter"
+    assert service.is_entitled(profile) is True
+
+
+@pytest.mark.asyncio
+async def test_snapshot_ignores_other_subscription_id():
+    profile = _profile(
+        plan=PlatformPlan.STARTER,
+        status=PlatformSubscriptionStatus.ACTIVE,
+        stripe_subscription_id="sub_live",
+        stripe_customer_id="cus_1",
+        stripe_price_id="price_starter",
+    )
+    service, _ = _service(profile)
+    await service.apply_subscription_snapshot(
+        {
+            "id": "sub_other",
+            "status": "active",
+            "customer": "cus_1",
+            "items": {"data": [{"id": "si_x", "price": {"id": "price_pro"}}]},
+        },
+        event_id="evt_other",
+    )
+    assert profile.stripe_subscription_id == "sub_live"
+    assert profile.plan == PlatformPlan.STARTER
