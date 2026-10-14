@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiRequestError } from "@/api/client";
@@ -17,10 +19,31 @@ const PLAN_OPTIONS: Array<Exclude<billing.PlatformPlan, "free">> = [
   "enterprise",
 ];
 
+/** Exact server env var names required before live SaaS checkout can enable. */
+export const BILLING_ENV_VAR_NAMES = [
+  "STRIPE_BILLING_ENABLED",
+  "STRIPE_PLATFORM_SECRET_KEY",
+  "STRIPE_PRICE_STARTER",
+  "STRIPE_PRICE_PRO",
+  "STRIPE_PRICE_ENTERPRISE",
+  "STRIPE_PLATFORM_WEBHOOK_SECRET",
+  "FRONTEND_URL",
+] as const;
+
+const RETURN_MESSAGES: Record<string, string> = {
+  success:
+    "Checkout returned to NexusOS. Plan access updates only after the server confirms the subscription — this redirect is not confirmation.",
+  cancel: "Checkout was canceled. No plan change was applied.",
+  portal: "Returned from the billing portal. Status below refreshes from the server.",
+};
+
 export function BillingSection() {
   const canView = usePermission("settings.view");
   const canManage = usePermission("settings.manage");
   const client = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handledReturn = useRef<string | null>(null);
+
   const query = useQuery({
     queryKey: queryKeys.billing.subscription,
     queryFn: ({ signal }) => billing.getBillingStatus(signal),
@@ -40,11 +63,26 @@ export function BillingSection() {
     },
   });
 
+  useEffect(() => {
+    if (!canView) return;
+    const outcome = searchParams.get("billing");
+    if (!outcome || !(outcome in RETURN_MESSAGES)) return;
+    if (handledReturn.current === outcome) return;
+    handledReturn.current = outcome;
+    toast.message(RETURN_MESSAGES[outcome]);
+    // Redirect never grants access — re-read authoritative server status.
+    void client.invalidateQueries({ queryKey: queryKeys.billing.subscription });
+    const next = new URLSearchParams(searchParams);
+    next.delete("billing");
+    next.delete("session_id");
+    setSearchParams(next, { replace: true });
+  }, [canView, client, searchParams, setSearchParams]);
+
   if (!canView) return null;
 
   if (query.isPending) {
     return (
-      <section aria-label="Loading billing" className="space-y-3">
+      <section id="billing" aria-label="Loading billing" className="space-y-3">
         <Skeleton className="h-10" />
         <Skeleton className="h-28" />
       </section>
@@ -53,18 +91,25 @@ export function BillingSection() {
 
   if (query.isError || !query.data) {
     return (
-      <ErrorState
-        title="Billing unavailable"
-        description={errorMessage(query.error)}
-        onRetry={() => void query.refetch()}
-      />
+      <section id="billing" className="space-y-3">
+        <ErrorState
+          title="Billing unavailable"
+          description={errorMessage(query.error)}
+          onRetry={() => void query.refetch()}
+        />
+        <p className="text-xs text-muted-foreground">
+          SaaS billing uses <code className="font-mono">GET /api/v1/billing/subscription</code>.
+          If this keeps failing, the API deploy may be behind the finance branch, or migrations
+          for platform billing may not be applied yet.
+        </p>
+      </section>
     );
   }
 
   const status = query.data;
 
   return (
-    <section className="space-y-3 rounded-card border border-line-soft bg-surface-2 p-5">
+    <section id="billing" className="space-y-3 rounded-card border border-line-soft bg-surface-2 p-5">
       <div>
         <h2 className="text-sm font-semibold">NexusOS subscription</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -91,10 +136,17 @@ export function BillingSection() {
         </div>
       </dl>
       {!status.billingEnabled && (
-        <p className="text-xs text-muted-foreground">
-          Live SaaS checkout stays disabled until Stripe billing credentials and price IDs
-          are configured on the server.
-        </p>
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p>
+            Live SaaS checkout stays disabled until Stripe billing credentials and price IDs
+            are configured on the server. Keep{" "}
+            <code className="font-mono">STRIPE_BILLING_ENABLED=false</code> until ready.
+          </p>
+          <p>
+            Required env var names:{" "}
+            <code className="font-mono">{BILLING_ENV_VAR_NAMES.join(", ")}</code>
+          </p>
+        </div>
       )}
       {canManage && (
         <div className="flex flex-wrap gap-2 border-t border-line-soft pt-4">

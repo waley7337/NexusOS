@@ -91,7 +91,10 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-2xl">
-      <PageHeader title="Settings" description="Company profile and preferences." />
+      <PageHeader
+        title="Settings"
+        description="Company profile, NexusOS subscription, and customer payment connections."
+      />
 
       {isLoading ? (
         <div className="flex flex-col gap-4">
@@ -162,7 +165,9 @@ export function SettingsPage() {
         </form>
       )}
 
+      {/* Platform SaaS billing — independent of company-profile load success. */}
       <BillingSection />
+      {/* Tenant Connect (invoice card payments) — separate Stripe domain. */}
       <StripeConnectSection />
     </div>
   );
