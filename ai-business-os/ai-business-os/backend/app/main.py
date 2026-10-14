@@ -150,6 +150,14 @@ def create_app() -> FastAPI:
         if request_id:
             response.headers["X-Request-ID"] = request_id
         apply_baseline_security_headers(response, request)
+        # ServerErrorMiddleware serves this response outside CORSMiddleware.
+        # Without ACAO, browsers surface opaque "Network Error" for 500s and
+        # hide the envelope — attach CORS here when the Origin is allowlisted.
+        origin = request.headers.get("origin")
+        if origin and origin in settings.CORS_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Vary"] = "Origin"
         return response
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)

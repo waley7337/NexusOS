@@ -50,11 +50,13 @@ describe("shared API client error normalization", () => {
     },
   );
 
-  it("keeps network failures without a response as Axios errors", async () => {
+  it("normalizes ERR_NETWORK into ApiRequestError with a readable message", async () => {
     api.defaults.adapter = (config) => Promise.reject(new AxiosError("Network Error", "ERR_NETWORK", config));
     const error = await request({ url: "/finance/invoices" }).catch((caught: unknown) => caught);
-    expect(error).toBeInstanceOf(AxiosError);
-    expect(error).not.toBeInstanceOf(ApiRequestError);
+    expect(error).toBeInstanceOf(ApiRequestError);
+    expect(error).not.toBeInstanceOf(AxiosError);
+    expect((error as ApiRequestError).message).toMatch(/Network error/i);
+    expect((error as ApiRequestError).errors[0]?.code).toBe("network_error");
   });
 
   it("normalizes non-envelope HTTP 404 into ApiRequestError", async () => {

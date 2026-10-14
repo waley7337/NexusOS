@@ -14,19 +14,19 @@ const prefetchRegistry: Partial<Record<string, PrefetchFn>> = {
   [ROUTES.crmContacts]: () => void import("@/pages/crm/ContactsPage"),
   [ROUTES.crmLeads]: () => void import("@/pages/crm/LeadsPage"),
   [ROUTES.crmDeals]: () => void import("@/pages/crm/DealsPage"),
-  [ROUTES.projects]: () => void import("@/pages/placeholders/ModulePlaceholders"),
-  [ROUTES.tasks]: () => void import("@/pages/placeholders/ModulePlaceholders"),
+  [ROUTES.projects]: () => void import("@/pages/projects"),
+  [ROUTES.tasks]: () => void import("@/pages/tasks"),
   [ROUTES.hr]: () => void import("@/pages/hr/EmployeesPage"),
   [ROUTES.hrEmployees]: () => void import("@/pages/hr/EmployeesPage"),
   // Vite requires a string literal here; FINANCE_FEATURE_MODULE_ID documents the target.
   [ROUTES.finance]: () => void import("@/features/finance"),
   [ROUTES.financeInvoices]: () => void import("@/features/finance"),
   [ROUTES.financeExpenses]: () => void import("@/features/finance"),
-  [ROUTES.inventory]: () => void import("@/pages/placeholders/ModulePlaceholders"),
+  [ROUTES.inventory]: () => void import("@/pages/inventory"),
   [ROUTES.documents]: () => void import("@/pages/placeholders/ModulePlaceholders"),
-  [ROUTES.reports]: () => void import("@/pages/placeholders/ModulePlaceholders"),
-  [ROUTES.assistant]: () => void import("@/pages/placeholders/ModulePlaceholders"),
-  [ROUTES.settings]: () => void import("@/pages/placeholders/ModulePlaceholders"),
+  [ROUTES.reports]: () => void import("@/pages/reports"),
+  [ROUTES.assistant]: () => void import("@/pages/assistant"),
+  [ROUTES.settings]: () => void import("@/pages/settings"),
 };
 
 /** Prefetches the lazy chunk for a route path (§5.18). */
