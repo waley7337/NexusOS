@@ -85,15 +85,21 @@ async def create_billing_checkout(
         plan=payload.plan,
         idempotency_key=_idempotency_key(idempotency_header),
     )
+    message = (
+        "Subscription plan updated."
+        if session.mode == "subscription_updated"
+        else "Billing checkout session created."
+    )
     return ApiResponse.ok(
         data=BillingCheckoutResponse.model_validate(
             {
                 "checkoutUrl": session.checkout_url,
                 "checkoutSessionId": session.checkout_session_id,
                 "plan": session.plan,
+                "mode": session.mode,
             }
         ),
-        message="Billing checkout session created.",
+        message=message,
     )
 
 

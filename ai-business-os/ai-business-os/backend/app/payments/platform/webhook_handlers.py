@@ -98,8 +98,29 @@ async def _dispatch(
             raise ConflictError("Checkout session missing subscription id.")
         # Persist linkage immediately; status is refined by subscription events.
         profile = await service.get_profile()
+        incoming_sub = str(subscription_id)
+        # Defense in depth: never replace a live linked subscription with a second Checkout.
+        if (
+            profile.stripe_subscription_id
+            and incoming_sub != profile.stripe_subscription_id
+            and profile.status
+            in {
+                PlatformSubscriptionStatus.ACTIVE,
+                PlatformSubscriptionStatus.TRIALING,
+                PlatformSubscriptionStatus.PAST_DUE,
+                PlatformSubscriptionStatus.INCOMPLETE,
+                PlatformSubscriptionStatus.PAUSED,
+            }
+        ):
+            logger.warning(
+                "platform_checkout_ignored_duplicate_subscription",
+                company_id=str(company_id),
+                linked_subscription_id=profile.stripe_subscription_id,
+                checkout_subscription_id=incoming_sub,
+            )
+            return company_id
         profile.stripe_customer_id = str(obj.get("customer") or profile.stripe_customer_id or "")
-        profile.stripe_subscription_id = str(subscription_id)
+        profile.stripe_subscription_id = incoming_sub
         meta_plan = (obj.get("metadata") or {}).get("plan")
         if meta_plan:
             try:

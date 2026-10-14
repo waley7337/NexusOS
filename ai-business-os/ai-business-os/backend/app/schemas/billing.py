@@ -58,9 +58,12 @@ class BillingCheckoutRequest(CamelModel):
 
 
 class BillingCheckoutResponse(CamelModel):
-    checkout_url: str = Field(alias="checkoutUrl")
-    checkout_session_id: str = Field(alias="checkoutSessionId")
+    """Checkout URL is set for new subscriptions; null when an existing sub was updated."""
+
+    checkout_url: str | None = Field(default=None, alias="checkoutUrl")
+    checkout_session_id: str | None = Field(default=None, alias="checkoutSessionId")
     plan: PlatformPlan
+    mode: str = "checkout"
 
 
 class BillingPortalResponse(CamelModel):

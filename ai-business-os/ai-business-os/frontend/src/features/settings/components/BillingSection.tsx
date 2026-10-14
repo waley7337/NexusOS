@@ -180,6 +180,14 @@ export function BillingSection() {
                 void (async () => {
                   try {
                     const session = await checkout.mutateAsync(plan);
+                    if (session.mode === "subscription_updated" || !session.checkoutUrl) {
+                      client.setQueryData(queryKeys.billing.subscription, undefined);
+                      await client.invalidateQueries({
+                        queryKey: queryKeys.billing.subscription,
+                      });
+                      toast.success("Plan updated on your existing subscription.");
+                      return;
+                    }
                     window.location.assign(session.checkoutUrl);
                   } catch (error) {
                     toast.error(errorMessage(error));

@@ -134,6 +134,7 @@ describe("BillingSection", () => {
       checkoutUrl: "https://checkout.stripe.test/session",
       checkoutSessionId: "cs_1",
       plan: "starter",
+      mode: "checkout",
     });
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });
@@ -142,6 +143,43 @@ describe("BillingSection", () => {
     await user.click(await screen.findByRole("button", { name: "Upgrade starter" }));
     await waitFor(() => expect(api.createBillingCheckout).toHaveBeenCalledWith("starter"));
     expect(assign).toHaveBeenCalledWith("https://checkout.stripe.test/session");
+    vi.unstubAllGlobals();
+  });
+
+  it("refreshes status when server updates an existing subscription in place", async () => {
+    const user = userEvent.setup();
+    api.getBillingStatus
+      .mockResolvedValueOnce({
+        ...status,
+        plan: "starter",
+        status: "active",
+        billingEnabled: true,
+        stripeCustomerLinked: true,
+      })
+      .mockResolvedValue({
+        ...status,
+        plan: "pro",
+        status: "active",
+        entitled: true,
+        billingEnabled: true,
+        stripeCustomerLinked: true,
+      });
+    api.createBillingCheckout.mockResolvedValue({
+      checkoutUrl: null,
+      checkoutSessionId: null,
+      plan: "pro",
+      mode: "subscription_updated",
+    });
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+
+    renderBilling();
+    await user.click(await screen.findByRole("button", { name: "Upgrade pro" }));
+    await waitFor(() => expect(api.createBillingCheckout).toHaveBeenCalledWith("pro"));
+    expect(assign).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Plan updated on your existing subscription."),
+    );
     vi.unstubAllGlobals();
   });
 });
