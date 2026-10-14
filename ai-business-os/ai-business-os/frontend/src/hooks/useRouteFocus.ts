@@ -16,8 +16,8 @@ const MAX_FRAMES = 30;
  * read the DOM once and fell straight through to <main>, which meant focus
  * landed on the content container on essentially every navigation. Because
  * <main> carries tabIndex={-1}, Chromium then painted its platform focus ring
- * around the entire content region — measured as `outline: 1px auto` on a
- * focused <main>, and reported as a "harsh bright-blue outline".
+ * around the entire content region — measured as `outline-solid: 1px auto` on a
+ * focused <main>, and reported as a "harsh bright-blue outline-solid".
  *
  * The fix is to wait for the heading rather than give up on the first frame.
  * <main> remains the fallback for a route that genuinely has no h1, so the

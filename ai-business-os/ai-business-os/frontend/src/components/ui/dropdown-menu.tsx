@@ -42,9 +42,9 @@ export const DropdownMenuItem = forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none",
+      "flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden",
       "focus:bg-surface-4 focus:text-foreground",
-      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "data-disabled:pointer-events-none data-disabled:opacity-50",
       destructive && "text-destructive focus:bg-destructive/10 focus:text-destructive",
       className,
     )}
@@ -60,16 +60,16 @@ export const DropdownMenuCheckboxItem = forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none",
+      "relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-hidden",
       "focus:bg-surface-4 focus:text-foreground",
-      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "data-disabled:pointer-events-none data-disabled:opacity-50",
       className,
     )}
     {...props}
   >
     <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Check className="h-[var(--icon-xs)] w-[var(--icon-xs)]" strokeWidth={3} />
+        <Check className="h-(--icon-xs) w-(--icon-xs)" strokeWidth={3} />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}

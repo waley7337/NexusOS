@@ -5,16 +5,1056 @@
    silently dropped the whole product to system faces.
    Inter carries the interface; JetBrains Mono carries every numeric readout,
    timestamp, ID and status string. */
-@import "@fontsource-variable/inter/index.css";
-@import "@fontsource/jetbrains-mono/400.css";
-@import "@fontsource/jetbrains-mono/500.css";
-@import "@fontsource/jetbrains-mono/600.css";
+@import '@fontsource-variable/inter/index.css' layer(base);
+@import '@fontsource/jetbrains-mono/400.css' layer(base);
+@import '@fontsource/jetbrains-mono/500.css' layer(base);
+@import '@fontsource/jetbrains-mono/600.css' layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* ------------------------------------------------------------------
+@plugin 'tailwindcss-animate';
+
+@custom-variant dark (&:is(.dark *));
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-surface-0: hsl(var(--surface-0));
+  --color-surface-1: hsl(var(--surface-1));
+  --color-surface-2: hsl(var(--surface-2));
+  --color-surface-3: hsl(var(--surface-3));
+  --color-surface-4: hsl(var(--surface-4));
+  --color-surface-5: hsl(var(--surface-5));
+
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+  --color-line-focus: var(--line-focus);
+  --color-line-transient: var(--line-transient);
+
+  --color-rail: var(--rail);
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-fill: hsl(var(--primary-fill));
+  --color-primary-soft: hsl(var(--primary-soft));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-disabled-foreground: hsl(var(--disabled-foreground));
+
+  --color-glow-primary: hsl(var(--glow-primary));
+  --color-glow-success: hsl(var(--glow-success));
+  --color-glow-warning: hsl(var(--glow-warning));
+
+  --color-surface-glass: hsl(var(--surface-glass));
+  --color-surface-glass-border: hsl(var(--surface-glass-border));
+  --color-overlay-scrim: var(--overlay-scrim);
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  --color-chart-6: hsl(var(--chart-6));
+
+  --radius-btn: var(--radius-btn);
+  --radius-input: var(--radius-input);
+  --radius-card: var(--radius-card);
+  --radius-dialog: var(--radius-dialog);
+  --radius-surface: var(--radius-surface);
+  --radius-control: var(--r-control);
+  --radius-plane: var(--r-surface);
+  --radius-none: 0px;
+  --radius-sm: var(--r-surface);
+  --radius: var(--r-surface);
+  --radius-md: var(--r-control);
+  --radius-lg: var(--r-control);
+  --radius-xl: var(--r-surface);
+  --radius-2xl: var(--r-surface);
+  --radius-3xl: var(--r-surface);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-hover: var(--shadow-hover);
+  --shadow-dropdown: var(--shadow-dropdown);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-surface: var(--shadow-surface);
+  --shadow-lift: var(--shadow-lift);
+  --shadow-inset: var(--surface-inset);
+
+  --z-index-sticky: var(--z-sticky);
+  --z-index-dropdown: var(--z-dropdown);
+  --z-index-overlay: var(--z-overlay);
+  --z-index-modal: var(--z-modal);
+  --z-index-toast: var(--z-toast);
+
+  --transition-duration-instant: var(--duration-instant);
+  --transition-duration-fast: var(--duration-fast);
+  --transition-duration-base: var(--duration-base);
+  --transition-duration-standard: var(--duration-standard);
+  --transition-duration-slow: var(--duration-slow);
+  --transition-duration-spatial: var(--duration-spatial);
+  --transition-duration-reveal: var(--duration-reveal);
+
+  --ease-brand: var(--ease);
+  --ease-out-expo: var(--ease-out-expo);
+  --ease-out-quart: var(--ease-out-quart);
+  --ease-in-out-quint: var(--ease-in-out-quint);
+
+  --backdrop-blur-overlay: var(--overlay-blur);
+
+  --width-sidebar: var(--sidebar-w);
+  --width-sidebar-collapsed: var(--sidebar-w-collapsed);
+
+  --height-shell-header: var(--shell-header-h);
+
+  --font-sans: Inter Variable, Inter, system-ui, sans-serif;
+  --font-mono: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-2xs--letter-spacing: 0.02em;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility text-display {
+  /* Display steps down from a flat 36px to a responsive 28→34px (LifeOS
+     convergence, Commit B). The old size was larger than the reference's
+     hero heading while carrying less information, which is what made the
+     greeting read as oversized rather than confident. */
+  /* ================================================================
+     TYPOGRAPHY REGISTERS (V1).
+
+     Two voices, and which one a string gets is a semantic decision:
+
+       SANS (Inter)          human/product language — greetings, page
+                             titles, actions, explanation, module names.
+       MONO (JetBrains)      machine/system language — API status,
+                             environment, slugs, timestamps, IDs, counts,
+                             technical metadata.
+
+     Reading a mono string should tell you, before you parse it, that a
+     machine produced it. That is the whole point, and it is why mono
+     must stay rare: over-used it becomes decoration and stops signalling.
+
+     Measured before: 12 distinct size/weight pairs on one dashboard, the
+     top three being 14/500, 12/400 and 11/400 — i.e. three flavours of
+     "small grey text" doing different jobs with no visible distinction.
+     The roles below are separated by WEIGHT and TRACKING as well as size,
+     so two 11px strings can still read as different registers.
+
+     The .text-* names are unchanged so every existing consumer inherits
+     the retune with no edit.
+     ================================================================ */
+
+  /* display — one per screen, maximum. */
+  @apply text-[30px] font-semibold leading-[1.1] tracking-[-0.028em] sm:text-[38px];
+}
+
+@utility text-h1 {
+  /* page title */
+  @apply text-[22px] font-semibold leading-[1.2] tracking-[-0.02em];
+}
+
+@utility text-h2 {
+  /* section title */
+  @apply text-[17px] font-semibold leading-[1.3] tracking-[-0.012em];
+}
+
+@utility text-h3 {
+  @apply text-[15px] font-semibold leading-[1.4] tracking-[-0.008em];
+}
+
+@utility text-h4 {
+  @apply text-sm    font-semibold leading-normal tracking-[-0.005em];
+}
+
+@utility text-body-lg {
+  /* body */
+  @apply text-[15px] font-normal leading-[1.6];
+}
+
+@utility text-body {
+  @apply text-sm  font-normal leading-[1.55];
+}
+
+@utility text-small {
+  /* metadata */
+  @apply text-xs  font-normal leading-normal;
+}
+
+@utility text-caption {
+  /* label — in-content, sentence-scale */
+  @apply text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground;
+}
+
+@utility text-machine {
+  /* MACHINE REGISTER. The system's own voice: mono, tight, tabular.
+     Anything a machine emitted — status, environment, slug, probe result
+     — should wear this rather than being dressed as prose. */
+  @apply font-mono text-2xs font-medium uppercase text-muted-foreground;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-machine-value {
+  /* Machine register at reading size, for values rather than labels. */
+  @apply font-mono text-sm font-medium text-foreground;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility eyebrow {
+  /* Dense chrome label — 11px, heavy tracking. Distinct from .text-caption
+     (12px/+0.06em), which stays the in-content label. This is the shell's
+     own voice: section eyebrows, tile labels, status strings. */
+  @apply inline-flex items-center gap-1.5 text-2xs font-semibold uppercase text-muted-foreground;
+  letter-spacing: 0.14em;
+}
+
+@utility num {
+  /* Numeric readouts. tabular-nums is the point: without it a ticking
+     clock, a percentage, or a column of currency values reflows on every
+     digit change because proportional figures have different widths. */
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+@utility focus-ring {
+  /* ================================================================
+     MOTION GRAMMAR (V1) — four classes, and every animation in NexusOS
+     must be able to name which one it is. If it cannot, it should not
+     move.
+
+       TRAVEL    a persistent object changes location or state.
+                 The nav indicator moving between rows. The sidebar
+                 collapsing. Duration: spatial (340ms), symmetric ease.
+       RESOLVE   new content establishes itself in a frame that already
+                 exists. Route content. Duration: standard (220ms).
+       RESPOND   direct reaction to the user's own input, at the point of
+                 contact. Hover, press, focus. Duration: fast (150ms).
+       BREATHE   ambient system state. Deliberately near-extinct: one per
+                 view, and only where a live system signal justifies it.
+
+     These are the timing/easing contracts only — they set no transform,
+     because WHAT moves is the consuming component's decision. That is
+     what stops the grammar becoming a pile of animation presets.
+
+     Motion coverage is explicitly NOT a goal. An interface where twenty
+     elements move for a reason is better than one where a hundred move
+     because a utility existed.
+     ================================================================ */
+  /* The three classes are defined UNLAYERED near the bottom of this file,
+     not here. Tailwind tree-shakes @layer components rules that no source
+     file references, and V1 deliberately ships the grammar before its
+     consumers exist — defined here they were silently purged, while their
+     reduced-motion overrides (a plain @media block, never purged) survived.
+     Measured: transition-duration 0s normally, 0.15s under reduced motion,
+     i.e. exactly backwards. A foundation that only exists once something
+     uses it is not a foundation. */
+
+  /* Shared focus treatment for chrome controls that aren't Buttons.
+     focus-visible only, so a pointer click never paints a ring but a
+     keyboard user always gets one. */
+  /* V1: LOCAL energy. The ring-offset-2 halo drew a detached second
+     outline two pixels off the control — a shadcn default that reads as
+     a sticker rather than as the control itself becoming live. Focus now
+     sits ON the edge: the violet focus line plus a tight contained
+     ring. This is the one place violet is unconditionally correct. */
+  @apply outline-hidden;
+}
+
+@utility kbd {
+  /* Keycap. */
+  @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-control border px-1.5 font-mono text-2xs font-medium text-muted-foreground;
+  border-color: var(--line);
+  background-color: hsl(var(--surface-4));
+}
+
+@utility auth-page {
+  /* Auth shell backdrop — one soft radial glow + a barely-visible grid,
+     both built from existing tokens. Deliberately minimal: texture, not
+     decoration. Phase F: the page is a spatial field; the form stays
+     the readable surface. No particles, no WebGL, no looping motion. */
+  /* ================================================================
+     AUTH ENVIRONMENT (rebuilt, V6).
+
+     Login is the first room of the SAME product, so it is built from the
+     chassis vocabulary rather than from its own private one:
+
+       - a full-height structural SEAM at the same geometry the workspace
+         rail occupies. This is deliberate and load-bearing: V7 transforms
+         one into the other, and that only works if the seam is a real
+         element sitting where the rail will be.
+       - the environment is neutral graphite (V1 removed the violet/cyan
+         ambient wash product-wide; nothing here re-adds it).
+       - the form sits on a Plane, which is the first surface in the
+         product that genuinely earns one — it is a distinct layer
+         floating in an environment, not a band on a canvas.
+       - identity and legal-ish metadata are machine register.
+
+     Auth semantics are untouched by all of this: no form, field, schema
+     or submit path is defined in CSS.
+     ================================================================ */
+  @apply relative isolate min-h-dvh overflow-x-hidden overflow-y-auto bg-background;
+}
+
+@utility atmosphere {
+  /* Default atmosphere layers (app shell). */
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+@utility atmosphere-parallax {
+  position: absolute;
+  inset: -12%;
+}
+
+@utility atmosphere-layer {
+  position: absolute;
+  inset: 0;
+}
+
+@utility atmosphere-layer--cobalt {
+  background: radial-gradient(
+    ellipse 85% 55% at 48% 92%,
+    rgb(37 99 235 / 0.3),
+    transparent 58%
+  );
+}
+
+@utility atmosphere-layer--cyan {
+  background: radial-gradient(
+    ellipse 50% 40% at 18% 18%,
+    rgb(56 189 248 / 0.11),
+    transparent 52%
+  );
+}
+
+@utility atmosphere-layer--violet {
+  background: radial-gradient(
+    ellipse 45% 35% at 86% 28%,
+    rgb(99 102 241 / 0.09),
+    transparent 54%
+  );
+}
+
+@utility atmosphere-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 40%,
+    transparent 35%,
+    rgb(2 4 10 / 0.72) 100%
+  );
+}
+
+@utility space-field {
+  /* ================================================================
+     THE SPATIAL ENVIRONMENT
+
+     One fixed layer, mounted outside the router (see SpaceField), that
+     serves BOTH the sign-in route and the auth-success cinematic. It is
+     one object in two phases rather than two objects that resemble each
+     other, because the phases are separated by a route change and any
+     seam there is a visible cut.
+
+       [data-space-stage="idle"]    behind the sign-in surface
+       [data-space-stage="travel"]  the camera move
+       [data-elevated="true"]       now above the application
+
+     Everything below animates transform and opacity only. No filter, no
+     backdrop-filter, no animated box-shadow, no layout properties. Five
+     animated elements total, plus one canvas.
+     ================================================================ */
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+  /* The lift above the application. Discrete, and it happens exactly when
+     the sign-in route unmounts — earlier would bury the card while it is
+     still receding, later would expose the mounting shell. */
+  &[data-elevated='true'] {
+    z-index: 60;
+  }
+
+  /* ---- TRAVEL ----
+     The camera move. The stars carry the actual sense of motion (they are
+     the only thing with real parallax); these layers carry scale and
+     depth. Timings are the ones in lib/auth-cinematic.ts. */
+  &[data-space-stage='travel'] .space-lights {
+    animation: space-travel-lights 1500ms var(--ease-cinematic) both;
+  }
+  &[data-space-stage='travel'] .space-vignette {
+    animation: space-travel-vignette 1500ms var(--ease-cinematic) both;
+  }
+  /* HANDOFF, NOT A CROSS-DISSOLVE.
+     The space clears between 62% and 96% of the timeline (930ms → 1440ms),
+     and by 930ms the real shell underneath has finished painting. So this
+     fade IS the reveal: one fade, over a complete interface, rather than
+     several stacked fades over a half-painted one.
+
+     Two earlier attempts are worth recording. Fading the space out over a
+     shell still at opacity 0 exposed the workspace's own background, which
+     is WHITE in the light theme — the cinematic went to mid-grey on its
+     way in. Stacking a second dark layer inside the shell to hide that
+     left the shell ~90% covered three-quarters of the way through its own
+     reveal. Ordering the two (shell first, space second) is what actually
+     solves it. */
+  &[data-space-stage='travel'] .space-base {
+    animation: space-travel-handoff 1500ms linear both;
+  }
+  &[data-space-stage='travel'] .space-stars {
+    animation: space-travel-handoff 1500ms linear both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &[data-space-stage='travel'] .space-lights {
+      animation: none;
+      transform: none;
+      opacity: 1;
+    }
+    &[data-space-stage='travel'] .space-vignette {
+      animation: none;
+      transform: none;
+      opacity: 1;
+    }
+    &[data-space-stage='travel'] .space-stars {
+      animation: none;
+      transform: none;
+      opacity: 1;
+    }
+    &[data-space-stage='travel'] .space-base {
+      animation: space-reduced-out 220ms linear both;
+    }
+  }
+}
+
+@utility space-base {
+  /* Opaque ground. On the sign-in route it is simply the page background;
+     during travel it is what keeps the mounting shell out of sight, and it
+     dissolves as the shell resolves. */
+  position: absolute;
+  inset: 0;
+  background: #010308;
+  /* HANDOFF, NOT A CROSS-DISSOLVE.
+     The space clears between 62% and 96% of the timeline (930ms → 1440ms),
+     and by 930ms the real shell underneath has finished painting. So this
+     fade IS the reveal: one fade, over a complete interface, rather than
+     several stacked fades over a half-painted one.
+
+     Two earlier attempts are worth recording. Fading the space out over a
+     shell still at opacity 0 exposed the workspace's own background, which
+     is WHITE in the light theme — the cinematic went to mid-grey on its
+     way in. Stacking a second dark layer inside the shell to hide that
+     left the shell ~90% covered three-quarters of the way through its own
+     reveal. Ordering the two (shell first, space second) is what actually
+     solves it. */
+  .space-field[data-space-stage='travel'] & {
+    animation: space-travel-handoff 1500ms linear both;
+  }
+  .space-field--reduce[data-space-stage='travel'] & {
+    animation: space-reduced-out 220ms linear both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .space-field[data-space-stage='travel'] & {
+      animation: space-reduced-out 220ms linear both;
+    }
+  }
+}
+
+@utility space-stars {
+  position: absolute;
+  inset: 0;
+  /* A slow fade-in on first mount only — the sky resolves as your eyes
+       adjust rather than snapping on with the page. One-shot, not a loop. */
+  animation: space-stars-in 1400ms var(--ease-standard) both;
+
+  .space-field[data-space-stage='travel'] & {
+    animation: space-travel-handoff 1500ms linear both;
+  }
+
+  /* Reduced motion: the environment is still there, it just does not
+     travel. A short cross-dissolve replaces the camera move. */
+  .space-field--reduce & {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+
+  .space-field--reduce[data-space-stage='travel'] & {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 1;
+
+    .space-field[data-space-stage='travel'] & {
+      animation: none;
+      transform: none;
+      opacity: 1;
+    }
+  }
+}
+
+@utility space-lights {
+  /* Three light volumes with their sources outside the frame. Offscreen
+     illumination, not blobs on the page. */
+  position: absolute;
+  inset: -14%;
+  transform: translate3d(0, 0, 0) scale(1);
+
+  /* ---- TRAVEL ----
+     The camera move. The stars carry the actual sense of motion (they are
+     the only thing with real parallax); these layers carry scale and
+     depth. Timings are the ones in lib/auth-cinematic.ts. */
+  .space-field[data-space-stage='travel'] & {
+    animation: space-travel-lights 1500ms var(--ease-cinematic) both;
+  }
+
+  .space-field--reduce[data-space-stage='travel'] & {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .space-field[data-space-stage='travel'] & {
+      animation: none;
+      transform: none;
+      opacity: 1;
+    }
+  }
+}
+
+@utility space-light {
+  position: absolute;
+  inset: 0;
+}
+
+@utility space-light--cobalt {
+  background: radial-gradient(
+    ellipse 105% 65% at 50% 112%,
+    rgb(37 99 235 / 0.42),
+    transparent 56%
+  );
+}
+
+@utility space-light--cyan {
+  background: radial-gradient(
+    ellipse 65% 52% at 88% -8%,
+    rgb(56 189 248 / 0.17),
+    transparent 58%
+  );
+}
+
+@utility space-light--violet {
+  background: radial-gradient(
+    ellipse 42% 36% at 8% 42%,
+    rgb(99 102 241 / 0.08),
+    transparent 60%
+  );
+}
+
+@utility space-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 96% 76% at 50% 46%,
+    transparent 30%,
+    rgb(1 3 8 / 0.8) 100%
+  );
+  .space-field[data-space-stage='travel'] & {
+    animation: space-travel-vignette 1500ms var(--ease-cinematic) both;
+  }
+
+  .space-field--reduce[data-space-stage='travel'] & {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .space-field[data-space-stage='travel'] & {
+      animation: none;
+      transform: none;
+      opacity: 1;
+    }
+  }
+}
+
+@utility space-field--reduce {
+  /* Reduced motion: the environment is still there, it just does not
+     travel. A short cross-dissolve replaces the camera move. */
+  & .space-stars {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  &[data-space-stage='travel'] .space-lights {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  &[data-space-stage='travel'] .space-vignette {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  &[data-space-stage='travel'] .space-stars {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  &[data-space-stage='travel'] .space-base {
+    animation: space-reduced-out 220ms linear both;
+  }
+}
+
+@utility starfield {
+  /* The canvas itself. CSS only places it — every pixel is drawn in JS. */
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@utility auth-world {
+  /* ================================================================
+     THE SIGN-IN ROUTE
+
+     One centred column in an empty environment: identity, then the
+     surface. There is no second column and no product mock — the space
+     is the composition. The page paints no background of its own; the
+     environment behind it does.
+     ================================================================ */
+  background: transparent;
+  display: grid;
+  place-items: center;
+  padding: max(2rem, 6vh) 1rem max(2rem, 6vh);
+
+  /* The exit. This is why the navigate is deferred: the surface can only
+     recede while its route is still mounted. */
+  &[data-auth-stage='leaving'] .auth-panel {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.965);
+    pointer-events: none;
+  }
+  &[data-auth-stage='leaving'] .auth-identity {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.985);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &[data-auth-stage='leaving'] .auth-panel {
+      transition: opacity 160ms linear;
+      transform: none;
+    }
+    &[data-auth-stage='leaving'] .auth-identity {
+      transition: opacity 160ms linear;
+      transform: none;
+    }
+  }
+}
+
+@utility auth-column {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.75rem, 5vh, 3.25rem);
+}
+
+@utility auth-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  transition:
+    opacity 260ms var(--ease-standard),
+    transform 320ms var(--ease-cinematic);
+  .auth-world[data-auth-stage='leaving'] & {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.985);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-world[data-auth-stage='leaving'] & {
+      transition: opacity 160ms linear;
+      transform: none;
+    }
+  }
+}
+
+@utility auth-tagline {
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+}
+
+@utility auth-panel {
+  width: 100%;
+  transition:
+    opacity 260ms var(--ease-standard),
+    transform 320ms var(--ease-cinematic);
+
+  /* The exit. This is why the navigate is deferred: the surface can only
+     recede while its route is still mounted. */
+  .auth-world[data-auth-stage='leaving'] & {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.965);
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-world[data-auth-stage='leaving'] & {
+      transition: opacity 160ms linear;
+      transform: none;
+    }
+  }
+}
+
+@utility auth-surface {
+  /* Floating authentication surface — opaque, no animated blur. */
+  width: 100%;
+  max-width: 26rem;
+  border-radius: var(--r-panel);
+  border: 1px solid rgb(160 190 255 / 0.14);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.045), transparent 40%),
+    hsl(var(--surface-2));
+  box-shadow:
+    var(--shadow-surface),
+    0 0 0 1px rgb(37 99 235 / 0.06),
+    0 32px 64px -28px rgb(0 4 12 / 0.88);
+  padding: 1.75rem 1.5rem;
+  @media (min-width: 640px) {
+    padding: 2.25rem 2.5rem;
+  }
+}
+
+@utility surface {
+  /* ----------------------------------------------------------------
+     Surface System (LifeOS convergence, Commit A).
+     .surface is the elevated-panel recipe: ladder fill + translucent
+     hairline + the inset top highlight and deep drop shadow that make a
+     panel read as a physical layer. Card adopts it in Commit C; it is
+     defined here so the recipe lives with the tokens it composes.
+     ---------------------------------------------------------------- */
+  /* PLANE. V1: the edge drops to --line-soft (the "normal surface edge"
+     role) and the directional pair does the separating instead. A plane
+     is not interactive, so it should not wear the interactive edge —
+     that was a large part of why 19 bordered elements on one screen all
+     shouted equally. */
+  border-radius: var(--radius-surface);
+  border: 1px solid var(--line-soft);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent 42%),
+    hsl(var(--surface-2));
+  box-shadow:
+    var(--shadow-surface),
+    0 1px 0 0 var(--edge-shade);
+  transition:
+    border-color var(--duration-fast) var(--ease-out-quart),
+    box-shadow var(--duration-fast) var(--ease-out-quart),
+    transform var(--duration-fast) var(--ease-out-quart),
+    background-color var(--duration-fast) var(--ease-out-quart);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: rgb(160 190 255 / 0.16);
+      box-shadow:
+        var(--shadow-surface),
+        0 1px 0 0 rgb(180 210 255 / 0.1) inset,
+        0 10px 28px -18px rgb(0 4 12 / 0.55),
+        0 0 0 1px rgb(37 99 235 / 0.04);
+    }
+    &a:hover {
+      transform: translateY(-1px);
+    }
+    &.motion-respond:hover {
+      transform: translateY(-1px);
+    }
+    & button:hover {
+      transform: translateY(-1px);
+    }
+  }
+}
+
+@utility motion-respond {
+  @media (hover: hover) and (pointer: fine) {
+    & .surface:hover {
+      transform: translateY(-1px);
+    }
+  }
+}
+
+@utility surface-raised {
+  /* Raised variant — one step up the ladder, for surfaces that sit on
+     top of another surface (nested panels, popovers over cards). */
+  border-radius: var(--radius-surface);
+  border: 1px solid var(--line);
+  background-color: hsl(var(--surface-3));
+  box-shadow: var(--shadow-surface);
+}
+
+@utility surface-glass {
+  /* Glass surface — floating/elevated surfaces only; see Design
+     Constitution §9. Never applied to data-dense surfaces. */
+  @apply rounded-card border shadow-lg backdrop-blur-xl;
+  background: hsl(var(--surface-glass) / 0.72);
+  border-color: hsl(var(--surface-glass-border) / 0.6);
+}
+
+@utility overlay-scrim {
+  /* Shared modal/drawer/command scrim. One dim, one blur. */
+  background: var(--overlay-scrim);
+  backdrop-filter: blur(var(--overlay-blur));
+  /* Closed overlays must not intercept clicks if exit animation is
+     interrupted (reduced-motion, frozen timelines). Radix unmounts after
+     animate-out; this is a fail-safe while data-state=closed remains. */
+  &[data-state='closed'] {
+    pointer-events: none;
+  }
+}
+
+@utility card-lift {
+  /* Restrained hover elevation. 2px is deliberate — enough to read as
+     interactive, small enough that a grid of cards doesn't jitter. */
+  transition:
+    transform var(--duration-fast) var(--ease-out-quart),
+    border-color var(--duration-fast) var(--ease-out-quart),
+    box-shadow var(--duration-fast) var(--ease-out-quart);
+  /* V2: no translate. A universal hover-lift makes a page of surfaces
+     jitter under the pointer and says nothing about what is actually
+     actionable — it is movement standing in for information. The response
+     is now material: the edge lights and the occlusion deepens, which
+     reads as the surface catching more of the key light without the
+     object leaving its position. RESPOND class, local, no layout cost. */
+  &:hover {
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-lift);
+  }
+}
+
+@utility spotlight {
+  /* Pointer-tracked highlight. --mx/--my are written by useSpotlight
+     (Commit E); with no hook attached the gradient simply sits at its
+     50%/0% default, so the class is safe to apply before then. */
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 400ms ease;
+    /* V1: neutral, not violet. This is a LIGHT response — the pointer
+       reveals the material — so it belongs to luminance, not to the
+       accent. Violet here made every hovered card glow purple, which is
+       the clearest example of accent used as atmosphere. */
+    background: radial-gradient(
+      340px 340px at var(--mx, 50%) var(--my, 0%),
+      rgb(255 255 255 / 0.045),
+      transparent 70%
+    );
+  }
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+@utility glow-banner {
+  /* Glow banner. V1: neutral. A hero region is marked by composition,
+     type and rail — not by a coloured haze behind it. Kept as a very
+     faint luminance lift so the region still reads as lit from above. */
+  background: radial-gradient(
+    680px circle at 50% -10%,
+    rgb(255 255 255 / 0.035),
+    transparent 60%
+  );
+}
+
+@utility nexusos-brand-mark {
+  /* Faint structural grid for hero/branded panels. */
+
+  /* Live-status pulse — for a live/online status dot (StatusPill).
+     Collapses to a static dot under the reduced-motion rule below. */
+
+  /* Ambient drift for the hero's blurred backdrop orbs. 14s and ~3% travel:
+     slow and small enough to be felt rather than watched. The @keyframes
+     landed in Commit A but this class did not, so the orbs were static —
+     measured animation-name: none. Switched off under reduced motion. */
+
+  /* ----------------------------------------------------------------
+     NexusOS brand mark + typography lockup (authenticated shell).
+     Expanded sidebar uses the approved horizontal wordmark asset
+     (N | NexusOS). Collapsed chrome keeps the circular mark only.
+
+     Motion is deliberately static: mark and wordmark sit in their
+     final position immediately. The only motion is a one-shot,
+     near-imperceptible specular sweep — light catching polished
+     glass, not a startup entrance. Never loops.
+     ---------------------------------------------------------------- */
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  /* V1: joins the family. This was a hand-written 8px and the only
+       element on the dashboard still rendering a fifth radius. */
+  border-radius: var(--r-control);
+  isolation: isolate;
+
+  & img {
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  & img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* Specular highlight — narrow, soft, one pass after a brief settle. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -30% -55%;
+    background: linear-gradient(
+      115deg,
+      transparent 43%,
+      rgb(255 255 255 / 0.08) 47%,
+      rgb(255 255 255 / 0.32) 49.3%,
+      rgb(210 202 255 / 0.22) 50%,
+      rgb(255 255 255 / 0.24) 50.7%,
+      rgb(255 255 255 / 0.06) 53%,
+      transparent 57%
+    );
+    transform: translateX(-120%) skewX(-18deg);
+    opacity: 0;
+    pointer-events: none;
+    animation: nexusos-brand-shine 580ms cubic-bezier(0.4, 0, 0.2, 1) 200ms both;
+  }
+}
+
+@utility nexusos-wordmark-img {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  width: 210px;
+  max-width: calc(100% - 24px);
+  height: auto;
+  object-fit: contain;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@utility nexusos-wordmark-lockup {
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -30% -55%;
+    background: linear-gradient(
+      115deg,
+      transparent 43%,
+      rgb(255 255 255 / 0.08) 47%,
+      rgb(255 255 255 / 0.32) 49.3%,
+      rgb(210 202 255 / 0.22) 50%,
+      rgb(255 255 255 / 0.24) 50.7%,
+      rgb(255 255 255 / 0.06) 53%,
+      transparent 57%
+    );
+    transform: translateX(-120%) skewX(-18deg);
+    opacity: 0;
+    pointer-events: none;
+    animation: nexusos-brand-shine 580ms cubic-bezier(0.4, 0, 0.2, 1) 200ms both;
+  }
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  overflow: visible;
+  isolation: isolate;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+@utility nexusos-wordmark-img--lg {
+  /* Auth shell uses a slightly larger lockup. */
+  width: auto;
+  max-width: 100%;
+  height: 2.25rem;
+}
+
+@layer utilities {
+  /* ------------------------------------------------------------------
    CHASSIS GEOMETRY (V3).
 
    --sidebar-w is registered so it can be ANIMATED. A bare custom
@@ -31,13 +1071,13 @@
 
    Declared outside @layer so the registration is never tree-shaken.
    ------------------------------------------------------------------ */
-@property --sidebar-w {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 270px;
-}
+  @property --sidebar-w {
+    syntax: '<length>';
+    inherits: true;
+    initial-value: 270px;
+  }
 
-/* ============================================================
+  /* ============================================================
    NexusOS Design Tokens — Part 4, single source of truth.
    Source hex values are documented next to each token.
 
@@ -77,6 +1117,7 @@
    shadow/inset/border system, not from hue. Re-tinting is a one-line
    change to the ladder if that reads too clinical.
    ============================================================ */
+}
 @layer base {
   :root {
     /* --- Surface ladder (light) — the single source of truth for every
@@ -575,309 +1616,9 @@
 
 /* --- Type scale (§4.5) — Inter, documented weights & tracking --- */
 @layer components {
-  /* Display steps down from a flat 36px to a responsive 28→34px (LifeOS
-     convergence, Commit B). The old size was larger than the reference's
-     hero heading while carrying less information, which is what made the
-     greeting read as oversized rather than confident. */
-  /* ================================================================
-     TYPOGRAPHY REGISTERS (V1).
-
-     Two voices, and which one a string gets is a semantic decision:
-
-       SANS (Inter)          human/product language — greetings, page
-                             titles, actions, explanation, module names.
-       MONO (JetBrains)      machine/system language — API status,
-                             environment, slugs, timestamps, IDs, counts,
-                             technical metadata.
-
-     Reading a mono string should tell you, before you parse it, that a
-     machine produced it. That is the whole point, and it is why mono
-     must stay rare: over-used it becomes decoration and stops signalling.
-
-     Measured before: 12 distinct size/weight pairs on one dashboard, the
-     top three being 14/500, 12/400 and 11/400 — i.e. three flavours of
-     "small grey text" doing different jobs with no visible distinction.
-     The roles below are separated by WEIGHT and TRACKING as well as size,
-     so two 11px strings can still read as different registers.
-
-     The .text-* names are unchanged so every existing consumer inherits
-     the retune with no edit.
-     ================================================================ */
-
-  /* display — one per screen, maximum. */
-  .text-display { @apply text-[30px] font-semibold leading-[1.1] tracking-[-0.028em] sm:text-[38px]; }
-  /* page title */
-  .text-h1      { @apply text-[22px] font-semibold leading-[1.2] tracking-[-0.02em]; }
-  /* section title */
-  .text-h2      { @apply text-[17px] font-semibold leading-[1.3] tracking-[-0.012em]; }
-  .text-h3      { @apply text-[15px] font-semibold leading-[1.4] tracking-[-0.008em]; }
-  .text-h4      { @apply text-sm    font-semibold leading-[1.5] tracking-[-0.005em]; }
-  /* body */
-  .text-body-lg { @apply text-[15px] font-normal leading-[1.6]; }
-  .text-body    { @apply text-sm  font-normal leading-[1.55]; }
-  /* metadata */
-  .text-small   { @apply text-xs  font-normal leading-[1.5]; }
-  /* label — in-content, sentence-scale */
-  .text-caption { @apply text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground; }
-
-  /* MACHINE REGISTER. The system's own voice: mono, tight, tabular.
-     Anything a machine emitted — status, environment, slug, probe result
-     — should wear this rather than being dressed as prose. */
-  .text-machine {
-    @apply font-mono text-2xs font-medium uppercase text-muted-foreground;
-    letter-spacing: 0.1em;
-    font-variant-numeric: tabular-nums;
-  }
-  /* Machine register at reading size, for values rather than labels. */
-  .text-machine-value {
-    @apply font-mono text-sm font-medium text-foreground;
-    letter-spacing: -0.01em;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Dense chrome label — 11px, heavy tracking. Distinct from .text-caption
-     (12px/+0.06em), which stays the in-content label. This is the shell's
-     own voice: section eyebrows, tile labels, status strings. */
-  .eyebrow {
-    @apply inline-flex items-center gap-1.5 text-2xs font-semibold uppercase text-muted-foreground;
-    letter-spacing: 0.14em;
-  }
-
-  /* Numeric readouts. tabular-nums is the point: without it a ticking
-     clock, a percentage, or a column of currency values reflows on every
-     digit change because proportional figures have different widths. */
-  .num {
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
-  }
-
-  /* ================================================================
-     MOTION GRAMMAR (V1) — four classes, and every animation in NexusOS
-     must be able to name which one it is. If it cannot, it should not
-     move.
-
-       TRAVEL    a persistent object changes location or state.
-                 The nav indicator moving between rows. The sidebar
-                 collapsing. Duration: spatial (340ms), symmetric ease.
-       RESOLVE   new content establishes itself in a frame that already
-                 exists. Route content. Duration: standard (220ms).
-       RESPOND   direct reaction to the user's own input, at the point of
-                 contact. Hover, press, focus. Duration: fast (150ms).
-       BREATHE   ambient system state. Deliberately near-extinct: one per
-                 view, and only where a live system signal justifies it.
-
-     These are the timing/easing contracts only — they set no transform,
-     because WHAT moves is the consuming component's decision. That is
-     what stops the grammar becoming a pile of animation presets.
-
-     Motion coverage is explicitly NOT a goal. An interface where twenty
-     elements move for a reason is better than one where a hundred move
-     because a utility existed.
-     ================================================================ */
-  /* The three classes are defined UNLAYERED near the bottom of this file,
-     not here. Tailwind tree-shakes @layer components rules that no source
-     file references, and V1 deliberately ships the grammar before its
-     consumers exist — defined here they were silently purged, while their
-     reduced-motion overrides (a plain @media block, never purged) survived.
-     Measured: transition-duration 0s normally, 0.15s under reduced motion,
-     i.e. exactly backwards. A foundation that only exists once something
-     uses it is not a foundation. */
-
-  /* Shared focus treatment for chrome controls that aren't Buttons.
-     focus-visible only, so a pointer click never paints a ring but a
-     keyboard user always gets one. */
-  /* V1: LOCAL energy. The ring-offset-2 halo drew a detached second
-     outline two pixels off the control — a shadcn default that reads as
-     a sticker rather than as the control itself becoming live. Focus now
-     sits ON the edge: the violet focus line plus a tight contained
-     ring. This is the one place violet is unconditionally correct. */
-  .focus-ring {
-    @apply outline-none;
-  }
-
-  /* Keycap. */
-  .kbd {
-    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-control border px-1.5 font-mono text-2xs font-medium text-muted-foreground;
-    border-color: var(--line);
-    background-color: hsl(var(--surface-4));
-  }
-
-  /* Auth shell backdrop — one soft radial glow + a barely-visible grid,
-     both built from existing tokens. Deliberately minimal: texture, not
-     decoration. Phase F: the page is a spatial field; the form stays
-     the readable surface. No particles, no WebGL, no looping motion. */
-  /* ================================================================
-     AUTH ENVIRONMENT (rebuilt, V6).
-
-     Login is the first room of the SAME product, so it is built from the
-     chassis vocabulary rather than from its own private one:
-
-       - a full-height structural SEAM at the same geometry the workspace
-         rail occupies. This is deliberate and load-bearing: V7 transforms
-         one into the other, and that only works if the seam is a real
-         element sitting where the rail will be.
-       - the environment is neutral graphite (V1 removed the violet/cyan
-         ambient wash product-wide; nothing here re-adds it).
-       - the form sits on a Plane, which is the first surface in the
-         product that genuinely earns one — it is a distinct layer
-         floating in an environment, not a band on a canvas.
-       - identity and legal-ish metadata are machine register.
-
-     Auth semantics are untouched by all of this: no form, field, schema
-     or submit path is defined in CSS.
-     ================================================================ */
-  .auth-page {
-    @apply relative isolate min-h-dvh overflow-x-hidden overflow-y-auto bg-background;
-  }
-
-  /* Default atmosphere layers (app shell). */
-  .atmosphere {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
-  }
-  .atmosphere-parallax {
-    position: absolute;
-    inset: -12%;
-  }
-  .atmosphere-layer {
-    position: absolute;
-    inset: 0;
-  }
-  .atmosphere-layer--cobalt {
-    background: radial-gradient(
-      ellipse 85% 55% at 48% 92%,
-      rgb(37 99 235 / 0.3),
-      transparent 58%
-    );
-  }
-  .atmosphere-layer--cyan {
-    background: radial-gradient(
-      ellipse 50% 40% at 18% 18%,
-      rgb(56 189 248 / 0.11),
-      transparent 52%
-    );
-  }
-  .atmosphere-layer--violet {
-    background: radial-gradient(
-      ellipse 45% 35% at 86% 28%,
-      rgb(99 102 241 / 0.09),
-      transparent 54%
-    );
-  }
-  .atmosphere-vignette {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-      ellipse 120% 90% at 50% 40%,
-      transparent 35%,
-      rgb(2 4 10 / 0.72) 100%
-    );
-  }
-
-  /* ================================================================
-     THE SPATIAL ENVIRONMENT
-
-     One fixed layer, mounted outside the router (see SpaceField), that
-     serves BOTH the sign-in route and the auth-success cinematic. It is
-     one object in two phases rather than two objects that resemble each
-     other, because the phases are separated by a route change and any
-     seam there is a visible cut.
-
-       [data-space-stage="idle"]    behind the sign-in surface
-       [data-space-stage="travel"]  the camera move
-       [data-elevated="true"]       now above the application
-
-     Everything below animates transform and opacity only. No filter, no
-     backdrop-filter, no animated box-shadow, no layout properties. Five
-     animated elements total, plus one canvas.
-     ================================================================ */
-  .space-field {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    pointer-events: none;
-    contain: strict;
-  }
-  /* The lift above the application. Discrete, and it happens exactly when
-     the sign-in route unmounts — earlier would bury the card while it is
-     still receding, later would expose the mounting shell. */
-  .space-field[data-elevated="true"] {
-    z-index: 60;
-  }
-
-  /* Opaque ground. On the sign-in route it is simply the page background;
-     during travel it is what keeps the mounting shell out of sight, and it
-     dissolves as the shell resolves. */
-  .space-base {
-    position: absolute;
-    inset: 0;
-    background: #010308;
-  }
-
-  .space-stars {
-    position: absolute;
-    inset: 0;
-    /* A slow fade-in on first mount only — the sky resolves as your eyes
-       adjust rather than snapping on with the page. One-shot, not a loop. */
-    animation: space-stars-in 1400ms var(--ease-standard) both;
-  }
   @keyframes space-stars-in {
     from { opacity: 0; }
     to   { opacity: 1; }
-  }
-
-  /* Three light volumes with their sources outside the frame. Offscreen
-     illumination, not blobs on the page. */
-  .space-lights {
-    position: absolute;
-    inset: -14%;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  .space-light {
-    position: absolute;
-    inset: 0;
-  }
-  .space-light--cobalt {
-    background: radial-gradient(
-      ellipse 105% 65% at 50% 112%,
-      rgb(37 99 235 / 0.42),
-      transparent 56%
-    );
-  }
-  .space-light--cyan {
-    background: radial-gradient(
-      ellipse 65% 52% at 88% -8%,
-      rgb(56 189 248 / 0.17),
-      transparent 58%
-    );
-  }
-  .space-light--violet {
-    background: radial-gradient(
-      ellipse 42% 36% at 8% 42%,
-      rgb(99 102 241 / 0.08),
-      transparent 60%
-    );
-  }
-  .space-vignette {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-      ellipse 96% 76% at 50% 46%,
-      transparent 30%,
-      rgb(1 3 8 / 0.8) 100%
-    );
-  }
-
-  /* ---- TRAVEL ----
-     The camera move. The stars carry the actual sense of motion (they are
-     the only thing with real parallax); these layers carry scale and
-     depth. Timings are the ones in lib/auth-cinematic.ts. */
-  .space-field[data-space-stage="travel"] .space-lights {
-    animation: space-travel-lights 1500ms var(--ease-cinematic) both;
   }
   @keyframes space-travel-lights {
     0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
@@ -886,31 +1627,11 @@
     96%  { transform: translate3d(0, -3.8%, 0) scale(1.34); opacity: 0; }
     100% { transform: translate3d(0, -4%, 0) scale(1.36); opacity: 0; }
   }
-  .space-field[data-space-stage="travel"] .space-vignette {
-    animation: space-travel-vignette 1500ms var(--ease-cinematic) both;
-  }
   @keyframes space-travel-vignette {
     0%   { opacity: 1; transform: scale(1); }
     62%  { opacity: 1; transform: scale(1.09); }
     96%  { opacity: 0; transform: scale(1.15); }
     100% { opacity: 0; transform: scale(1.16); }
-  }
-  /* HANDOFF, NOT A CROSS-DISSOLVE.
-     The space clears between 62% and 96% of the timeline (930ms → 1440ms),
-     and by 930ms the real shell underneath has finished painting. So this
-     fade IS the reveal: one fade, over a complete interface, rather than
-     several stacked fades over a half-painted one.
-
-     Two earlier attempts are worth recording. Fading the space out over a
-     shell still at opacity 0 exposed the workspace's own background, which
-     is WHITE in the light theme — the cinematic went to mid-grey on its
-     way in. Stacking a second dark layer inside the shell to hide that
-     left the shell ~90% covered three-quarters of the way through its own
-     reveal. Ordering the two (shell first, space second) is what actually
-     solves it. */
-  .space-field[data-space-stage="travel"] .space-base,
-  .space-field[data-space-stage="travel"] .space-stars {
-    animation: space-travel-handoff 1500ms linear both;
   }
   @keyframes space-travel-handoff {
     0%   { opacity: 1; }
@@ -918,340 +1639,9 @@
     96%  { opacity: 0; }
     100% { opacity: 0; }
   }
-
-  /* Reduced motion: the environment is still there, it just does not
-     travel. A short cross-dissolve replaces the camera move. */
-  .space-field--reduce .space-stars,
-  .space-field--reduce[data-space-stage="travel"] .space-lights,
-  .space-field--reduce[data-space-stage="travel"] .space-vignette,
-  .space-field--reduce[data-space-stage="travel"] .space-stars {
-    animation: none;
-    transform: none;
-    opacity: 1;
-  }
-  .space-field--reduce[data-space-stage="travel"] .space-base {
-    animation: space-reduced-out 220ms linear both;
-  }
   @keyframes space-reduced-out {
     from { opacity: 1; }
     to   { opacity: 0; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .space-stars { animation: none; opacity: 1; }
-    .space-field[data-space-stage="travel"] .space-lights,
-    .space-field[data-space-stage="travel"] .space-vignette,
-    .space-field[data-space-stage="travel"] .space-stars {
-      animation: none;
-      transform: none;
-      opacity: 1;
-    }
-    .space-field[data-space-stage="travel"] .space-base {
-      animation: space-reduced-out 220ms linear both;
-    }
-  }
-
-  /* The canvas itself. CSS only places it — every pixel is drawn in JS. */
-  .starfield {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  /* ================================================================
-     THE SIGN-IN ROUTE
-
-     One centred column in an empty environment: identity, then the
-     surface. There is no second column and no product mock — the space
-     is the composition. The page paints no background of its own; the
-     environment behind it does.
-     ================================================================ */
-  .auth-world {
-    background: transparent;
-    display: grid;
-    place-items: center;
-    padding: max(2rem, 6vh) 1rem max(2rem, 6vh);
-  }
-  .auth-column {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 25rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: clamp(1.75rem, 5vh, 3.25rem);
-  }
-  .auth-identity {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    text-align: center;
-    transition:
-      opacity 260ms var(--ease-standard),
-      transform 320ms var(--ease-cinematic);
-  }
-  .auth-tagline {
-    font-size: 0.8125rem;
-    color: hsl(var(--muted-foreground));
-  }
-  .auth-panel {
-    width: 100%;
-    transition:
-      opacity 260ms var(--ease-standard),
-      transform 320ms var(--ease-cinematic);
-  }
-
-  /* The exit. This is why the navigate is deferred: the surface can only
-     recede while its route is still mounted. */
-  .auth-world[data-auth-stage="leaving"] .auth-panel {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.965);
-    pointer-events: none;
-  }
-  .auth-world[data-auth-stage="leaving"] .auth-identity {
-    opacity: 0;
-    transform: translate3d(0, 6px, 0) scale(0.985);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .auth-world[data-auth-stage="leaving"] .auth-panel,
-    .auth-world[data-auth-stage="leaving"] .auth-identity {
-      transition: opacity 160ms linear;
-      transform: none;
-    }
-  }
-  /* Floating authentication surface — opaque, no animated blur. */
-  .auth-surface {
-    width: 100%;
-    max-width: 26rem;
-    border-radius: var(--r-panel);
-    border: 1px solid rgb(160 190 255 / 0.14);
-    background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.045), transparent 40%),
-      hsl(var(--surface-2));
-    box-shadow:
-      var(--shadow-surface),
-      0 0 0 1px rgb(37 99 235 / 0.06),
-      0 32px 64px -28px rgb(0 4 12 / 0.88);
-    padding: 1.75rem 1.5rem;
-  }
-  @media (min-width: 640px) {
-    .auth-surface { padding: 2.25rem 2.5rem; }
-  }
-
-  /* ----------------------------------------------------------------
-     Surface System (LifeOS convergence, Commit A).
-     .surface is the elevated-panel recipe: ladder fill + translucent
-     hairline + the inset top highlight and deep drop shadow that make a
-     panel read as a physical layer. Card adopts it in Commit C; it is
-     defined here so the recipe lives with the tokens it composes.
-     ---------------------------------------------------------------- */
-  /* PLANE. V1: the edge drops to --line-soft (the "normal surface edge"
-     role) and the directional pair does the separating instead. A plane
-     is not interactive, so it should not wear the interactive edge —
-     that was a large part of why 19 bordered elements on one screen all
-     shouted equally. */
-  .surface {
-    border-radius: var(--radius-surface);
-    border: 1px solid var(--line-soft);
-    background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent 42%),
-      hsl(var(--surface-2));
-    box-shadow: var(--shadow-surface), 0 1px 0 0 var(--edge-shade);
-    transition:
-      border-color var(--duration-fast) var(--ease-out-quart),
-      box-shadow var(--duration-fast) var(--ease-out-quart),
-      transform var(--duration-fast) var(--ease-out-quart),
-      background-color var(--duration-fast) var(--ease-out-quart);
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .surface:hover {
-      border-color: rgb(160 190 255 / 0.16);
-      box-shadow:
-        var(--shadow-surface),
-        0 1px 0 0 rgb(180 210 255 / 0.1) inset,
-        0 10px 28px -18px rgb(0 4 12 / 0.55),
-        0 0 0 1px rgb(37 99 235 / 0.04);
-    }
-    a.surface:hover,
-    .surface.motion-respond:hover,
-    button.surface:hover {
-      transform: translateY(-1px);
-    }
-  }
-
-  /* Raised variant — one step up the ladder, for surfaces that sit on
-     top of another surface (nested panels, popovers over cards). */
-  .surface-raised {
-    border-radius: var(--radius-surface);
-    border: 1px solid var(--line);
-    background-color: hsl(var(--surface-3));
-    box-shadow: var(--shadow-surface);
-  }
-
-  /* Glass surface — floating/elevated surfaces only; see Design
-     Constitution §9. Never applied to data-dense surfaces. */
-  .surface-glass {
-    @apply rounded-card border shadow-lg backdrop-blur-xl;
-    background: hsl(var(--surface-glass) / 0.72);
-    border-color: hsl(var(--surface-glass-border) / 0.6);
-  }
-
-  /* Shared modal/drawer/command scrim. One dim, one blur. */
-  .overlay-scrim {
-    background: var(--overlay-scrim);
-    backdrop-filter: blur(var(--overlay-blur));
-  }
-  /* Closed overlays must not intercept clicks if exit animation is
-     interrupted (reduced-motion, frozen timelines). Radix unmounts after
-     animate-out; this is a fail-safe while data-state=closed remains. */
-  .overlay-scrim[data-state="closed"] {
-    pointer-events: none;
-  }
-
-  /* Restrained hover elevation. 2px is deliberate — enough to read as
-     interactive, small enough that a grid of cards doesn't jitter. */
-  .card-lift {
-    transition:
-      transform var(--duration-fast) var(--ease-out-quart),
-      border-color var(--duration-fast) var(--ease-out-quart),
-      box-shadow var(--duration-fast) var(--ease-out-quart);
-  }
-  /* V2: no translate. A universal hover-lift makes a page of surfaces
-     jitter under the pointer and says nothing about what is actually
-     actionable — it is movement standing in for information. The response
-     is now material: the edge lights and the occlusion deepens, which
-     reads as the surface catching more of the key light without the
-     object leaving its position. RESPOND class, local, no layout cost. */
-  .card-lift:hover {
-    border-color: var(--line-strong);
-    box-shadow: var(--shadow-lift);
-  }
-
-  /* Pointer-tracked highlight. --mx/--my are written by useSpotlight
-     (Commit E); with no hook attached the gradient simply sits at its
-     50%/0% default, so the class is safe to apply before then. */
-  .spotlight { position: relative; }
-  .spotlight::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    opacity: 0;
-    transition: opacity 400ms ease;
-    /* V1: neutral, not violet. This is a LIGHT response — the pointer
-       reveals the material — so it belongs to luminance, not to the
-       accent. Violet here made every hovered card glow purple, which is
-       the clearest example of accent used as atmosphere. */
-    background: radial-gradient(
-      340px 340px at var(--mx, 50%) var(--my, 0%),
-      rgb(255 255 255 / 0.045),
-      transparent 70%
-    );
-  }
-  .spotlight:hover::before { opacity: 1; }
-
-  /* Glow banner. V1: neutral. A hero region is marked by composition,
-     type and rail — not by a coloured haze behind it. Kept as a very
-     faint luminance lift so the region still reads as lit from above. */
-  .glow-banner { background: radial-gradient(680px circle at 50% -10%, rgb(255 255 255 / 0.035), transparent 60%); }
-
-  /* Faint structural grid for hero/branded panels. */
-
-  /* Live-status pulse — for a live/online status dot (StatusPill).
-     Collapses to a static dot under the reduced-motion rule below. */
-
-  /* Ambient drift for the hero's blurred backdrop orbs. 14s and ~3% travel:
-     slow and small enough to be felt rather than watched. The @keyframes
-     landed in Commit A but this class did not, so the orbs were static —
-     measured animation-name: none. Switched off under reduced motion. */
-
-  /* ----------------------------------------------------------------
-     NexusOS brand mark + typography lockup (authenticated shell).
-     Expanded sidebar uses the approved horizontal wordmark asset
-     (N | NexusOS). Collapsed chrome keeps the circular mark only.
-
-     Motion is deliberately static: mark and wordmark sit in their
-     final position immediately. The only motion is a one-shot,
-     near-imperceptible specular sweep — light catching polished
-     glass, not a startup entrance. Never loops.
-     ---------------------------------------------------------------- */
-  .nexusos-brand-mark {
-    position: relative;
-    flex-shrink: 0;
-    overflow: hidden;
-    /* V1: joins the family. This was a hand-written 8px and the only
-       element on the dashboard still rendering a fifth radius. */
-    border-radius: var(--r-control);
-    isolation: isolate;
-  }
-
-  .nexusos-brand-mark img,
-  .nexusos-wordmark-img {
-    display: block;
-    user-select: none;
-    -webkit-user-drag: none;
-  }
-
-  .nexusos-brand-mark img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
-
-  /* Specular highlight — narrow, soft, one pass after a brief settle. */
-  .nexusos-brand-mark::after,
-  .nexusos-wordmark-lockup::after {
-    content: "";
-    position: absolute;
-    inset: -30% -55%;
-    background: linear-gradient(
-      115deg,
-      transparent 43%,
-      rgb(255 255 255 / 0.08) 47%,
-      rgb(255 255 255 / 0.32) 49.3%,
-      rgb(210 202 255 / 0.22) 50%,
-      rgb(255 255 255 / 0.24) 50.7%,
-      rgb(255 255 255 / 0.06) 53%,
-      transparent 57%
-    );
-    transform: translateX(-120%) skewX(-18deg);
-    opacity: 0;
-    pointer-events: none;
-    animation: nexusos-brand-shine 580ms cubic-bezier(0.4, 0, 0.2, 1) 200ms both;
-  }
-
-  .nexusos-wordmark-lockup {
-    position: relative;
-    display: inline-flex;
-    max-width: 100%;
-    overflow: visible;
-    isolation: isolate;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 0;
-  }
-
-  .nexusos-wordmark-img {
-    width: 210px;
-    max-width: calc(100% - 24px);
-    height: auto;
-    object-fit: contain;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  /* Auth shell uses a slightly larger lockup. */
-  .nexusos-wordmark-img--lg {
-    width: auto;
-    max-width: 100%;
-    height: 2.25rem;
   }
 }
 

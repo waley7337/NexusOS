@@ -371,7 +371,7 @@ export function AssistantPage() {
 
             <div className="flex gap-2 items-end">
               <textarea
-                className="flex-1 rounded-control border border-line-soft bg-surface-0 px-3 py-2 text-sm resize-none min-h-[40px] max-h-32 focus:outline-none focus:ring-1 focus:ring-ring"
+                className="flex-1 rounded-control border border-line-soft bg-surface-0 px-3 py-2 text-sm resize-none min-h-[40px] max-h-32 focus:outline-hidden focus:ring-1 focus:ring-ring"
                 placeholder={
                   providerUnavailable
                     ? "AI unavailable — OPENAI_API_KEY not configured"

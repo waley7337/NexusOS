@@ -168,7 +168,7 @@ export function DealsTable({
                 <td className="px-4 py-3 tabular-nums text-foreground">
                   {formatDealValue(deal.value, deal.currency)}
                 </td>
-                <td className="hidden max-w-[14rem] truncate px-4 py-3 text-muted-foreground md:table-cell">
+                <td className="hidden max-w-56 truncate px-4 py-3 text-muted-foreground md:table-cell">
                   {outcomeLabel(deal)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">

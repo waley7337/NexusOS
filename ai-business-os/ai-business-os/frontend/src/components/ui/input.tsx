@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 // Plane, which is exactly the physical difference between a recess and a
 // raised plate. Hover lifts the edge only; focus is handled by focus-edge.
 const base =
-  "w-full rounded-input border border-line-soft bg-surface-0 px-3 text-sm text-foreground shadow-[inset_0_1px_2px_0_var(--edge-shade)] [--focus-base:inset_0_1px_2px_0_var(--edge-shade)] transition-colors duration-fast placeholder:text-muted-foreground hover:border-line-strong focus-edge disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line-soft aria-[invalid=true]:border-destructive aria-[invalid=true]:hover:border-destructive";
+  "w-full rounded-input border border-line-soft bg-surface-0 px-3 text-sm text-foreground shadow-[inset_0_1px_2px_0_var(--edge-shade)] [--focus-base:inset_0_1px_2px_0_var(--edge-shade)] transition-colors duration-fast placeholder:text-muted-foreground hover:border-line-strong focus-edge disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line-soft aria-invalid:border-destructive aria-invalid:hover:border-destructive";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
@@ -38,7 +38,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
         {children}
       </select>
       <ChevronDown
-        className="pointer-events-none absolute right-2.5 top-1/2 h-[var(--icon-sm)] w-[var(--icon-sm)] -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute right-2.5 top-1/2 h-(--icon-sm) w-(--icon-sm) -translate-y-1/2 text-muted-foreground"
         aria-hidden
       />
     </div>

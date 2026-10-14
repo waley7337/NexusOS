@@ -93,7 +93,7 @@ export function CommandPalette() {
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <Command.Input
           placeholder="Search pages and actions…"
-          className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="h-12 flex-1 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
         />
         <kbd className="kbd">esc</kbd>
       </div>
@@ -111,7 +111,7 @@ export function CommandPalette() {
           <Command.Group
             key={provider.id}
             heading={provider.group}
-            className="[&_[cmdk-group-heading]]:eyebrow [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2"
+            className="**:[[cmdk-group-heading]]:eyebrow **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:pb-1 **:[[cmdk-group-heading]]:pt-2"
           >
             {items.map(({ id, label, value, icon: Icon, onSelect }) => (
               // Selected row is a neutral raised fill with an accent icon —
