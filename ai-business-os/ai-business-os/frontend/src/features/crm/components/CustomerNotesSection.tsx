@@ -95,7 +95,7 @@ export function CustomerNotesSection({ customerId }: CustomerNotesSectionProps) 
             onChange={(event) => setDraft(event.target.value)}
             rows={3}
             placeholder="Add a note about this customer…"
-            className="w-full rounded-md border border-line-soft bg-surface-raised px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="w-full rounded-md border border-line-soft bg-surface-raised px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           />
           <div className="flex justify-end">
             <Button

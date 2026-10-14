@@ -307,7 +307,7 @@ export function AppLayout() {
               <div className="divide-y divide-line-soft">
                 <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
                   <span className="text-machine">Name</span>
-                  <span className="min-w-0 break-words text-sm font-medium">
+                  <span className="min-w-0 wrap-break-word text-sm font-medium">
                     {user?.name ?? "—"}
                   </span>
                 </div>
@@ -338,7 +338,7 @@ export function AppLayout() {
               <div className="divide-y divide-line-soft">
                 <div className="grid grid-cols-1 items-baseline gap-1 py-2.5 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
                   <span className="text-machine">Company</span>
-                  <span className="min-w-0 break-words text-sm font-medium">
+                  <span className="min-w-0 wrap-break-word text-sm font-medium">
                     {user?.companyName ?? "—"}
                   </span>
                 </div>
@@ -390,7 +390,7 @@ export function AppLayout() {
             the mark/wordmark swap is a pure crossfade — no simultaneous
             height jump to desync from the width transition. Both marks stay
             mounted and share the same left inset; only opacity moves. */}
-        <div className="nexusos-brand relative h-[4.75rem] shrink-0 px-4">
+        <div className="nexusos-brand relative h-19 shrink-0 px-4">
           {/* Opacity is inverse of the wordmark: the wordmark PNG already
               contains this glyph, so leaving the mark at opacity 1 while
               expanded rendered the logo twice. left-4 centres the 32px
@@ -656,11 +656,11 @@ export function AppLayout() {
 
         {/* Content is capped and centred (Commit B), and owns the shell's
             scroll (Commit C) so the status bar below stays put.
-            focus:outline-none suppresses the platform ring that
+            focus:outline-hidden suppresses the platform ring that
             useRouteFocus's fallback would otherwise paint around the whole
             content region — see the note in that hook. tabIndex={-1} means
             this is not Tab-reachable, so no keyboard affordance is lost. */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto focus:outline-none" tabIndex={-1}>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto focus:outline-hidden" tabIndex={-1}>
           <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
             <LazyOutlet />
           </div>

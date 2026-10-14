@@ -28,7 +28,7 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
       <dt className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
-      <dd className="min-w-0 break-words text-sm text-foreground">{value || "—"}</dd>
+      <dd className="min-w-0 wrap-break-word text-sm text-foreground">{value || "—"}</dd>
     </div>
   );
 }

@@ -84,7 +84,7 @@ export function EmptyState({
       />
 
       <div className="flex items-center gap-2">
-        <Icon className="h-[var(--icon-xs)] w-[var(--icon-xs)] shrink-0 text-disabled-foreground" aria-hidden="true" />
+        <Icon className="h-(--icon-xs) w-(--icon-xs) shrink-0 text-disabled-foreground" aria-hidden="true" />
         {status && <span className="text-machine">{status}</span>}
       </div>
 

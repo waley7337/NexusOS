@@ -38,12 +38,12 @@ export function PageHeader({ eyebrow, title, description, actions, status, as: H
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         {/* tabIndex=-1: useRouteFocus() moves focus to the page's h1 on route
-            change (§5.19). focus:outline-none suppresses the platform ring
+            change (§5.19). focus:outline-hidden suppresses the platform ring
             that programmatic focus would otherwise paint around the heading.
             Safe: tabIndex={-1} means this is not reachable with Tab, so no
             keyboard user ever needs an indicator here — every genuinely
             interactive control keeps its focus-visible ring. */}
-        <Heading className="text-display focus:outline-none" tabIndex={-1}>
+        <Heading className="text-display focus:outline-hidden" tabIndex={-1}>
           {title}
         </Heading>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}

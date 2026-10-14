@@ -86,7 +86,7 @@ function TaskForm({ initial, onSubmit, onCancel, loading }: TaskFormProps) {
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium">Description</label>
         <textarea
-          className="rounded-control border border-line-soft bg-surface-0 px-3 py-2 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-ring"
+          className="rounded-control border border-line-soft bg-surface-0 px-3 py-2 text-sm resize-none h-20 focus:outline-hidden focus:ring-1 focus:ring-ring"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Optional description"

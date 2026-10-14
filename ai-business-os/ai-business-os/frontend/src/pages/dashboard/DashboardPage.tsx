@@ -146,7 +146,7 @@ export function DashboardPage() {
           </header>
 
           <div className="product-stage-frame" data-motion={motionAttr}>
-            <div className="mission-primary cinema-stage space-y-4 rounded-[var(--r-panel)] border border-[rgb(160_190_255_/_0.14)] bg-[hsl(var(--surface-1)/0.78)] p-3 shadow-[0_1px_0_0_rgb(180_210_255_/_0.08)_inset] sm:p-4">
+            <div className="mission-primary cinema-stage space-y-4 rounded-(--r-panel) border border-[rgb(160_190_255/0.14)] bg-[hsl(var(--surface-1)/0.78)] p-3 shadow-[0_1px_0_0_rgb(180_210_255/0.08)_inset] sm:p-4">
               {/* Signal row */}
               <section
                 aria-label="System signals"
@@ -243,7 +243,7 @@ export function DashboardPage() {
                     {metricsPending ? (
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                         {Array.from({ length: 6 }).map((_, i) => (
-                          <div key={i} className="rounded-[var(--r-surface)] border border-line-soft bg-surface-0/50 px-3 py-2.5">
+                          <div key={i} className="rounded-(--r-surface) border border-line-soft bg-surface-0/50 px-3 py-2.5">
                             <Skeleton className="h-3 w-16" />
                             <Skeleton className="mt-1.5 h-5 w-10" />
                           </div>
@@ -542,7 +542,7 @@ function SignalPanel({
   return (
     <Plane className="relative overflow-hidden p-4 sm:p-5">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/50 to-transparent"
         aria-hidden="true"
       />
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
@@ -583,7 +583,7 @@ function MetricChip({
   hint?: string;
 }) {
   return (
-    <div className="rounded-[var(--r-surface)] border border-line-soft bg-surface-0/50 px-3 py-2.5">
+    <div className="rounded-(--r-surface) border border-line-soft bg-surface-0/50 px-3 py-2.5">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd
         className={cn(
@@ -643,7 +643,7 @@ function ReadinessRing({
   const dash = circumference * progress;
 
   return (
-    <div className="relative h-[5.5rem] w-[5.5rem] shrink-0" aria-hidden="true">
+    <div className="relative h-22 w-22 shrink-0" aria-hidden="true">
       <svg viewBox="0 0 88 88" className="h-full w-full -rotate-90">
         <circle
           cx="44"
@@ -689,7 +689,7 @@ function ReadinessRing({
 function AmbientWaveform() {
   return (
     <div
-      className="relative mt-6 h-44 overflow-hidden rounded-[var(--r-surface)] border border-line-soft bg-surface-0/50 sm:h-52"
+      className="relative mt-6 h-44 overflow-hidden rounded-(--r-surface) border border-line-soft bg-surface-0/50 sm:h-52"
       aria-hidden="true"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_50%_100%,hsl(var(--primary)/0.18),transparent_55%)]" />

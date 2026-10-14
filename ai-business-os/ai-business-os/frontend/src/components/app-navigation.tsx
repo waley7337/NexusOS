@@ -172,7 +172,7 @@ export function MobileSidebar({
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerContent side="left" className="max-w-[15rem] border-r p-0">
+      <DrawerContent side="left" className="max-w-60 border-r p-0">
         <DrawerHeader title="NexusOS" />
         <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-clip p-3 pr-4">
           <NavItems onNavigate={() => setOpen(false)} />
