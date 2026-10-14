@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { FolderKanban, Plus, Search } from "lucide-react";
+import { ApiRequestError } from "@/api/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -26,15 +27,18 @@ import {
   useCreateProject, useDeleteProject, useProjects, useUpdateProject,
 } from "../hooks/useProjects";
 
+const errorMessage = (error: unknown) =>
+  error instanceof ApiRequestError ? error.message : "Could not complete this request.";
+
 const PAGE_SIZE = 20;
 
 function StatusBadge({ status }: { status: ProjectStatus }) {
   const variants: Record<ProjectStatus, "default" | "warning" | "success" | "danger" | "info" | "accent"> = {
-    planning: "info",
+    planned: "info",
     active: "success",
     on_hold: "warning",
     completed: "accent",
-    cancelled: "danger",
+    archived: "danger",
   };
   return <Badge variant={variants[status]}>{PROJECT_STATUS_LABELS[status]}</Badge>;
 }
@@ -49,7 +53,7 @@ interface ProjectFormProps {
 function ProjectForm({ initial, onSubmit, onCancel, loading }: ProjectFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [status, setStatus] = useState<ProjectStatus>(initial?.status ?? "planning");
+  const [status, setStatus] = useState<ProjectStatus>(initial?.status ?? "planned");
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -130,23 +134,35 @@ export function ProjectsPage() {
   function closeDrawer() { setDrawerMode(null); setEditTarget(null); }
 
   async function handleCreate(payload: ProjectCreatePayload) {
-    await createMutation.mutateAsync(payload);
-    toast.success("Project created.");
-    closeDrawer();
+    try {
+      await createMutation.mutateAsync(payload);
+      toast.success("Project created.");
+      closeDrawer();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
   }
 
   async function handleUpdate(payload: ProjectCreatePayload) {
     if (!editTarget) return;
-    await updateMutation.mutateAsync(payload);
-    toast.success("Project updated.");
-    closeDrawer();
+    try {
+      await updateMutation.mutateAsync(payload);
+      toast.success("Project updated.");
+      closeDrawer();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    toast.success("Project deleted.");
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Project deleted.");
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
   }
 
   function setPage(p: number) {
@@ -200,7 +216,7 @@ export function ProjectsPage() {
           ))}
         </div>
       ) : isError ? (
-        <ErrorState title="Failed to load projects" description={String(error)} />
+        <ErrorState title="Failed to load projects" description={errorMessage(error)} />
       ) : !data?.items.length ? (
         <EmptyState
           icon={FolderKanban}

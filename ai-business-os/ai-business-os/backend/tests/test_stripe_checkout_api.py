@@ -169,6 +169,19 @@ def test_billing_status_requires_settings_view(client):
     assert data["plan"] == "free"
     assert "entitled" in data
     assert "billingEnabled" in data
+    # Disabled billing is a successful status payload — never an API error.
+    assert data["billingEnabled"] is False
+
+
+def test_billing_checkout_fail_closed_when_disabled(client):
+    session = _register(client, "billoff")
+    response = client.post(
+        "/api/v1/billing/checkout",
+        headers={**session["headers"], "Idempotency-Key": "bill-off"},
+        json={"plan": "starter"},
+    )
+    assert response.status_code == 503
+    assert response.json()["errors"][0]["reason"] == "stripe_billing_disabled"
 
 
 def test_billing_checkout_rejects_free_plan(client):

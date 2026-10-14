@@ -38,7 +38,7 @@ def test_billing_profile_invariant_response_does_not_expose_company_id():
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.get("/_test/billing-profile-invariant")
 
-    assert response.status_code == 500
+    assert response.status_code == 409
     assert response.json() == {
         "success": False,
         "data": None,

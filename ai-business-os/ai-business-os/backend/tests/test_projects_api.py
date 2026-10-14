@@ -71,13 +71,13 @@ class TestProjectsCRUD:
         res = client.post(
             _PROJECTS,
             headers=user["headers"],
-            json={"name": "Alpha Project", "status": "PLANNED", "priority": "HIGH"},
+            json={"name": "Alpha Project", "status": "planned", "priority": "high"},
         )
         assert res.status_code == 201, res.text
         data = res.json()["data"]
         assert data["name"] == "Alpha Project"
-        assert data["status"] == "PLANNED"
-        assert data["priority"] == "HIGH"
+        assert data["status"] == "planned"
+        assert data["priority"] == "high"
         assert data["isActive"] is True
         assert data["companyId"] == user["user"]["companyId"]
 
@@ -100,7 +100,7 @@ class TestProjectsCRUD:
         res = client.get(_PROJECTS, headers=user["headers"])
         assert res.status_code == 200
         body = res.json()
-        assert body["data"]["total"] >= 3
+        assert body["data"]["meta"]["total"] >= 3
         ids = [p["id"] for p in body["data"]["items"]]
         assert len(set(ids)) == len(ids)  # no duplicates
 
@@ -121,11 +121,11 @@ class TestProjectsCRUD:
         res = client.patch(
             f"{_PROJECTS}/{pid}",
             headers=user["headers"],
-            json={"name": "After", "status": "ACTIVE"},
+            json={"name": "After", "status": "active"},
         )
         assert res.status_code == 200
         assert res.json()["data"]["name"] == "After"
-        assert res.json()["data"]["status"] == "ACTIVE"
+        assert res.json()["data"]["status"] == "active"
 
     def test_delete_project(self, client: TestClient):
         user = _register(client, "p-del")
@@ -143,17 +143,34 @@ class TestProjectsCRUD:
     def test_filter_by_status(self, client: TestClient):
         user = _register(client, "p-filter")
         client.post(
-            _PROJECTS, headers=user["headers"], json={"name": "Active1", "status": "ACTIVE"}
+            _PROJECTS, headers=user["headers"], json={"name": "Active1", "status": "active"}
         )
         client.post(
-            _PROJECTS, headers=user["headers"], json={"name": "Planned1", "status": "PLANNED"}
+            _PROJECTS, headers=user["headers"], json={"name": "Planned1", "status": "planned"}
         )
         res = client.get(
-            f"{_PROJECTS}?status=ACTIVE", headers=user["headers"]
+            f"{_PROJECTS}?status=active", headers=user["headers"]
         )
         assert res.status_code == 200
         items = res.json()["data"]["items"]
-        assert all(p["status"] == "ACTIVE" for p in items)
+        assert all(p["status"] == "active" for p in items)
+
+    def test_create_rejects_legacy_frontend_status_aliases(self, client: TestClient):
+        """FE once sent planning/cancelled — API wire values are planned/archived."""
+        user = _register(client, "p-legacy")
+        bad = client.post(
+            _PROJECTS,
+            headers=user["headers"],
+            json={"name": "Legacy", "status": "planning"},
+        )
+        assert bad.status_code == 422
+        ok = client.post(
+            _PROJECTS,
+            headers=user["headers"],
+            json={"name": "Canonical", "status": "planned"},
+        )
+        assert ok.status_code == 201, ok.text
+        assert ok.json()["data"]["status"] == "planned"
 
     def test_unknown_project_id_404(self, client: TestClient):
         user = _register(client, "p-404")
@@ -233,7 +250,7 @@ class TestTasksCRUD:
         data = res.json()["data"]
         assert data["title"] == "First Task"
         assert data["projectId"] == pid
-        assert data["status"] == "TODO"
+        assert data["status"] == "todo"
 
     def test_create_task_invalid_project_uuid(self, client: TestClient):
         user = _register(client, "t-badproj")
@@ -278,10 +295,10 @@ class TestTasksCRUD:
         res = client.patch(
             f"{_TASKS}/{tid}",
             headers=user["headers"],
-            json={"status": "IN_PROGRESS"},
+            json={"status": "in_progress"},
         )
         assert res.status_code == 200
-        assert res.json()["data"]["status"] == "IN_PROGRESS"
+        assert res.json()["data"]["status"] == "in_progress"
 
     def test_delete_task(self, client: TestClient):
         user = _register(client, "t-del")

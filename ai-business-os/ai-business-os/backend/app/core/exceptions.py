@@ -55,6 +55,7 @@ class ValidationError(AppError):
 class BillingProfileInvariantError(AppError):
     """An existing company is missing its required billing authority row."""
 
+    status_code = 409
     code = "billing_profile_invariant"
     message = "Company billing profile is not provisioned."
 

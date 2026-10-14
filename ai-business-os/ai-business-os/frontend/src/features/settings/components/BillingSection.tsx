@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { AxiosError } from "axios";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,23 @@ import * as billing from "../services/billingService";
 
 const errorMessage = (error: unknown) =>
   error instanceof ApiRequestError ? error.message : "Could not complete this request.";
+
+/** Classify load failures — disabled billing is a 200 success path, not an error. */
+function billingLoadErrorMessage(error: unknown): string {
+  if (error instanceof ApiRequestError) {
+    if (error.status === 404) {
+      return "Billing API route not found (HTTP 404). The running API may be behind the finance release that serves GET /api/v1/billing/subscription — redeploy that API, then retry.";
+    }
+    if (error.errors.some((item) => item.code === "billing_profile_invariant")) {
+      return "Company billing profile is not provisioned. Apply platform billing migrations on this database, then retry.";
+    }
+    return error.message;
+  }
+  if (error instanceof AxiosError && !error.response) {
+    return "Cannot reach the API. Confirm the backend is running and the frontend API base URL is correct.";
+  }
+  return errorMessage(error);
+}
 
 const PLAN_OPTIONS: Array<Exclude<billing.PlatformPlan, "free">> = [
   "starter",
@@ -94,13 +112,14 @@ export function BillingSection() {
       <section id="billing" className="space-y-3">
         <ErrorState
           title="Billing unavailable"
-          description={errorMessage(query.error)}
+          description={billingLoadErrorMessage(query.error)}
           onRetry={() => void query.refetch()}
         />
         <p className="text-xs text-muted-foreground">
+          This is a request failure — not the same as billing being disabled.
+          Disabled SaaS checkout returns HTTP 200 with{" "}
+          <code className="font-mono">billingEnabled: false</code> and actionable env guidance.
           SaaS billing uses <code className="font-mono">GET /api/v1/billing/subscription</code>.
-          If this keeps failing, the API deploy may be behind the finance branch, or migrations
-          for platform billing may not be applied yet.
         </p>
       </section>
     );

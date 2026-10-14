@@ -57,6 +57,26 @@ describe("shared API client error normalization", () => {
     expect(error).not.toBeInstanceOf(ApiRequestError);
   });
 
+  it("normalizes non-envelope HTTP 404 into ApiRequestError", async () => {
+    api.defaults.adapter = (config) => {
+      const response: AxiosResponse = {
+        config: config as InternalAxiosRequestConfig,
+        data: "<html>not found</html>",
+        headers: {},
+        status: 404,
+        statusText: "404",
+      };
+      return Promise.reject(
+        new AxiosError("Request failed with status code 404", "ERR_BAD_RESPONSE", config, undefined, response),
+      );
+    };
+    await expect(request({ url: "/billing/subscription" })).rejects.toMatchObject({
+      name: "ApiRequestError",
+      message: "Not Found",
+      status: 404,
+    });
+  });
+
   it("retries a 401 with refreshed tokens before normalizing failures", async () => {
     vi.spyOn(axios, "post").mockResolvedValue({ data: { success: true, data: { accessToken: "new-access", refreshToken: "new-refresh" }, message: "ok", errors: null } });
     let calls = 0;

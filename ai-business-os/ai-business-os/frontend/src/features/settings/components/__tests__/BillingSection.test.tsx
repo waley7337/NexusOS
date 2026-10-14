@@ -100,10 +100,22 @@ describe("BillingSection", () => {
   });
 
   it("keeps API failures distinct from disabled billing", async () => {
-    api.getBillingStatus.mockRejectedValue(new ApiRequestError("Not Found", []));
+    api.getBillingStatus.mockRejectedValue(new ApiRequestError("Not Found", [], 404));
     renderBilling();
     expect(await screen.findByText("Billing unavailable")).toBeInTheDocument();
+    expect(await screen.findByText(/Billing API route not found/i)).toBeInTheDocument();
+    expect(screen.getByText(/not the same as billing being disabled/i)).toBeInTheDocument();
     expect(screen.queryByText("NexusOS subscription")).not.toBeInTheDocument();
+  });
+
+  it("surfaces missing billing-profile migration clearly", async () => {
+    api.getBillingStatus.mockRejectedValue(
+      new ApiRequestError("Company billing profile is not provisioned.", [
+        { code: "billing_profile_invariant" },
+      ], 500),
+    );
+    renderBilling();
+    expect(await screen.findByText(/platform billing migrations/i)).toBeInTheDocument();
   });
 
   it("treats checkout return as non-authoritative and refreshes from the server", async () => {

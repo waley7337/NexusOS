@@ -76,6 +76,18 @@ api.interceptors.response.use(
         new ApiRequestError(body.message, body.errors ?? [], error.response?.status),
       );
     }
+    // Non-envelope HTTP failures (e.g. HTML 404 from a proxy/stale deploy)
+    // still become ApiRequestError so UI can classify status accurately.
+    if (error.response?.status) {
+      const status = error.response.status;
+      const fallback =
+        status === 404
+          ? "Not Found"
+          : status === 503
+            ? "Service unavailable"
+            : error.message || `Request failed (${status})`;
+      return Promise.reject(new ApiRequestError(fallback, [], status));
+    }
     return Promise.reject(error);
   },
 );
