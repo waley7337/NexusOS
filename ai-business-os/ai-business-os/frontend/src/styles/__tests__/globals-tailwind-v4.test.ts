@@ -31,6 +31,14 @@ describe("globals.css Tailwind v4 invariants", () => {
     expect(globals).toMatch(/@keyframes\s+space-travel-handoff/);
   });
 
+  it("keeps auth-page free of bg-background so auth-world can reveal SpaceField", () => {
+    const authPage = globals.match(/@utility\s+auth-page\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+    const applyLine = authPage.match(/@apply\s+[^;]+;/)?.[0] ?? "";
+    expect(applyLine).toMatch(/@apply\s+/);
+    expect(applyLine).not.toMatch(/bg-background/);
+    expect(globals).toMatch(/\.auth-world\s*\{[^}]*background:\s*transparent/);
+  });
+
   it("forces dark auth input fill/caret so paste/autofill stays readable", () => {
     expect(globals).toMatch(/\.auth-shell\s+input/);
     expect(globals).toMatch(/color-scheme:\s*dark/);
