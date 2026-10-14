@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import { AppLayout } from "@/layouts/AppLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
+import { BillingCheckoutLayout } from "@/layouts/BillingCheckoutLayout";
 import { ROUTES } from "@/constants/routes";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { PermissionRoute } from "@/routes/PermissionRoute";
@@ -83,6 +84,14 @@ const SettingsPage = lazy(() =>
 const DocumentsPlaceholder = lazy(() =>
   import("@/pages/placeholders/ModulePlaceholders").then((m) => ({ default: m.DocumentsPlaceholder })),
 );
+const BillingCheckoutPage = lazy(() =>
+  import("@/pages/billing/BillingCheckoutPage").then((m) => ({ default: m.BillingCheckoutPage })),
+);
+const BillingCheckoutReturnPage = lazy(() =>
+  import("@/pages/billing/BillingCheckoutReturnPage").then((m) => ({
+    default: m.BillingCheckoutReturnPage,
+  })),
+);
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
   return (
@@ -141,6 +150,32 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
+      {
+        element: <BillingCheckoutLayout />,
+        children: [
+          {
+            element: <PermissionRoute permission="settings.view" />,
+            children: [
+              {
+                path: ROUTES.billingCheckout,
+                element: (
+                  <AuthRoute>
+                    <BillingCheckoutPage />
+                  </AuthRoute>
+                ),
+              },
+              {
+                path: ROUTES.billingCheckoutReturn,
+                element: (
+                  <AuthRoute>
+                    <BillingCheckoutReturnPage />
+                  </AuthRoute>
+                ),
+              },
+            ],
+          },
+        ],
+      },
       {
         element: <AppLayout />,
         children: [

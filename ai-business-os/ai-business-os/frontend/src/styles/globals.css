@@ -609,6 +609,13 @@
   align-items: center;
   gap: clamp(1.75rem, 5vh, 3.25rem);
 }
+/* Billing checkout reuses the same spatial shell with a wider plate. */
+.auth-column--checkout {
+  max-width: min(42rem, 100%);
+}
+.auth-world--checkout {
+  padding-block: max(1.5rem, 4vh);
+}
 .auth-identity {
   display: flex;
   flex-direction: column;
@@ -666,6 +673,13 @@
 }
 @media (min-width: 640px) {
   .auth-surface { padding: 2.25rem 2.5rem; }
+}
+.auth-surface--checkout {
+  max-width: none;
+  padding: 1.5rem 1.25rem;
+}
+@media (min-width: 640px) {
+  .auth-surface--checkout { padding: 2rem 2rem; }
 }
 }
 

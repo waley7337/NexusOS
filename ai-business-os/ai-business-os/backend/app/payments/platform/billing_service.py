@@ -15,6 +15,7 @@ from app.models.enums import PlatformPlan, PlatformSubscriptionStatus
 from app.models.payments import PlatformBillingProfile
 from app.payments.providers.stripe.client import stripe_module
 from app.payments.stripe_config import (
+    billing_live,
     plan_for_price_id,
     price_id_for_plan,
     require_billing_enabled,
@@ -51,6 +52,7 @@ _ALLOW_IN_PLACE_PLAN_CHANGE = frozenset(
 )
 
 CheckoutMode = Literal["checkout", "subscription_updated"]
+CheckoutUiMode = Literal["hosted", "elements"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,11 +61,41 @@ class BillingCheckoutSession:
     checkout_session_id: str | None
     plan: PlatformPlan
     mode: CheckoutMode = "checkout"
+    client_secret: str | None = None
+    publishable_key: str | None = None
+    ui_mode: CheckoutUiMode = "hosted"
 
 
 @dataclass(frozen=True, slots=True)
 class BillingPortalSession:
     portal_url: str
+
+
+@dataclass(frozen=True, slots=True)
+class BillingPlanPriceSnapshot:
+    plan: PlatformPlan
+    price_id: str | None
+    currency: str | None
+    unit_amount: int | None
+    interval: str | None
+    interval_count: int | None
+    product_name: str | None
+    configured: bool
+
+
+@dataclass(frozen=True, slots=True)
+class BillingPlansCatalog:
+    billing_enabled: bool
+    publishable_key: str | None
+    plans: list[BillingPlanPriceSnapshot]
+
+
+@dataclass(frozen=True, slots=True)
+class BillingCheckoutSessionStatus:
+    status: str
+    payment_status: str
+    plan: PlatformPlan | None
+    checkout_session_id: str
 
 
 class PlatformBillingService:
@@ -117,12 +149,21 @@ class PlatformBillingService:
         *,
         plan: PlatformPlan,
         idempotency_key: str,
+        ui_mode: CheckoutUiMode = "hosted",
         success_path: str = "/settings?billing=success",
         cancel_path: str = "/settings?billing=cancel",
+        return_path: str = "/billing/checkout/return?billing=success",
     ) -> BillingCheckoutSession:
         api_key = require_billing_enabled()
+        if ui_mode not in ("hosted", "elements"):
+            raise ValidationError(
+                "Unsupported checkout UI mode.",
+                details={"reason": "checkout_ui_mode_invalid"},
+            )
         if not success_path.startswith("/") or not cancel_path.startswith("/"):
             raise ValidationError("Billing return paths must be relative.")
+        if not return_path.startswith("/"):
+            raise ValidationError("Billing return path must be relative.")
         price_id = price_id_for_plan(plan)
         # Serialize concurrent checkout/upgrade attempts for this company.
         profile = await self.repo.get_authoritative_for_update()
@@ -184,44 +225,225 @@ class PlatformBillingService:
             customer_id = profile.stripe_customer_id or customer_id
 
         frontend = settings.FRONTEND_URL.rstrip("/")
-        try:
-            session = stripe.checkout.Session.create(
-                mode="subscription",
-                customer=customer_id,
-                line_items=[{"price": price_id, "quantity": 1}],
-                success_url=f"{frontend}{success_path}&session_id={{CHECKOUT_SESSION_ID}}",
-                cancel_url=f"{frontend}{cancel_path}",
-                client_reference_id=str(self.company_id),
-                metadata={
+        create_kwargs: dict = {
+            "mode": "subscription",
+            "customer": customer_id,
+            "line_items": [{"price": price_id, "quantity": 1}],
+            "client_reference_id": str(self.company_id),
+            "metadata": {
+                "domain": "platform_billing",
+                "company_id": str(self.company_id),
+                "plan": plan.value,
+            },
+            "subscription_data": {
+                "metadata": {
                     "domain": "platform_billing",
                     "company_id": str(self.company_id),
                     "plan": plan.value,
                 },
-                subscription_data={
-                    "metadata": {
-                        "domain": "platform_billing",
-                        "company_id": str(self.company_id),
-                        "plan": plan.value,
-                    },
-                },
-                idempotency_key=idempotency_key,
+            },
+            "idempotency_key": idempotency_key,
+        }
+        if ui_mode == "elements":
+            # Custom NexusOS Payment Element UI — no hosted Checkout URL.
+            create_kwargs["ui_mode"] = "elements"
+            create_kwargs["return_url"] = (
+                f"{frontend}{return_path}&session_id={{CHECKOUT_SESSION_ID}}"
             )
+            create_kwargs["billing_address_collection"] = "auto"
+        else:
+            create_kwargs["success_url"] = (
+                f"{frontend}{success_path}&session_id={{CHECKOUT_SESSION_ID}}"
+            )
+            create_kwargs["cancel_url"] = f"{frontend}{cancel_path}"
+
+        try:
+            session = stripe.checkout.Session.create(**create_kwargs)
         except Exception as exc:
             logger.warning(
                 "platform_checkout_create_failed",
                 company_id=str(self.company_id),
                 error_type=type(exc).__name__,
+                ui_mode=ui_mode,
             )
             raise ConflictError(
                 "Unable to start subscription checkout.",
                 details={"reason": "stripe_billing_checkout_failed"},
             ) from None
 
+        session_id = str(session["id"] if isinstance(session, dict) else session.id)
+        publishable = (settings.STRIPE_PLATFORM_PUBLISHABLE_KEY or "").strip() or None
+        if ui_mode == "elements":
+            secret = session["client_secret"] if isinstance(session, dict) else session.client_secret
+            if not secret:
+                raise ConflictError(
+                    "Unable to start subscription checkout.",
+                    details={"reason": "stripe_billing_checkout_failed"},
+                )
+            return BillingCheckoutSession(
+                checkout_url=None,
+                checkout_session_id=session_id,
+                plan=plan,
+                mode="checkout",
+                client_secret=str(secret),
+                publishable_key=publishable,
+                ui_mode="elements",
+            )
+
         return BillingCheckoutSession(
             checkout_url=str(session["url"] if isinstance(session, dict) else session.url),
-            checkout_session_id=str(session["id"] if isinstance(session, dict) else session.id),
+            checkout_session_id=session_id,
             plan=plan,
             mode="checkout",
+            ui_mode="hosted",
+        )
+
+    async def list_plan_catalog(self) -> BillingPlansCatalog:
+        """Trusted plan pricing from Stripe Price IDs — fail closed when billing is off."""
+        publishable = (settings.STRIPE_PLATFORM_PUBLISHABLE_KEY or "").strip() or None
+        if not billing_live():
+            return BillingPlansCatalog(
+                billing_enabled=False,
+                publishable_key=None,
+                plans=[
+                    BillingPlanPriceSnapshot(
+                        plan=plan,
+                        price_id=None,
+                        currency=None,
+                        unit_amount=None,
+                        interval=None,
+                        interval_count=None,
+                        product_name=None,
+                        configured=False,
+                    )
+                    for plan in (
+                        PlatformPlan.STARTER,
+                        PlatformPlan.PRO,
+                        PlatformPlan.ENTERPRISE,
+                    )
+                ],
+            )
+
+        api_key = require_billing_enabled()
+        stripe = stripe_module(api_key=api_key)
+        snapshots: list[BillingPlanPriceSnapshot] = []
+        for plan in (PlatformPlan.STARTER, PlatformPlan.PRO, PlatformPlan.ENTERPRISE):
+            try:
+                price_id = price_id_for_plan(plan)
+            except Exception:
+                snapshots.append(
+                    BillingPlanPriceSnapshot(
+                        plan=plan,
+                        price_id=None,
+                        currency=None,
+                        unit_amount=None,
+                        interval=None,
+                        interval_count=None,
+                        product_name=None,
+                        configured=False,
+                    )
+                )
+                continue
+            try:
+                remote = stripe.Price.retrieve(price_id, expand=["product"])
+                data = remote if isinstance(remote, dict) else remote.to_dict()
+                recurring = data.get("recurring") or {}
+                product = data.get("product")
+                product_name = None
+                if isinstance(product, dict):
+                    product_name = product.get("name")
+                elif isinstance(product, str):
+                    product_name = None
+                snapshots.append(
+                    BillingPlanPriceSnapshot(
+                        plan=plan,
+                        price_id=price_id,
+                        currency=str(data.get("currency") or "").lower() or None,
+                        unit_amount=int(data["unit_amount"])
+                        if data.get("unit_amount") is not None
+                        else None,
+                        interval=str(recurring.get("interval")) if recurring.get("interval") else None,
+                        interval_count=int(recurring["interval_count"])
+                        if recurring.get("interval_count") is not None
+                        else None,
+                        product_name=str(product_name) if product_name else None,
+                        configured=True,
+                    )
+                )
+            except Exception as exc:
+                logger.warning(
+                    "platform_price_retrieve_failed",
+                    company_id=str(self.company_id),
+                    plan=plan.value,
+                    error_type=type(exc).__name__,
+                )
+                snapshots.append(
+                    BillingPlanPriceSnapshot(
+                        plan=plan,
+                        price_id=price_id,
+                        currency=None,
+                        unit_amount=None,
+                        interval=None,
+                        interval_count=None,
+                        product_name=None,
+                        configured=False,
+                    )
+                )
+        return BillingPlansCatalog(
+            billing_enabled=True,
+            publishable_key=publishable,
+            plans=snapshots,
+        )
+
+    async def get_checkout_session_status(
+        self, *, checkout_session_id: str
+    ) -> BillingCheckoutSessionStatus:
+        """Return Checkout Session status for UI only — entitlements stay webhook-driven."""
+        api_key = require_billing_enabled()
+        session_id = checkout_session_id.strip()
+        if not session_id.startswith("cs_"):
+            raise ValidationError(
+                "Invalid checkout session id.",
+                details={"reason": "checkout_session_invalid"},
+            )
+        stripe = stripe_module(api_key=api_key)
+        try:
+            remote = stripe.checkout.Session.retrieve(session_id)
+            data = remote if isinstance(remote, dict) else remote.to_dict()
+        except Exception as exc:
+            logger.warning(
+                "platform_checkout_status_failed",
+                company_id=str(self.company_id),
+                error_type=type(exc).__name__,
+            )
+            raise ConflictError(
+                "Unable to load checkout session status.",
+                details={"reason": "stripe_checkout_status_failed"},
+            ) from None
+
+        metadata = data.get("metadata") or {}
+        if str(metadata.get("domain") or "") != "platform_billing":
+            raise ConflictError(
+                "Checkout session is not a NexusOS billing session.",
+                details={"reason": "checkout_session_domain_mismatch"},
+            )
+        if str(metadata.get("company_id") or "") != str(self.company_id):
+            raise ConflictError(
+                "Checkout session does not belong to this company.",
+                details={"reason": "checkout_session_company_mismatch"},
+            )
+        plan_raw = metadata.get("plan")
+        plan = None
+        if isinstance(plan_raw, str):
+            try:
+                plan = PlatformPlan(plan_raw)
+            except ValueError:
+                plan = None
+        return BillingCheckoutSessionStatus(
+            status=str(data.get("status") or "open"),
+            payment_status=str(data.get("payment_status") or "unpaid"),
+            plan=plan,
+            checkout_session_id=session_id,
         )
 
     async def _upgrade_existing_subscription(

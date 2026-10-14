@@ -6,6 +6,8 @@ export interface ApiError {
   code: string;
   field?: string;
   detail?: string;
+  /** Domain reason from backend AppError.details (e.g. subscription_past_due). */
+  reason?: string;
 }
 
 export interface ApiResponse<T> {

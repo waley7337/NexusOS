@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { AxiosError } from "axios";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiRequestError } from "@/api/client";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { queryKeys } from "@/constants/queryKeys";
+import { ROUTES } from "@/constants/routes";
 import { usePermission } from "@/hooks/usePermission";
 import * as billing from "../services/billingService";
 
@@ -59,6 +60,7 @@ export function BillingSection() {
   const canView = usePermission("settings.view");
   const canManage = usePermission("settings.manage");
   const client = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const handledReturn = useRef<string | null>(null);
 
@@ -68,10 +70,6 @@ export function BillingSection() {
     enabled: canView,
   });
 
-  const checkout = useMutation({
-    mutationFn: (plan: Exclude<billing.PlatformPlan, "free">) =>
-      billing.createBillingCheckout(plan),
-  });
   const portal = useMutation({ mutationFn: () => billing.createBillingPortal() });
   const cancel = useMutation({
     mutationFn: () => billing.cancelBillingSubscription(),
@@ -174,25 +172,11 @@ export function BillingSection() {
               key={plan}
               size="sm"
               variant="outline"
-              loading={checkout.isPending}
               disabled={!status.billingEnabled}
               onClick={() => {
-                void (async () => {
-                  try {
-                    const session = await checkout.mutateAsync(plan);
-                    if (session.mode === "subscription_updated" || !session.checkoutUrl) {
-                      client.setQueryData(queryKeys.billing.subscription, undefined);
-                      await client.invalidateQueries({
-                        queryKey: queryKeys.billing.subscription,
-                      });
-                      toast.success("Plan updated on your existing subscription.");
-                      return;
-                    }
-                    window.location.assign(session.checkoutUrl);
-                  } catch (error) {
-                    toast.error(errorMessage(error));
-                  }
-                })();
+                // Custom Elements checkout (same spatial shell as login).
+                // Duplicate-sub / past_due / in-place upgrade rules stay on the server.
+                navigate(`${ROUTES.billingCheckout}?plan=${plan}`);
               }}
             >
               Upgrade {plan}

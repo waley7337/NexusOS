@@ -34,6 +34,8 @@ export const ROUTES = {
   reports: "/reports",
   assistant: "/assistant",
   settings: "/settings",
+  billingCheckout: "/billing/checkout",
+  billingCheckoutReturn: "/billing/checkout/return",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];

@@ -116,6 +116,9 @@ export const queryKeys = {
   billing: {
     all: ["billing"] as const,
     subscription: ["billing", "subscription"] as const,
+    plans: ["billing", "plans"] as const,
+    checkoutSession: (sessionId: string) =>
+      ["billing", "checkout-session", sessionId] as const,
   },
   projects: {
     all: ["projects"] as const,
