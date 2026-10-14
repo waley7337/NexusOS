@@ -356,7 +356,12 @@
      Auth semantics are untouched by all of this: no form, field, schema
      or submit path is defined in CSS.
      ================================================================ */
-  @apply relative isolate min-h-dvh overflow-x-hidden overflow-y-auto bg-background;
+  /* No bg-background: AuthLayout also carries .auth-world, which must stay
+     transparent so SpaceField (fixed sibling underneath) shows through.
+     Under Tailwind v4, @utility wins over @layer components, so a utility
+     fill here permanently blanked the login stars. Body still paints the
+     page ground via bg-background. */
+  @apply relative isolate min-h-dvh overflow-x-hidden overflow-y-auto;
 }
 
 @utility atmosphere {
@@ -588,6 +593,7 @@
    environment behind it does.
    ================================================================ */
 .auth-world {
+  /* Must remain transparent: SpaceField sits under this route shell. */
   background: transparent;
   display: grid;
   place-items: center;
