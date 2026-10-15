@@ -18,14 +18,13 @@ Security:
 """
 from __future__ import annotations
 
-import json
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field
 
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import NotFoundError
 from app.dependencies.auth import CurrentUser, get_current_active_user, require_permission
 from app.db.session import get_db
 from app.models.ai import AiConversation, AiMessage
@@ -33,8 +32,7 @@ from app.models.enums import AiRole
 from app.schemas.base import CamelModel
 from app.schemas.response import ApiResponse, Paginated
 from app.repositories.base import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
-from app.services.ai_agent import AgentOrchestrator, ConfirmedAction, get_orchestrator
-from app.services.ai_provider import setup_providers
+from app.services.ai_agent import ConfirmedAction, get_orchestrator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

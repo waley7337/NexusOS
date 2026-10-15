@@ -36,11 +36,10 @@ Adding a new tool:
 """
 from __future__ import annotations
 
-import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, timedelta
-from typing import Any, Callable, Coroutine
+from typing import Callable
 
 import structlog
 from pydantic import BaseModel, Field, field_validator
@@ -372,7 +371,7 @@ async def _exec_finance_invoice_detail(
     args: dict, db: AsyncSession, user: CurrentUser
 ) -> dict:
     a = InvoiceDetailArgs(**args)
-    from app.models.finance import Invoice, InvoiceItem
+    from app.models.finance import Invoice
     from sqlalchemy.orm import selectinload
 
     stmt = (
@@ -466,7 +465,6 @@ async def _exec_projects_list(
 ) -> dict:
     a = ProjectsListArgs(**args)
     from app.models.project import Project
-    from app.models.enums import ProjectStatus as PS
 
     stmt = select(
         Project.id, Project.name, Project.status,
@@ -591,7 +589,7 @@ async def _exec_create_task(
     """Creates a task. Only called after user confirmation is verified."""
     a = CreateTaskArgs(**args)
     from app.models.project import Project, Task
-    from app.models.enums import TaskStatus, Priority as P
+    from app.models.enums import TaskStatus
 
     # Verify project belongs to this tenant.
     project = (await db.execute(

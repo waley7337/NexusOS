@@ -13,7 +13,6 @@ from decimal import Decimal
 from typing import List
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.inventory import Product, StockLevel, Warehouse
