@@ -10,7 +10,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import ConflictError, ValidationError
+from app.core.exceptions import ConflictError, ServiceUnavailableError, ValidationError
 from app.models.enums import PlatformPlan, PlatformSubscriptionStatus
 from app.models.payments import PlatformBillingProfile
 from app.payments.providers.stripe.client import stripe_module
@@ -274,6 +274,11 @@ class PlatformBillingService:
         session_id = str(session["id"] if isinstance(session, dict) else session.id)
         publishable = (settings.STRIPE_PLATFORM_PUBLISHABLE_KEY or "").strip() or None
         if ui_mode == "elements":
+            if not publishable:
+                raise ServiceUnavailableError(
+                    "Platform billing publishable key is not configured.",
+                    details={"reason": "stripe_publishable_key_missing"},
+                )
             secret = session["client_secret"] if isinstance(session, dict) else session.client_secret
             if not secret:
                 raise ConflictError(

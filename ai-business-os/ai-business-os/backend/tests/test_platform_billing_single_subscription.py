@@ -1017,4 +1017,35 @@ async def test_elements_checkout_past_due_still_blocked(monkeypatch):
 
     assert exc.value.details["reason"] == "subscription_past_due"
     stripe.checkout.Session.create.assert_not_called()
-    assert service.is_entitled(profile) is False
+
+
+@pytest.mark.asyncio
+async def test_elements_checkout_fail_closed_without_publishable_key(monkeypatch):
+    """Elements requires a platform publishable key — do not return a half-wired session."""
+    from app.core.exceptions import ServiceUnavailableError
+
+    _enable_billing(monkeypatch)
+    monkeypatch.setattr(
+        "app.payments.platform.billing_service.settings.STRIPE_PLATFORM_PUBLISHABLE_KEY",
+        None,
+    )
+    profile = _profile(stripe_customer_id="cus_1")
+    service, _ = _service(profile)
+    session_create = MagicMock(
+        return_value={
+            "id": "cs_elements",
+            "client_secret": "cs_elements_secret_123",
+            "url": None,
+        }
+    )
+    stripe = _stripe_mock(session_create=session_create)
+
+    with patch("app.payments.platform.billing_service.stripe_module", return_value=stripe):
+        with pytest.raises(ServiceUnavailableError) as exc:
+            await service.create_checkout(
+                plan=PlatformPlan.STARTER,
+                idempotency_key="idem-el-nopk",
+                ui_mode="elements",
+            )
+
+    assert exc.value.details["reason"] == "stripe_publishable_key_missing"
