@@ -43,12 +43,13 @@ FRONTEND_URL                      # used for Checkout / Connect / Portal return 
 
 ### Connect (tenant invoices)
 
-1. Complete Connect platform profile in Stripe Dashboard.
-2. Webhook endpoint (Connect): `POST {API}/api/v1/webhooks/stripe/connect`
-3. Events: `checkout.session.*`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `account.updated`
-4. Set `STRIPE_CONNECT_WEBHOOK_SECRET`.
-5. Set `STRIPE_TENANT_PAYMENTS_ENABLED=true` only after Connect is ready.
-6. Tenants onboard via Settings → Stripe Connect (`payment_providers.manage`).
+1. Enable Connect on the platform Stripe account (Dashboard → Connect, or sandbox `stripe tools enable_connect` / `POST /v1/_unstable/connect/enable` with a preview `Stripe-Version`). New sandboxes reject `Account.create` until this is done.
+2. Complete the Connect platform profile (acknowledge loss liability when the platform is `losses_collector`).
+3. Webhook endpoint (Connect): `POST {API}/api/v1/webhooks/stripe/connect`
+4. Events: `checkout.session.*`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `account.updated`
+5. Set `STRIPE_CONNECT_WEBHOOK_SECRET`.
+6. Set `STRIPE_TENANT_PAYMENTS_ENABLED=true` only after Connect is ready.
+7. Tenants onboard via Settings → Stripe Connect (`payment_providers.manage`). With `STRIPE_API_VERSION=2026-03-25.dahlia`, connected accounts are created via **Accounts v2** (`POST /v2/core/accounts`); Account Links remain on v1.
 
 ## Test vs live
 
