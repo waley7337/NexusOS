@@ -13,7 +13,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.client_ip import resolve_client_identity
 from app.core.exceptions import ValidationError

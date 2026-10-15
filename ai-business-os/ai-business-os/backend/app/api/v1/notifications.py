@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 
 from app.dependencies.notifications import NotificationRepo
 from app.repositories.base import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE

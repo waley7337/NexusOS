@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import structlog
 from fastapi import APIRouter, Header, Request, Response, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ServiceUnavailableError
 from app.db.session import AsyncSessionLocal

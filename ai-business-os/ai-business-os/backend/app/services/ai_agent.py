@@ -23,18 +23,14 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any
 
 import structlog
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.dependencies.auth import CurrentUser
 from app.models.ai import AiConversation, AiMessage
-from app.models.enums import AiRole
 from app.services.ai_provider import (
     AssistantMessage,
     BaseAIProvider,
@@ -42,7 +38,6 @@ from app.services.ai_provider import (
     ProviderUnavailableError,
     ProviderMessage,
     ToolCall,
-    ToolResultMessage,
 )
 from app.services.ai_tools import tool_registry
 
@@ -374,9 +369,9 @@ class AgentOrchestrator:
 
         try:
             result = await td.executor(confirmed_action.tool_arguments, db, user)
-        except PydanticValidationError as exc:
+        except PydanticValidationError:
             return AgentResult(
-                reply=f"The action could not be completed: invalid arguments.",
+                reply="The action could not be completed: invalid arguments.",
                 provider_available=True,
                 tool_calls_made=[],
             )
