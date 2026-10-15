@@ -32,12 +32,17 @@ FAKE_RESET_TOKEN = "reset-token-MUST-NOT-APPEAR-in-logs-a1b2"
 FAKE_RECIPIENT = "secret-recipient@example.test"
 
 
-def _reset_logger_cache(logger: structlog.BoundLoggerLazyProxy) -> None:
+def _reset_logger_cache(logger: object) -> None:
     """Bust structlog's `cache_logger_on_first_use` for one module logger.
 
     Same isolation pattern as `test_exception_logging.py`: after the first
-    use, BoundLoggerLazyProxy caches the pipeline; deleting the instance
-    `.bind` forces re-read of the current global config.
+    use, the lazy proxy caches the pipeline; deleting the instance `.bind`
+    forces re-read of the current global config.
+
+    Annotated as `object` (not `structlog.BoundLoggerLazyProxy`): that name
+    lives only on `structlog._config` and is not re-exported on the public
+    module, so referencing it in a runtime annotation breaks collection on
+    Python 3.12 (CI) while 3.14's deferred annotations hide the error.
     """
     if "bind" in vars(logger):
         del logger.bind
