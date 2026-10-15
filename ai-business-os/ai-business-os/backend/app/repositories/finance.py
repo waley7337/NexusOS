@@ -400,7 +400,10 @@ class ExpenseRepository(BaseRepository[Expense]):
         stmt = self._base_query()
 
         if category is not None:
-            stmt = stmt.where(Expense.category == category.strip())
+            cat = category.strip()
+            if cat:
+                # Exact match, case-insensitive (free-text categories; UI filter).
+                stmt = stmt.where(func.lower(Expense.category) == cat.lower())
 
         if date_from is not None:
             stmt = stmt.where(Expense.date >= date_from)

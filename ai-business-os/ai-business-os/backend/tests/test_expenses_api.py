@@ -7,6 +7,7 @@ Requires a running PostgreSQL database. Skip with SKIP_DB_TESTS=1.
 from __future__ import annotations
 
 import os
+import uuid
 from datetime import date, timedelta
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-must-be-32-chars-long!!")
@@ -23,6 +24,7 @@ pytestmark = pytest.mark.skipif(
 
 from app.main import app  # noqa: E402
 
+TEST_DB = os.environ.get("TEST_DATABASE_URL", os.environ["DATABASE_URL"])
 _EMAIL_DOMAIN = "expensesapitest.example.com"
 _EXPENSES = "/api/v1/finance/expenses"
 
@@ -296,3 +298,156 @@ def test_tenant_isolation_list_and_get(client: TestClient):
 
     delete_b = client.delete(f"{_EXPENSES}/{created['id']}", headers=auth_b["headers"])
     assert delete_b.status_code == 404
+
+
+def _set_user_role(user_id: str, role_name: str) -> None:
+    import asyncio
+
+    from sqlalchemy import select
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy.pool import NullPool
+
+    from app.models import Role, User
+
+    async def _run():
+        engine = create_async_engine(TEST_DB, poolclass=NullPool)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with session_factory() as db:
+                user = (
+                    await db.execute(
+                        select(User)
+                        .where(User.id == uuid.UUID(user_id))
+                        .options(selectinload(User.roles))
+                    )
+                ).scalar_one()
+                role = (
+                    await db.execute(
+                        select(Role).where(
+                            Role.company_id == user.company_id,
+                            Role.name == role_name,
+                            Role.is_system.is_(True),
+                        )
+                    )
+                ).scalar_one()
+                user.roles = [role]
+                await db.commit()
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_run())
+
+
+def test_manager_denied_all_expense_ops(client: TestClient):
+    """Managers keep invoices.read but must not receive expenses.*."""
+    auth = _register(client, "mgr-deny")
+    created = _make_expense(client, auth["headers"])
+    _set_user_role(auth["user"]["id"], "Manager")
+
+    assert client.get(_EXPENSES, headers=auth["headers"]).status_code == 403
+    assert (
+        client.get(f"{_EXPENSES}/{created['id']}", headers=auth["headers"]).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            _EXPENSES,
+            headers=auth["headers"],
+            json={
+                "category": "X",
+                "amount": "1.00",
+                "currency": "USD",
+                "date": date.today().isoformat(),
+            },
+        ).status_code
+        == 403
+    )
+    assert (
+        client.patch(
+            f"{_EXPENSES}/{created['id']}",
+            headers=auth["headers"],
+            json={"category": "Y"},
+        ).status_code
+        == 403
+    )
+    assert (
+        client.delete(
+            f"{_EXPENSES}/{created['id']}", headers=auth["headers"]
+        ).status_code
+        == 403
+    )
+
+
+def test_category_filter_is_case_insensitive(client: TestClient):
+    auth = _register(client, "cat-case")
+    _make_expense(client, auth["headers"], category="Travel")
+
+    for cat in ("Travel", "travel", "TRAVEL", "TrAvEl"):
+        res = client.get(_EXPENSES, headers=auth["headers"], params={"category": cat})
+        assert res.status_code == 200, res.text
+        assert res.json()["data"]["meta"]["total"] == 1
+        assert res.json()["data"]["items"][0]["category"] == "Travel"
+
+    miss = client.get(
+        _EXPENSES, headers=auth["headers"], params={"category": "Meals"}
+    )
+    assert miss.json()["data"]["meta"]["total"] == 0
+
+
+def test_search_matches_description(client: TestClient):
+    auth = _register(client, "search-desc")
+    _make_expense(
+        client,
+        auth["headers"],
+        description="airport cab",
+        category="Travel",
+    )
+    res = client.get(
+        _EXPENSES, headers=auth["headers"], params={"search": "airport"}
+    )
+    assert res.status_code == 200
+    assert res.json()["data"]["meta"]["total"] == 1
+
+
+def test_invalid_sort_field_rejected(client: TestClient):
+    auth = _register(client, "bad-sort")
+    res = client.get(
+        _EXPENSES, headers=auth["headers"], params={"sortBy": "hack;drop"}
+    )
+    assert res.status_code == 422
+
+
+def test_soft_deleted_excluded_from_list(client: TestClient):
+    auth = _register(client, "soft-list")
+    created = _make_expense(client, auth["headers"])
+    assert (
+        client.delete(
+            f"{_EXPENSES}/{created['id']}", headers=auth["headers"]
+        ).status_code
+        == 200
+    )
+    listed = client.get(_EXPENSES, headers=auth["headers"])
+    assert listed.json()["data"]["meta"]["total"] == 0
+    assert (
+        client.get(
+            f"{_EXPENSES}/{created['id']}", headers=auth["headers"]
+        ).status_code
+        == 404
+    )
+
+
+def test_paid_by_unknown_uuid_rejected(client: TestClient):
+    auth = _register(client, "paidby-unknown")
+    res = client.post(
+        _EXPENSES,
+        headers=auth["headers"],
+        json={
+            "category": "Travel",
+            "amount": "10.00",
+            "currency": "USD",
+            "date": date.today().isoformat(),
+            "paidBy": str(uuid.uuid4()),
+        },
+    )
+    assert res.status_code == 422, res.text

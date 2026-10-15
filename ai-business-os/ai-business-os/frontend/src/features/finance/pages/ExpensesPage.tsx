@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Receipt, Search } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -77,7 +77,17 @@ export function ExpensesPage() {
     [setParams],
   );
   const items = query.data?.items ?? [];
+  const total = query.data?.meta.total ?? 0;
+  const totalPages = query.data?.meta.totalPages ?? 1;
   const filtered = Boolean(debouncedSearch.trim() || category.trim());
+
+  // After delete/filter, URL page can exceed totalPages → empty items but total > 0.
+  useEffect(() => {
+    if (!query.isSuccess) return;
+    if (totalPages > 0 && page > totalPages) {
+      patch({ page: String(totalPages) });
+    }
+  }, [query.isSuccess, page, totalPages, patch]);
 
   return (
     <div className="space-y-6">
@@ -130,7 +140,7 @@ export function ExpensesPage() {
           description={message(query.error)}
           onRetry={() => void query.refetch()}
         />
-      ) : items.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState
           icon={Receipt}
           title={filtered ? "No matching expenses" : "No expenses yet"}
@@ -150,6 +160,12 @@ export function ExpensesPage() {
               : undefined
           }
         />
+      ) : items.length === 0 ? (
+        // Page beyond totalPages — clamp effect will rewrite the URL.
+        <div className="space-y-2" aria-label="Loading expenses">
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+        </div>
       ) : (
         <>
           <ExpensesTable
@@ -162,7 +178,7 @@ export function ExpensesPage() {
           />
           <Pagination
             page={query.data!.meta.page}
-            totalPages={query.data!.meta.totalPages}
+            totalPages={totalPages}
             onPageChange={(next) => patch({ page: String(next) })}
           />
         </>
