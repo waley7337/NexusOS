@@ -55,16 +55,52 @@ class BillingStatusResponse(CamelModel):
 
 class BillingCheckoutRequest(CamelModel):
     plan: PlatformPlan
+    """hosted = Stripe-hosted Checkout; elements = custom NexusOS Payment Element UI."""
+    ui_mode: str = Field(default="hosted", alias="uiMode")
 
 
 class BillingCheckoutResponse(CamelModel):
-    checkout_url: str = Field(alias="checkoutUrl")
-    checkout_session_id: str = Field(alias="checkoutSessionId")
+    """Checkout URL is set for hosted mode; clientSecret for elements; both null on in-place update."""
+
+    checkout_url: str | None = Field(default=None, alias="checkoutUrl")
+    checkout_session_id: str | None = Field(default=None, alias="checkoutSessionId")
+    client_secret: str | None = Field(default=None, alias="clientSecret")
+    publishable_key: str | None = Field(default=None, alias="publishableKey")
     plan: PlatformPlan
+    mode: str = "checkout"
+    ui_mode: str = Field(default="hosted", alias="uiMode")
 
 
 class BillingPortalResponse(CamelModel):
     portal_url: str = Field(alias="portalUrl")
+
+
+class BillingPlanPrice(CamelModel):
+    """Server-derived Stripe Price snapshot — never trust client amounts."""
+
+    plan: PlatformPlan
+    price_id: str | None = Field(default=None, alias="priceId")
+    currency: str | None = None
+    unit_amount: int | None = Field(default=None, alias="unitAmount")
+    interval: str | None = None
+    interval_count: int | None = Field(default=None, alias="intervalCount")
+    product_name: str | None = Field(default=None, alias="productName")
+    configured: bool = False
+
+
+class BillingPlansResponse(CamelModel):
+    billing_enabled: bool = Field(alias="billingEnabled")
+    publishable_key: str | None = Field(default=None, alias="publishableKey")
+    plans: list[BillingPlanPrice]
+
+
+class BillingCheckoutSessionStatusResponse(CamelModel):
+    """Read-only Checkout Session status for the return page — never grants entitlements."""
+
+    status: str
+    payment_status: str = Field(alias="paymentStatus")
+    plan: PlatformPlan | None = None
+    checkout_session_id: str = Field(alias="checkoutSessionId")
 
 
 def money_str(amount: Decimal) -> str:

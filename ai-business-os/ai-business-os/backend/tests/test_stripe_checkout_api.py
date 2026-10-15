@@ -27,6 +27,8 @@ from fastapi.testclient import TestClient
 
 from app.core.exceptions import ConflictError, ServiceUnavailableError
 from app.main import app
+from app.models.enums import PlatformPlan
+from app.payments.platform.billing_service import BillingCheckoutSession
 from app.payments.tenant.checkout_service import InvoiceCheckoutSession
 
 _EMAIL_DOMAIN = "stripecheckout.example.com"
@@ -190,6 +192,73 @@ def test_billing_checkout_rejects_free_plan(client):
         "/api/v1/billing/checkout",
         headers={**session["headers"], "Idempotency-Key": "bill-free"},
         json={"plan": "free"},
+    )
+    assert response.status_code == 422
+
+
+def test_billing_checkout_elements_returns_client_secret(client):
+    session = _register(client, "billelem")
+    fake = BillingCheckoutSession(
+        checkout_url=None,
+        checkout_session_id="cs_test_elements",
+        plan=PlatformPlan.STARTER,
+        mode="checkout",
+        client_secret="cs_test_secret_value",
+        publishable_key="pk_test_mock",
+        ui_mode="elements",
+    )
+    with patch(
+        "app.api.v1.billing.PlatformBillingService.create_checkout",
+        new=AsyncMock(return_value=fake),
+    ) as create_checkout:
+        response = client.post(
+            "/api/v1/billing/checkout",
+            headers={**session["headers"], "Idempotency-Key": "bill-elements"},
+            json={"plan": "starter", "uiMode": "elements"},
+        )
+    assert response.status_code == 201, response.text
+    body = response.json()["data"]
+    assert body["uiMode"] == "elements"
+    assert body["clientSecret"] == "cs_test_secret_value"
+    assert body["publishableKey"] == "pk_test_mock"
+    assert body["checkoutUrl"] is None
+    assert body["checkoutSessionId"] == "cs_test_elements"
+    assert create_checkout.await_args.kwargs["ui_mode"] == "elements"
+
+
+def test_billing_checkout_hosted_default_returns_url(client):
+    session = _register(client, "billhost")
+    fake = BillingCheckoutSession(
+        checkout_url="https://checkout.stripe.com/c/pay/cs_test_hosted",
+        checkout_session_id="cs_test_hosted",
+        plan=PlatformPlan.STARTER,
+        mode="checkout",
+        ui_mode="hosted",
+    )
+    with patch(
+        "app.api.v1.billing.PlatformBillingService.create_checkout",
+        new=AsyncMock(return_value=fake),
+    ) as create_checkout:
+        response = client.post(
+            "/api/v1/billing/checkout",
+            headers={**session["headers"], "Idempotency-Key": "bill-hosted"},
+            json={"plan": "starter"},
+        )
+    assert response.status_code == 201, response.text
+    body = response.json()["data"]
+    assert body["uiMode"] == "hosted"
+    assert body["checkoutUrl"].startswith("https://checkout.stripe.com/")
+    assert body["clientSecret"] is None
+    assert body["publishableKey"] is None
+    assert create_checkout.await_args.kwargs["ui_mode"] == "hosted"
+
+
+def test_billing_checkout_rejects_invalid_ui_mode(client):
+    session = _register(client, "billuimode")
+    response = client.post(
+        "/api/v1/billing/checkout",
+        headers={**session["headers"], "Idempotency-Key": "bill-bad-ui"},
+        json={"plan": "starter", "uiMode": "mobile"},
     )
     assert response.status_code == 422
 
