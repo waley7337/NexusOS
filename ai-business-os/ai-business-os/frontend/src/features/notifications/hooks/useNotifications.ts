@@ -1,9 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/constants/queryKeys";
 import * as service from "../services/notificationsService";
-import type { Notification, NotificationListParams } from "../types";
+import type { Notification, NotificationListParams, UnreadCount } from "../types";
 
 const UNREAD_POLL_MS = 30_000;
+
+type NotificationListCache = {
+  items: Notification[];
+  meta: unknown;
+};
+
+function isNotificationListCache(
+  value: unknown,
+): value is NotificationListCache {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as NotificationListCache).items)
+  );
+}
 
 export function useNotifications(params: NotificationListParams = {}, enabled = true) {
   return useQuery({
@@ -37,23 +52,26 @@ export function useMarkNotificationRead() {
       const previousList = client.getQueriesData({
         queryKey: queryKeys.notifications.list,
       });
-      const previousCount = client.getQueryData<{ count: number }>(
+      const previousCount = client.getQueryData<UnreadCount>(
         queryKeys.notifications.unreadCount,
       );
 
+      let markedUnread = false;
       client.setQueriesData(
         { queryKey: queryKeys.notifications.list },
-        (current: { items: Notification[]; meta: unknown } | undefined) => {
-          if (!current) return current;
+        (current: unknown) => {
+          if (!isNotificationListCache(current)) return current;
           return {
             ...current,
-            items: current.items.map((item) =>
-              item.id === id ? { ...item, isRead: true } : item,
-            ),
+            items: current.items.map((item) => {
+              if (item.id !== id || item.isRead) return item;
+              markedUnread = true;
+              return { ...item, isRead: true };
+            }),
           };
         },
       );
-      if (previousCount && previousCount.count > 0) {
+      if (markedUnread && previousCount && previousCount.count > 0) {
         client.setQueryData(queryKeys.notifications.unreadCount, {
           count: previousCount.count - 1,
         });
@@ -85,17 +103,19 @@ export function useMarkAllNotificationsRead() {
       const previousList = client.getQueriesData({
         queryKey: queryKeys.notifications.list,
       });
-      const previousCount = client.getQueryData<{ count: number }>(
+      const previousCount = client.getQueryData<UnreadCount>(
         queryKeys.notifications.unreadCount,
       );
 
       client.setQueriesData(
         { queryKey: queryKeys.notifications.list },
-        (current: { items: Notification[]; meta: unknown } | undefined) => {
-          if (!current) return current;
+        (current: unknown) => {
+          if (!isNotificationListCache(current)) return current;
           return {
             ...current,
-            items: current.items.map((item) => ({ ...item, isRead: true })),
+            items: current.items.map((item) =>
+              item.isRead ? item : { ...item, isRead: true },
+            ),
           };
         },
       );
