@@ -2,9 +2,9 @@
  * Mission Control — cinematic product stage + dense system dashboard.
  *
  * TRUTHFULNESS IS UNCHANGED AND NON-NEGOTIABLE.
- * Values come only from auth identity, useLiveClock, and GET /health +
- * GET /ready. No KPI, revenue, pipeline, activity, or invented series.
- * Decorative waveforms are explicitly non-semantic ambient graphics.
+ * Values come from auth identity, useLiveClock, GET /health + GET /ready,
+ * and GET /dashboard/metrics. Decorative waveforms are non-semantic ambient
+ * graphics — never treat them as operational data.
  */
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -55,6 +55,16 @@ const CAPABILITY_SECTIONS = [
   },
 ] as const;
 
+/** Modules with confirmed backend ↔ frontend integration. */
+const OPERATIONAL_ROUTES = new Set<string>([
+  ROUTES.crm,
+  ROUTES.hr,
+  ROUTES.finance,
+  ROUTES.inventory,
+  ROUTES.projects,
+  ROUTES.tasks,
+]);
+
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const { data, isPending, isError, dataUpdatedAt, refetch } = useDashboard();
@@ -62,6 +72,7 @@ export function DashboardPage() {
     data: metrics,
     isPending: metricsPending,
     isError: metricsError,
+    refetch: refetchMetrics,
   } = useDashboardMetrics();
   const setCaptureOpen = useUiStore((s) => s.setCaptureOpen);
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
@@ -72,6 +83,16 @@ export function DashboardPage() {
   const modules = discoverableNavItems(NAV_ITEMS, me?.permissions).filter(
     (item) => item.to !== ROUTES.home,
   );
+  const operationalModules = modules.filter((item) =>
+    OPERATIONAL_ROUTES.has(item.to),
+  );
+  const operationalHint =
+    operationalModules.map((item) => item.label).join(" · ") || "None visible";
+
+  const retryDashboard = () => {
+    void refetch();
+    void refetchMetrics();
+  };
 
   /* One-shot cinema after auth entry — never replay on later module visits. */
   const [cinemaEntry] = useState(() => {
@@ -176,13 +197,17 @@ export function DashboardPage() {
                 <LocalTimeSignal />
               </section>
 
-              {isError && (
+              {(isError || metricsError) && (
                 <p className="text-small text-muted-foreground">
-                  Health probes did not respond.{" "}
+                  {isError && metricsError
+                    ? "Health probes and metrics did not respond. "
+                    : isError
+                      ? "Health probes did not respond. "
+                      : "Operational metrics did not respond. "}
                   <button
                     type="button"
                     className="focus-ring rounded text-foreground underline-offset-4 transition-colors duration-fast hover:text-primary hover:underline"
-                    onClick={() => refetch()}
+                    onClick={retryDashboard}
                   >
                     Retry
                   </button>
@@ -225,7 +250,7 @@ export function DashboardPage() {
                         <Skeleton className="mt-1.5 h-4 w-60" />
                       ) : metricsError || !metrics ? (
                         <p className="mt-1.5 max-w-[48ch] text-body text-muted-foreground">
-                          Could not load operational metrics. They will appear once the database is reachable.
+                          Could not load operational metrics. Use Retry above, or they will refresh once the database is reachable.
                         </p>
                       ) : (
                         <p className="mt-1.5 max-w-[48ch] text-body text-muted-foreground">
@@ -286,7 +311,7 @@ export function DashboardPage() {
                           }
                         />
                         <MetricChip
-                          label="Employees"
+                          label="Active employees"
                           value={metrics.hr.employeeCount}
                         />
                       </dl>
@@ -327,9 +352,9 @@ export function DashboardPage() {
                   </p>
                   <h2 className="mt-2 text-h3 text-foreground">Module field</h2>
                   <p className="mt-1.5 text-body text-muted-foreground">
-                    Configured routes in this workspace. CRM Customers is live;
-                    other modules open as honest empty surfaces until their APIs
-                    ship.
+                    Configured routes in this workspace. Operational tiles have
+                    live APIs; remaining destinations stay available as routed
+                    surfaces.
                   </p>
 
                   <div className="mt-5 flex items-center gap-5">
@@ -341,8 +366,8 @@ export function DashboardPage() {
                     <dl className="min-w-0 flex-1 space-y-3">
                       <ReadinessRow
                         label="Operational modules"
-                        value="6"
-                        hint="CRM · HR · Finance · Inventory · Projects · Tasks"
+                        value={String(operationalModules.length)}
+                        hint={operationalHint}
                       />
                       <ReadinessRow
                         label="Last probe"
@@ -756,15 +781,6 @@ function ModuleTile({
   description: string;
   icon: LucideIcon;
 }) {
-  // Modules with confirmed backend ↔ frontend integration
-  const OPERATIONAL_ROUTES = new Set<string>([
-    ROUTES.crm,
-    ROUTES.hr,
-    ROUTES.finance,
-    ROUTES.inventory,
-    ROUTES.projects,
-    ROUTES.tasks,
-  ]);
   const operational = OPERATIONAL_ROUTES.has(to);
   return (
     <Link

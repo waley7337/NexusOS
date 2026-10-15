@@ -89,6 +89,7 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("Open invoices")).toBeInTheDocument();
     expect(screen.getByText("Customers")).toBeInTheDocument();
     expect(screen.getByText("Active projects")).toBeInTheDocument();
+    expect(screen.getByText("Active employees")).toBeInTheDocument();
 
     // Invented numbers must not appear
     expect(screen.queryByText("$128,430")).not.toBeInTheDocument();
@@ -117,6 +118,7 @@ describe("DashboardPage", () => {
 
     expect(await screen.findByText("Metrics unavailable")).toBeInTheDocument();
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 
   it("keeps identity visible when health probes fail and offers retry", async () => {

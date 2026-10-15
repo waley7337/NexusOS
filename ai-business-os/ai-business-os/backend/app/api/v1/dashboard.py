@@ -166,7 +166,7 @@ async def get_dashboard_metrics(
     ).fetchone()
 
     # ------------------------------------------------------------------ #
-    # HR: active employee count                                           #
+    # HR: active employee count (excludes on-leave + terminated)          #
     # ------------------------------------------------------------------ #
     hr_row = (
         await db.execute(
@@ -174,7 +174,9 @@ async def get_dashboard_metrics(
                 """
                 SELECT COUNT(*) AS employee_count
                 FROM employees
-                WHERE company_id = :cid AND deleted_at IS NULL
+                WHERE company_id = :cid
+                  AND deleted_at IS NULL
+                  AND status = 'ACTIVE'
                 """
             ),
             {"cid": cid},

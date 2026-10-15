@@ -5,13 +5,15 @@ import { getDashboardMetrics } from "../services/dashboardService";
 /**
  * React Query hook for tenant-scoped operational KPIs.
  * Calls GET /api/v1/dashboard/metrics — authentication required only.
- * Refreshes every 5 minutes; stale after 2 minutes.
+ * Refetch on every mount so returning from module writes shows fresh counts.
+ * Background refresh every 5 minutes.
  */
 export function useDashboardMetrics() {
   return useQuery({
     queryKey: queryKeys.dashboard.metrics,
     queryFn: getDashboardMetrics,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchInterval: 5 * 60 * 1000,
   });
 }
