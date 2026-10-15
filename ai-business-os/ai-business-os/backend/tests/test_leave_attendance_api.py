@@ -89,10 +89,16 @@ def test_leave_crud_approve_and_tenant_isolation(client: TestClient):
     leave = create.json()["data"]
     assert leave["approvalStatus"] == "pending"
     assert leave["employeeId"] == emp_a["id"]
+    assert leave.get("employeeFullName")
+    assert leave["employeeFullName"] == emp_a["fullName"]
 
     listed = client.get(_LEAVE, headers=a["headers"])
     assert listed.status_code == 200
     assert listed.json()["data"]["meta"]["total"] >= 1
+    listed_item = next(
+        item for item in listed.json()["data"]["items"] if item["id"] == leave["id"]
+    )
+    assert listed_item.get("employeeFullName") == emp_a["fullName"]
 
     # Other tenant cannot see
     other = client.get(_LEAVE, headers=b["headers"])

@@ -92,6 +92,8 @@ export interface LeaveRequest {
   id: string;
   companyId: string;
   employeeId: string;
+  /** Present when the API can resolve the employee display name. */
+  employeeFullName?: string | null;
   leaveType: LeaveType;
   startDate: string;
   endDate: string;
@@ -127,6 +129,8 @@ export interface AttendanceRecord {
   id: string;
   companyId: string;
   employeeId: string;
+  /** Present when the API can resolve the employee display name. */
+  employeeFullName?: string | null;
   date: string;
   clockIn: string | null;
   clockOut: string | null;

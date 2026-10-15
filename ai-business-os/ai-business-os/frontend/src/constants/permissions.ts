@@ -73,3 +73,24 @@ export const HR_WORKSPACE_PERMISSIONS = [
   "attendance.read_self",
   "attendance.read_team",
 ] as const satisfies readonly Permission[];
+
+/** Scoped read perms for HR Employees routes. */
+export const HR_EMPLOYEES_READ_PERMISSIONS = [
+  "employees.read",
+  "employees.read_self",
+  "employees.read_team",
+] as const satisfies readonly Permission[];
+
+/** Scoped read perms for HR Leave routes. */
+export const HR_LEAVE_READ_PERMISSIONS = [
+  "leave_requests.read",
+  "leave_requests.read_self",
+  "leave_requests.read_team",
+] as const satisfies readonly Permission[];
+
+/** Scoped read perms for HR Attendance routes. */
+export const HR_ATTENDANCE_READ_PERMISSIONS = [
+  "attendance.read",
+  "attendance.read_self",
+  "attendance.read_team",
+] as const satisfies readonly Permission[];

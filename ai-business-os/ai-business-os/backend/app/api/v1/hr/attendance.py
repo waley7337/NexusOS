@@ -34,6 +34,7 @@ from app.schemas.hr import (
     AttendanceResponse,
     AttendanceUpdate,
     attendance_to_response,
+    employee_display_name,
 )
 from app.schemas.response import ApiResponse, Paginated
 from app.services import audit_service
@@ -85,6 +86,20 @@ async def _require_linked_employee(employees: EmployeeRepo, user: ActiveUser) ->
     return caller_id
 
 
+async def _employee_names(
+    employees: EmployeeRepo,
+    rows: list[Attendance],
+) -> dict[uuid.UUID, str]:
+    employee_ids = {row.employee_id for row in rows}
+    emp_map = await employees.map_by_ids(employee_ids, include_deleted=True)
+    linked = await employees.linked_users_by_id(list(emp_map.values()))
+    names: dict[uuid.UUID, str] = {}
+    for emp_id, employee in emp_map.items():
+        linked_user = linked.get(employee.user_id) if employee.user_id else None
+        names[emp_id] = employee_display_name(employee, linked_user)
+    return names
+
+
 @router.get("")
 async def list_attendance(
     user: AttendanceReadUser,
@@ -117,9 +132,16 @@ async def list_attendance(
         date_to=date_to,
         visibility_employee_ids=visibility,
     )
+    names = await _employee_names(employees, items)
     return ApiResponse.ok(
         data=Paginated.build(
-            items=[attendance_to_response(row) for row in items],
+            items=[
+                attendance_to_response(
+                    row,
+                    employee_full_name=names.get(row.employee_id),
+                )
+                for row in items
+            ],
             total=total,
             page=page,
             page_size=page_size,
@@ -158,7 +180,14 @@ async def clock_in(
         ip_address=ip_address,
         user_agent=user_agent,
     )
-    return ApiResponse.ok(data=attendance_to_response(row), message="Clocked in.")
+    names = await _employee_names(employees, [row])
+    return ApiResponse.ok(
+        data=attendance_to_response(
+            row,
+            employee_full_name=names.get(row.employee_id),
+        ),
+        message="Clocked in.",
+    )
 
 
 @router.post(
@@ -190,7 +219,14 @@ async def clock_out(
         ip_address=ip_address,
         user_agent=user_agent,
     )
-    return ApiResponse.ok(data=attendance_to_response(row), message="Clocked out.")
+    names = await _employee_names(employees, [row])
+    return ApiResponse.ok(
+        data=attendance_to_response(
+            row,
+            employee_full_name=names.get(row.employee_id),
+        ),
+        message="Clocked out.",
+    )
 
 
 @router.post(
@@ -202,15 +238,19 @@ async def create_attendance(
     payload: AttendanceCreate,
     user: ActiveUser,
     repo: AttendanceRepo,
+    employees: EmployeeRepo,
     db: DbSession,
     request: Request,
 ) -> ApiResponse[AttendanceResponse]:
     await repo.ensure_employee_in_tenant(payload.employee_id)
     values = payload.model_dump()
-    if values.get("clock_in") and values.get("clock_out") and values.get("hours_worked") is None:
-        values["hours_worked"] = AttendanceRepository.compute_hours(
-            values["clock_in"], values["clock_out"]
-        )
+    clock_in = values.get("clock_in")
+    clock_out = values.get("clock_out")
+    # Always validate clock order when both present (even if hoursWorked is supplied).
+    if clock_in and clock_out:
+        computed = AttendanceRepository.compute_hours(clock_in, clock_out)
+        if values.get("hours_worked") is None:
+            values["hours_worked"] = computed
     try:
         created = await repo.create(Attendance(**values))
     except IntegrityError:
@@ -231,8 +271,12 @@ async def create_attendance(
         ip_address=ip_address,
         user_agent=user_agent,
     )
+    names = await _employee_names(employees, [created])
     return ApiResponse.ok(
-        data=attendance_to_response(created),
+        data=attendance_to_response(
+            created,
+            employee_full_name=names.get(created.employee_id),
+        ),
         message="Attendance recorded.",
     )
 
@@ -245,7 +289,7 @@ async def get_attendance(
     employees: EmployeeRepo,
 ) -> ApiResponse[AttendanceResponse]:
     row = await repo.get(attendance_id)
-    employee = await employees.get(row.employee_id)
+    employee = await employees.get_including_deleted(row.employee_id)
     caller_id = await employees.try_get_employee_id_for_user(user.id)
     if not can_read_attendance_for_employee(
         permissions=user.permissions,
@@ -254,7 +298,14 @@ async def get_attendance(
         acting_user_id=user.id,
     ):
         raise NotFoundError("Attendance not found")
-    return ApiResponse.ok(data=attendance_to_response(row))
+    linked = await employees.linked_users_by_id([employee])
+    linked_user = linked.get(employee.user_id) if employee.user_id else None
+    return ApiResponse.ok(
+        data=attendance_to_response(
+            row,
+            employee_full_name=employee_display_name(employee, linked_user),
+        )
+    )
 
 
 @router.patch(
@@ -266,6 +317,7 @@ async def update_attendance(
     payload: AttendanceUpdate,
     user: ActiveUser,
     repo: AttendanceRepo,
+    employees: EmployeeRepo,
     db: DbSession,
     request: Request,
 ) -> ApiResponse[AttendanceResponse]:
@@ -276,8 +328,10 @@ async def update_attendance(
     existing = await repo.get(attendance_id)
     clock_in = values.get("clock_in", existing.clock_in)
     clock_out = values.get("clock_out", existing.clock_out)
-    if clock_in and clock_out and "hours_worked" not in values:
-        values["hours_worked"] = AttendanceRepository.compute_hours(clock_in, clock_out)
+    if clock_in and clock_out:
+        computed = AttendanceRepository.compute_hours(clock_in, clock_out)
+        if "hours_worked" not in values:
+            values["hours_worked"] = computed
 
     old_values = _snapshot(existing, list(values.keys()))
     updated = await repo.update(attendance_id, values)
@@ -295,8 +349,12 @@ async def update_attendance(
         ip_address=ip_address,
         user_agent=user_agent,
     )
+    names = await _employee_names(employees, [updated])
     return ApiResponse.ok(
-        data=attendance_to_response(updated),
+        data=attendance_to_response(
+            updated,
+            employee_full_name=names.get(updated.employee_id),
+        ),
         message="Attendance updated.",
     )
 
