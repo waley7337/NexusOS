@@ -5,6 +5,12 @@ import { AppLayout } from "@/layouts/AppLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { ROUTES } from "@/constants/routes";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import {
+  HR_ATTENDANCE_READ_PERMISSIONS,
+  HR_EMPLOYEES_READ_PERMISSIONS,
+  HR_LEAVE_READ_PERMISSIONS,
+} from "@/constants/permissions";
+import { AnyPermissionRoute } from "@/routes/AnyPermissionRoute";
 import { PermissionRoute } from "@/routes/PermissionRoute";
 import { HrPermissionRoute } from "@/routes/HrPermissionRoute";
 import { RouteErrorBoundary } from "@/components/route-error-boundary";
@@ -171,11 +177,32 @@ export const router = createBrowserRouter([
           {
             element: <HrPermissionRoute />,
             children: [
-              { path: ROUTES.hr, element: <EmployeesPage /> },
-              { path: ROUTES.hrEmployees, element: <EmployeesPage /> },
-              { path: ROUTES.hrEmployeeDetail, element: <EmployeeDetailPage /> },
-              { path: ROUTES.hrLeave, element: <LeaveRequestsPage /> },
-              { path: ROUTES.hrAttendance, element: <AttendancePage /> },
+              {
+                element: (
+                  <AnyPermissionRoute permissions={HR_EMPLOYEES_READ_PERMISSIONS} />
+                ),
+                children: [
+                  { path: ROUTES.hr, element: <EmployeesPage /> },
+                  { path: ROUTES.hrEmployees, element: <EmployeesPage /> },
+                  { path: ROUTES.hrEmployeeDetail, element: <EmployeeDetailPage /> },
+                ],
+              },
+              {
+                element: (
+                  <AnyPermissionRoute permissions={HR_LEAVE_READ_PERMISSIONS} />
+                ),
+                children: [
+                  { path: ROUTES.hrLeave, element: <LeaveRequestsPage /> },
+                ],
+              },
+              {
+                element: (
+                  <AnyPermissionRoute permissions={HR_ATTENDANCE_READ_PERMISSIONS} />
+                ),
+                children: [
+                  { path: ROUTES.hrAttendance, element: <AttendancePage /> },
+                ],
+              },
             ],
           },
           {

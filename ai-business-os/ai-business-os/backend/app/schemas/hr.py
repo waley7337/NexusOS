@@ -162,6 +162,7 @@ class LeaveRequestResponse(CamelModel):
     id: uuid.UUID
     company_id: uuid.UUID = Field(alias="companyId")
     employee_id: uuid.UUID = Field(alias="employeeId")
+    employee_full_name: str | None = Field(default=None, alias="employeeFullName")
     leave_type: LeaveType = Field(alias="leaveType")
     start_date: date = Field(alias="startDate")
     end_date: date = Field(alias="endDate")
@@ -175,8 +176,27 @@ class LeaveRequestResponse(CamelModel):
     deleted_at: datetime | None = Field(default=None, alias="deletedAt")
 
 
-def leave_request_to_response(row: LeaveRequest) -> LeaveRequestResponse:
-    return LeaveRequestResponse.model_validate(row)
+def employee_display_name(
+    employee: Employee,
+    linked_user: User | None = None,
+) -> str:
+    """Best-effort display name for leave/attendance rows."""
+    try:
+        first, last, _ = _resolve_display_names(employee, linked_user)
+        return f"{first} {last}".strip()
+    except ValueError:
+        return employee.employee_number
+
+
+def leave_request_to_response(
+    row: LeaveRequest,
+    *,
+    employee_full_name: str | None = None,
+) -> LeaveRequestResponse:
+    data = LeaveRequestResponse.model_validate(row)
+    if employee_full_name is not None:
+        return data.model_copy(update={"employee_full_name": employee_full_name})
+    return data
 
 
 class AttendanceCreate(CamelModel):
@@ -197,6 +217,7 @@ class AttendanceResponse(CamelModel):
     id: uuid.UUID
     company_id: uuid.UUID = Field(alias="companyId")
     employee_id: uuid.UUID = Field(alias="employeeId")
+    employee_full_name: str | None = Field(default=None, alias="employeeFullName")
     date: date
     clock_in: datetime | None = Field(default=None, alias="clockIn")
     clock_out: datetime | None = Field(default=None, alias="clockOut")
@@ -209,5 +230,12 @@ class AttendanceResponse(CamelModel):
     deleted_at: datetime | None = Field(default=None, alias="deletedAt")
 
 
-def attendance_to_response(row: Attendance) -> AttendanceResponse:
-    return AttendanceResponse.model_validate(row)
+def attendance_to_response(
+    row: Attendance,
+    *,
+    employee_full_name: str | None = None,
+) -> AttendanceResponse:
+    data = AttendanceResponse.model_validate(row)
+    if employee_full_name is not None:
+        return data.model_copy(update={"employee_full_name": employee_full_name})
+    return data

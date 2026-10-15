@@ -209,6 +209,57 @@ class EmployeeRepository(BaseRepository[Employee]):
         """Fetch a live in-tenant employee or raise NotFoundError."""
         return await self.get(employee_id)
 
+    async def get_including_deleted(self, employee_id: uuid.UUID) -> Employee:
+        """Tenant-scoped employee lookup including soft-deleted rows.
+
+        Used for leave/attendance object-level authz after the employee is archived.
+        """
+        self._require_tenant_context()
+        stmt = select(Employee).where(
+            Employee.id == employee_id,
+            Employee.company_id == self.company_id,
+        )
+        row = (await self.db.execute(stmt)).scalar_one_or_none()
+        if row is None:
+            raise NotFoundError("Employee not found")
+        return row
+
+    async def map_by_ids(
+        self,
+        employee_ids: set[uuid.UUID],
+        *,
+        include_deleted: bool = False,
+    ) -> dict[uuid.UUID, Employee]:
+        """Batch-load employees by id within the current tenant."""
+        if not employee_ids:
+            return {}
+        self._require_tenant_context()
+        stmt = select(Employee).where(
+            Employee.id.in_(employee_ids),
+            Employee.company_id == self.company_id,
+        )
+        if not include_deleted:
+            stmt = stmt.where(Employee.deleted_at.is_(None))
+        rows = (await self.db.execute(stmt)).scalars().all()
+        return {row.id: row for row in rows}
+
+    async def linked_users_by_id(
+        self,
+        employees: list[Employee],
+    ) -> dict[uuid.UUID, User]:
+        """Map linked user ids → live in-tenant User rows."""
+        user_ids = {row.user_id for row in employees if row.user_id is not None}
+        if not user_ids:
+            return {}
+        self._require_tenant_context()
+        stmt = select(User).where(
+            User.id.in_(user_ids),
+            User.company_id == self.company_id,
+            User.deleted_at.is_(None),
+        )
+        rows = (await self.db.execute(stmt)).scalars().all()
+        return {user.id: user for user in rows}
+
 
 class LeaveRequestRepository(BaseRepository[LeaveRequest]):
     model = LeaveRequest

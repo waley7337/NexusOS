@@ -59,24 +59,58 @@ describe("Leave + Attendance pages", () => {
 
   it("renders leave empty state", () => {
     useLeaveRequestsMock.mockReturnValue({
-      data: { items: [], meta: { page: 1, pageSize: 50, total: 0, totalPages: 1 } },
+      data: { items: [], meta: { page: 1, pageSize: 20, total: 0, totalPages: 1 } },
       isPending: false,
       isError: false,
       error: null,
       refetch: vi.fn(),
+      isSuccess: true,
     } as never);
     wrap(<LeaveRequestsPage />);
     expect(screen.getByText("No leave requests")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Request leave/i })).toBeInTheDocument();
   });
 
-  it("renders attendance empty state with clock actions", () => {
-    useAttendanceMock.mockReturnValue({
-      data: { items: [], meta: { page: 1, pageSize: 50, total: 0, totalPages: 1 } },
+  it("renders leave employee identity for approvers", () => {
+    useLeaveRequestsMock.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: "lr1",
+            companyId: "c1",
+            employeeId: "e1",
+            employeeFullName: "Ada Lovelace",
+            leaveType: "vacation",
+            startDate: "2026-10-01",
+            endDate: "2026-10-03",
+            reason: null,
+            approvalStatus: "pending",
+            isActive: true,
+            createdAt: "2026-10-01T00:00:00Z",
+            updatedAt: "2026-10-01T00:00:00Z",
+          },
+        ],
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      },
       isPending: false,
       isError: false,
       error: null,
       refetch: vi.fn(),
+      isSuccess: true,
+    } as never);
+    wrap(<LeaveRequestsPage />);
+    expect(screen.getByText(/Ada Lovelace/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Approve/i })).toBeInTheDocument();
+  });
+
+  it("renders attendance empty state with clock actions", () => {
+    useAttendanceMock.mockReturnValue({
+      data: { items: [], meta: { page: 1, pageSize: 20, total: 0, totalPages: 1 } },
+      isPending: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+      isSuccess: true,
     } as never);
     wrap(<AttendancePage />);
     expect(screen.getByText("No attendance records")).toBeInTheDocument();

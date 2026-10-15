@@ -11,7 +11,8 @@ export const queryKeys = {
   },
   notifications: {
     all: ["notifications"] as const,
-    list: ["notifications"] as const,
+    // Distinct from unreadCount so setQueriesData(list) cannot rewrite { count }.
+    list: ["notifications", "list"] as const,
     unreadCount: ["notifications", "unread-count"] as const,
   },
   crm: {

@@ -1,5 +1,10 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { hasAnyPermission } from "@/constants/permissions";
+import {
+  HR_ATTENDANCE_READ_PERMISSIONS,
+  HR_EMPLOYEES_READ_PERMISSIONS,
+  HR_LEAVE_READ_PERMISSIONS,
+  hasAnyPermission,
+} from "@/constants/permissions";
 import { ROUTES } from "@/constants/routes";
 import { useAuthMe } from "@/hooks/usePermission";
 import { cn } from "@/lib/utils";
@@ -9,21 +14,9 @@ export function HrTabs() {
   const permissions = me?.permissions ?? [];
   const { pathname } = useLocation();
 
-  const canEmployees = hasAnyPermission(permissions, [
-    "employees.read",
-    "employees.read_self",
-    "employees.read_team",
-  ]);
-  const canLeave = hasAnyPermission(permissions, [
-    "leave_requests.read",
-    "leave_requests.read_self",
-    "leave_requests.read_team",
-  ]);
-  const canAttendance = hasAnyPermission(permissions, [
-    "attendance.read",
-    "attendance.read_self",
-    "attendance.read_team",
-  ]);
+  const canEmployees = hasAnyPermission(permissions, HR_EMPLOYEES_READ_PERMISSIONS);
+  const canLeave = hasAnyPermission(permissions, HR_LEAVE_READ_PERMISSIONS);
+  const canAttendance = hasAnyPermission(permissions, HR_ATTENDANCE_READ_PERMISSIONS);
 
   if (!canEmployees && !canLeave && !canAttendance) return null;
 

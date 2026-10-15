@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Plus } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ApiRequestError } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Input, Select } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePermission } from "@/hooks/usePermission";
 import { HrTabs } from "../components/HrTabs";
@@ -29,34 +31,67 @@ import {
   type LeaveType,
 } from "../types";
 
+const PAGE_SIZE = 20;
+
 const message = (error: unknown) =>
   error instanceof ApiRequestError ? error.message : "Could not complete this request.";
 
 export function LeaveRequestsPage() {
   const canCreate = usePermission("leave_requests.create");
   const canApprove = usePermission("leave_requests.approve");
+  const [params, setParams] = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
   const [leaveType, setLeaveType] = useState<LeaveType>("vacation");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ApprovalStatus | "">("");
 
-  const params = useMemo(
+  const page = Math.max(1, Number(params.get("page") ?? 1) || 1);
+  const statusFilter = (params.get("status") ?? "") as ApprovalStatus | "";
+
+  const patch = useCallback(
+    (values: Record<string, string | null>, reset = false) =>
+      setParams((previous) => {
+        const next = new URLSearchParams(previous);
+        Object.entries(values).forEach(([key, value]) =>
+          value ? next.set(key, value) : next.delete(key),
+        );
+        if (reset) next.set("page", "1");
+        return next;
+      }),
+    [setParams],
+  );
+
+  const listParams = useMemo(
     () => ({
-      page: 1,
-      pageSize: 50,
+      page,
+      pageSize: PAGE_SIZE,
       sortBy: "created_at",
       sortDesc: true,
       approvalStatus: statusFilter || undefined,
     }),
-    [statusFilter],
+    [page, statusFilter],
   );
-  const query = useLeaveRequests(params);
+  const query = useLeaveRequests(listParams);
   const create = useCreateLeaveRequest();
   const approve = useApproveLeaveRequest();
   const reject = useRejectLeaveRequest();
   const items = query.data?.items ?? [];
+  const totalPages = query.data?.meta.totalPages ?? 1;
+
+  useEffect(() => {
+    if (!query.isSuccess) return;
+    if (totalPages > 0 && page > totalPages) {
+      patch({ page: String(totalPages) });
+    }
+  }, [query.isSuccess, page, totalPages, patch]);
+
+  const resetForm = () => {
+    setLeaveType("vacation");
+    setStartDate("");
+    setEndDate("");
+    setReason("");
+  };
 
   const submit = async () => {
     if (!startDate || !endDate) {
@@ -76,7 +111,7 @@ export function LeaveRequestsPage() {
       });
       toast.success("Leave request submitted.");
       setCreateOpen(false);
-      setReason("");
+      resetForm();
     } catch (error) {
       toast.error(message(error));
     }
@@ -102,7 +137,10 @@ export function LeaveRequestsPage() {
           aria-label="Filter by status"
           value={statusFilter}
           onChange={(event) =>
-            setStatusFilter(event.target.value as ApprovalStatus | "")
+            patch(
+              { status: event.target.value || null },
+              true,
+            )
           }
           className="max-w-xs"
         >
@@ -133,62 +171,81 @@ export function LeaveRequestsPage() {
           description="Submitted leave requests will appear here."
         />
       ) : (
-        <ul className="divide-y divide-line-soft">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex flex-wrap items-start justify-between gap-3 py-3"
-            >
-              <div>
-                <p className="text-sm font-medium capitalize">
-                  {item.leaveType.replace("_", " ")}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {item.startDate} → {item.endDate}
-                </p>
-                {item.reason ? (
-                  <p className="mt-1 text-sm text-muted-foreground">{item.reason}</p>
-                ) : null}
-                <p className="text-machine mt-1 text-2xs uppercase tracking-wide">
-                  {item.approvalStatus}
-                </p>
-              </div>
-              {canApprove && item.approvalStatus === "pending" ? (
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={approve.isPending || reject.isPending}
-                    onClick={() =>
-                      approve.mutate(item.id, {
-                        onSuccess: () => toast.success("Leave approved."),
-                        onError: (error) => toast.error(message(error)),
-                      })
-                    }
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={approve.isPending || reject.isPending}
-                    onClick={() =>
-                      reject.mutate(item.id, {
-                        onSuccess: () => toast.success("Leave rejected."),
-                        onError: (error) => toast.error(message(error)),
-                      })
-                    }
-                  >
-                    Reject
-                  </Button>
+        <>
+          <ul className="divide-y divide-line-soft">
+            {items.map((item) => (
+              <li
+                key={item.id}
+                className="flex flex-wrap items-start justify-between gap-3 py-3"
+              >
+                <div>
+                  <p className="text-sm font-medium capitalize">
+                    {item.leaveType.replace("_", " ")}
+                    {item.employeeFullName ? (
+                      <span className="font-normal text-muted-foreground">
+                        {" "}
+                        · {item.employeeFullName}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {item.startDate} → {item.endDate}
+                  </p>
+                  {item.reason ? (
+                    <p className="mt-1 text-sm text-muted-foreground">{item.reason}</p>
+                  ) : null}
+                  <p className="text-machine mt-1 text-2xs uppercase tracking-wide">
+                    {item.approvalStatus}
+                  </p>
                 </div>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+                {canApprove && item.approvalStatus === "pending" ? (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={approve.isPending || reject.isPending}
+                      onClick={() =>
+                        approve.mutate(item.id, {
+                          onSuccess: () => toast.success("Leave approved."),
+                          onError: (error) => toast.error(message(error)),
+                        })
+                      }
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={approve.isPending || reject.isPending}
+                      onClick={() =>
+                        reject.mutate(item.id, {
+                          onSuccess: () => toast.success("Leave rejected."),
+                          onError: (error) => toast.error(message(error)),
+                        })
+                      }
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <Pagination
+            page={query.data!.meta.page}
+            totalPages={totalPages}
+            onPageChange={(next) => patch({ page: String(next) })}
+          />
+        </>
       )}
 
-      <Drawer open={createOpen} onOpenChange={setCreateOpen}>
+      <Drawer
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) resetForm();
+        }}
+      >
         <DrawerContent>
           <DrawerHeader title="Request leave" />
           <DrawerBody className="space-y-4">

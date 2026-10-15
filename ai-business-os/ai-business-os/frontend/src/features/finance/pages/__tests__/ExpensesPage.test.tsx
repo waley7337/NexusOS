@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -159,5 +159,56 @@ describe("Expenses workspace", () => {
     await user.type(screen.getByLabelText(/^Amount/), "0");
     await user.click(screen.getByRole("button", { name: "Create expense" }));
     expect(await screen.findByText("Amount must be greater than zero.")).toBeInTheDocument();
+  });
+
+  it("clamps page when list returns empty items but total remains positive", async () => {
+    api.list.mockImplementation(async (params: { page?: number }) => {
+      if (params.page === 2) {
+        return { items: [], meta: { page: 2, pageSize: 20, total: 20, totalPages: 1 } };
+      }
+      return page([expense]);
+    });
+    renderAt("/finance/expenses?page=2", ["expenses.read"]);
+    await waitFor(() =>
+      expect(api.list.mock.calls.some(([params]) => params.page === 1)).toBe(true),
+    );
+    expect(await screen.findByText("Travel")).toBeInTheDocument();
+    expect(screen.queryByText("No expenses yet")).not.toBeInTheDocument();
+  });
+
+  it("submits edit payload when expenses.update is granted", async () => {
+    const user = userEvent.setup();
+    api.list.mockResolvedValue(page([expense]));
+    api.update.mockResolvedValue({ ...expense, category: "Meals" });
+
+    renderAt("/finance/expenses", ["expenses.read", "expenses.update"]);
+
+    await user.click(await screen.findByRole("button", { name: /Edit expense Travel/i }));
+    const category = screen.getByLabelText(/^Category/);
+    await user.clear(category);
+    await user.type(category, "Meals");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(api.update).toHaveBeenCalled());
+    expect(api.update.mock.calls[0]).toEqual([
+      "e1",
+      expect.objectContaining({ category: "Meals" }),
+    ]);
+  });
+
+  it("confirms soft-delete when expenses.delete is granted", async () => {
+    const user = userEvent.setup();
+    api.list.mockResolvedValue(page([expense]));
+    api.deleteExpense.mockImplementation(async (id: string) => {
+      expect(id).toBe("e1");
+    });
+
+    renderAt("/finance/expenses", ["expenses.read", "expenses.delete"]);
+
+    await user.click(await screen.findByRole("button", { name: /Delete expense Travel/i }));
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByRole("button", { name: /^Delete expense$/ });
+    expect(confirm).not.toBeDisabled();
+    await user.click(confirm);
+    await waitFor(() => expect(api.deleteExpense).toHaveBeenCalledTimes(1));
   });
 });

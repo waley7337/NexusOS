@@ -16,6 +16,11 @@ const TOP_LEVEL = new Set([
   "paidBy",
 ]);
 
+/** Strip Pydantic's "Value error, " prefix from validator messages. */
+function cleanDetail(detail: string): string {
+  return detail.replace(/^Value error,\s*/i, "");
+}
+
 /** Maps stable FastAPI validation locations to expense form fields. */
 export function expenseFormErrors(error: unknown): ExpenseFormErrors | null {
   if (!(error instanceof ApiRequestError)) return null;
@@ -27,7 +32,9 @@ export function expenseFormErrors(error: unknown): ExpenseFormErrors | null {
     const parts = item.field.split(".");
     if (parts[0] !== "body") continue;
     if (parts.length === 2 && TOP_LEVEL.has(parts[1])) {
-      mapped.fields[parts[1] as keyof ExpenseFormErrors["fields"]] = item.detail;
+      mapped.fields[parts[1] as keyof ExpenseFormErrors["fields"]] = cleanDetail(
+        item.detail,
+      );
       found = true;
       continue;
     }

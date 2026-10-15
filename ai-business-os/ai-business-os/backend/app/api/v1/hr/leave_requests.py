@@ -32,6 +32,7 @@ from app.repositories.base import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from app.schemas.hr import (
     LeaveRequestCreate,
     LeaveRequestResponse,
+    employee_display_name,
     leave_request_to_response,
 )
 from app.schemas.response import ApiResponse, Paginated
@@ -87,6 +88,20 @@ async def _visibility_employee_ids(
     return ids
 
 
+async def _employee_names(
+    employees: EmployeeRepo,
+    rows: list[LeaveRequest],
+) -> dict[uuid.UUID, str]:
+    employee_ids = {row.employee_id for row in rows}
+    emp_map = await employees.map_by_ids(employee_ids, include_deleted=True)
+    linked = await employees.linked_users_by_id(list(emp_map.values()))
+    names: dict[uuid.UUID, str] = {}
+    for emp_id, employee in emp_map.items():
+        linked_user = linked.get(employee.user_id) if employee.user_id else None
+        names[emp_id] = employee_display_name(employee, linked_user)
+    return names
+
+
 @router.get("")
 async def list_leave_requests(
     user: LeaveReadUser,
@@ -118,9 +133,16 @@ async def list_leave_requests(
         leave_type=leave_type,
         visibility_employee_ids=visibility,
     )
+    names = await _employee_names(employees, items)
     return ApiResponse.ok(
         data=Paginated.build(
-            items=[leave_request_to_response(row) for row in items],
+            items=[
+                leave_request_to_response(
+                    row,
+                    employee_full_name=names.get(row.employee_id),
+                )
+                for row in items
+            ],
             total=total,
             page=page,
             page_size=page_size,
@@ -153,6 +175,10 @@ async def create_leave_request(
     employee = await repo.ensure_employee_in_tenant(target_id)
     repo.validate_dates(payload.start_date, payload.end_date)
 
+    linked = await employees.linked_users_by_id([employee])
+    linked_user = linked.get(employee.user_id) if employee.user_id else None
+    display_name = employee_display_name(employee, linked_user)
+
     try:
         created = await repo.create(
             LeaveRequest(
@@ -181,7 +207,7 @@ async def create_leave_request(
         user_agent=user_agent,
     )
     return ApiResponse.ok(
-        data=leave_request_to_response(created),
+        data=leave_request_to_response(created, employee_full_name=display_name),
         message="Leave request submitted.",
     )
 
@@ -194,7 +220,7 @@ async def get_leave_request(
     employees: EmployeeRepo,
 ) -> ApiResponse[LeaveRequestResponse]:
     leave = await repo.get(leave_id)
-    employee = await employees.get(leave.employee_id)
+    employee = await employees.get_including_deleted(leave.employee_id)
     caller_id = await employees.try_get_employee_id_for_user(user.id)
     if not can_read_leave_for_employee(
         permissions=user.permissions,
@@ -203,7 +229,14 @@ async def get_leave_request(
         acting_user_id=user.id,
     ):
         raise NotFoundError("Leave request not found")
-    return ApiResponse.ok(data=leave_request_to_response(leave))
+    linked = await employees.linked_users_by_id([employee])
+    linked_user = linked.get(employee.user_id) if employee.user_id else None
+    return ApiResponse.ok(
+        data=leave_request_to_response(
+            leave,
+            employee_full_name=employee_display_name(employee, linked_user),
+        )
+    )
 
 
 async def _decide(
@@ -217,7 +250,7 @@ async def _decide(
     request: Request,
 ) -> ApiResponse[LeaveRequestResponse]:
     leave = await repo.get(leave_id)
-    employee = await employees.get(leave.employee_id)
+    employee = await employees.get_including_deleted(leave.employee_id)
     caller_id = await employees.try_get_employee_id_for_user(user.id)
     if not can_approve_leave_for_employee(
         permissions=user.permissions,
@@ -241,8 +274,13 @@ async def _decide(
         ip_address=ip_address,
         user_agent=user_agent,
     )
+    linked = await employees.linked_users_by_id([employee])
+    linked_user = linked.get(employee.user_id) if employee.user_id else None
     return ApiResponse.ok(
-        data=leave_request_to_response(updated),
+        data=leave_request_to_response(
+            updated,
+            employee_full_name=employee_display_name(employee, linked_user),
+        ),
         message=f"Leave request {decision.value}.",
     )
 
