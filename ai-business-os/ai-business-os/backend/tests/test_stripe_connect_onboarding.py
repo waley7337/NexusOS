@@ -9,7 +9,11 @@ import pytest
 
 from app.core.exceptions import ConflictError, ServiceUnavailableError, ValidationError
 from app.models.enums import ProviderConnectionStatus
-from app.payments.tenant.connect_service import TenantConnectService, _raise_connect_create_failure
+from app.payments.tenant.connect_service import (
+    TenantConnectService,
+    _extract_connected_account_id,
+    _raise_connect_create_failure,
+)
 
 
 def test_map_connect_not_enabled_error():
@@ -40,6 +44,14 @@ def test_map_generic_create_failure():
             exc=RuntimeError("something else failed"),
         )
     assert exc.value.details["reason"] == "stripe_connect_account_create_failed"
+
+
+def test_extract_account_id_from_dict_and_stripe_response():
+    assert _extract_connected_account_id({"id": "acct_abc"}) == "acct_abc"
+    assert _extract_connected_account_id(SimpleNamespace(data={"id": "acct_xyz"})) == "acct_xyz"
+    assert _extract_connected_account_id(SimpleNamespace(id="acct_direct")) == "acct_direct"
+    assert _extract_connected_account_id({"id": "cus_nope"}) is None
+    assert _extract_connected_account_id(SimpleNamespace(data={})) is None
 
 
 @pytest.mark.asyncio

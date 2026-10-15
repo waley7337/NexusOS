@@ -46,6 +46,22 @@ def _stripe_error_message(exc: BaseException) -> str:
     return str(getattr(exc, "user_message", None) or exc)
 
 
+def _extract_connected_account_id(created: Any) -> str | None:
+    """Normalize StripeClient.raw_request / dict responses to an acct_* id."""
+    if isinstance(created, dict):
+        candidate = created.get("id")
+    else:
+        data = getattr(created, "data", None)
+        if isinstance(data, dict):
+            candidate = data.get("id")
+        else:
+            candidate = getattr(created, "id", None)
+    if candidate is None:
+        return None
+    text = str(candidate)
+    return text if text.startswith("acct_") else None
+
+
 def _raise_connect_create_failure(*, company_id: uuid.UUID, exc: BaseException) -> None:
     """Map Stripe create failures to stable API reasons (no secret leakage)."""
     message = _stripe_error_message(exc)
@@ -208,20 +224,18 @@ class TenantConnectService:
         except Exception as exc:
             _raise_connect_create_failure(company_id=self.company_id, exc=exc)
 
-        if isinstance(created, dict):
-            account_id = created.get("id")
-        else:
-            account_id = getattr(created, "id", None)
-        if not account_id or not str(account_id).startswith("acct_"):
+        account_id = _extract_connected_account_id(created)
+        if not account_id:
             logger.warning(
                 "connect_account_create_missing_id",
                 company_id=str(self.company_id),
+                response_type=type(created).__name__,
             )
             raise ConflictError(
                 "Unable to create a Stripe Connect account.",
                 details={"reason": "stripe_connect_account_create_failed"},
             )
-        return str(account_id)
+        return account_id
 
     async def start_onboarding(
         self,
