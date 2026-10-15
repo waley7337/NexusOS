@@ -88,6 +88,17 @@ api.interceptors.response.use(
             : error.message || `Request failed (${status})`;
       return Promise.reject(new ApiRequestError(fallback, [], status));
     }
+    // CORS blocks, DNS failures, and offline browsers surface as ERR_NETWORK
+    // with no response. Normalize so pages show a readable message instead of
+    // raw "AxiosError: Network Error".
+    if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
+      return Promise.reject(
+        new ApiRequestError(
+          "Network error — the API is unreachable or blocked by CORS. Check VITE_API_BASE_URL and backend CORS_ORIGINS.",
+          [{ code: "network_error" }],
+        ),
+      );
+    }
     return Promise.reject(error);
   },
 );

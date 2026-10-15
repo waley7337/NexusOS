@@ -338,16 +338,24 @@ class InvoiceRepository(BaseRepository[Invoice]):
 
     @staticmethod
     def payment_summary(invoice: Invoice) -> tuple[Decimal, Decimal]:
-        paid = quantize_money(
-            sum(
-                (effective_payment_amount(
+        """Sum effective payments for API list/detail.
+
+        Invalid historical payment rows must not 500 the invoices list — skip
+        them (they contribute 0) so the workspace still loads.
+        """
+        paid = Decimal("0")
+        for payment in invoice.payments:
+            if payment.deleted_at is not None or not payment.is_active:
+                continue
+            try:
+                paid += effective_payment_amount(
                     status=payment.status,
                     amount=payment.amount,
                     refunded_amount=payment.refunded_amount,
-                ) for payment in invoice.payments if payment.deleted_at is None and payment.is_active),
-                start=Decimal("0"),
-            )
-        )
+                )
+            except (ValueError, TypeError):
+                continue
+        paid = quantize_money(paid)
         outstanding = quantize_money(invoice.total - paid)
         return paid, outstanding
 

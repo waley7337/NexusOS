@@ -43,13 +43,13 @@ from app.main import logger as _app_logger  # noqa: E402
 from app.services import auth_service  # noqa: E402
 
 
-def _reset_logger_cache(logger: structlog.BoundLoggerLazyProxy) -> None:
+def _reset_logger_cache(logger: object) -> None:
     """Bust structlog's `cache_logger_on_first_use` cache for one specific
     module-level logger proxy.
 
     Root cause this works around (confirmed by direct reproduction against
-    structlog 24.4.0's `BoundLoggerLazyProxy.bind()`): the *first* time any
-    given `structlog.get_logger(...)` proxy is actually used, it monkeypatches
+    structlog 24.4.0's lazy proxy `.bind()`): the *first* time any given
+    `structlog.get_logger(...)` proxy is actually used, it monkeypatches
     its own instance `.bind` attribute to a closure over whatever the global
     config was *at that moment* — every later `structlog.configure()` call is
     then silently ignored by that specific proxy forever. `app.main.logger`
@@ -60,7 +60,12 @@ def _reset_logger_cache(logger: structlog.BoundLoggerLazyProxy) -> None:
     `bind`, which re-reads the *current* global config on next use. This is a
     test-isolation fix only; production's `cache_logger_on_first_use=True`
     behavior in `app/core/logging.py` is untouched and still correct there,
-    since production never dynamically reconfigures logging mid-process."""
+    since production never dynamically reconfigures logging mid-process.
+
+    Annotated as `object` (not `structlog.BoundLoggerLazyProxy`): that name is
+    not on the public `structlog` module, so a runtime annotation breaks
+    pytest collection on Python 3.12 (CI).
+    """
     if "bind" in vars(logger):
         del logger.bind
 

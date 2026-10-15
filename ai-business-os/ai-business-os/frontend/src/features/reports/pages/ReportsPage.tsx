@@ -5,13 +5,20 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import { request } from "@/api/client";
+import { ApiRequestError, request } from "@/api/client";
 import { queryKeys } from "@/constants/queryKeys";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const reportErrorMessage = (error: unknown) =>
+  error instanceof ApiRequestError
+    ? error.message
+    : error instanceof Error
+      ? error.message
+      : "Could not load this report.";
 
 interface ReportSummary {
   period: { fromDate: string; toDate: string };
@@ -39,11 +46,12 @@ export function ReportsPage() {
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.reports.summary(applied),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<ReportSummary>({
         method: "GET",
         url: "/reports/summary",
         params: { fromDate: applied.fromDate, toDate: applied.toDate },
+        signal,
       }),
   });
 
@@ -83,7 +91,11 @@ export function ReportsPage() {
           ))}
         </div>
       ) : isError ? (
-        <ErrorState title="Failed to load report" description={String(error)} />
+        <ErrorState
+          title="Failed to load report"
+          description={reportErrorMessage(error)}
+          onRetry={() => void refetch()}
+        />
       ) : data ? (
         <div className="flex flex-col gap-6">
           {/* Finance section */}
