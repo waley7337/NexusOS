@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="NexusOS system architecture">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#7DD3C0"/>
+    </marker>
+    <marker id="arrowMuted" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#64748B"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="#0B1220"/>
+
+  <!-- Title -->
+  <text x="40" y="42" fill="#F1F5F9" font-family="Inter, Helvetica, Arial, sans-serif" font-size="26" font-weight="700">NexusOS  -  System Architecture</text>
+  <text x="40" y="68" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">As implemented on main  |  application-level multi-tenancy  |  edge settings unverified in-repo</text>
+
+  <!-- Status sidebar -->
+  <rect x="1320" y="90" width="250" height="760" rx="8" fill="#111827" stroke="#1E293B" stroke-width="1.5"/>
+  <text x="1340" y="120" fill="#7DD3C0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="700">Implementation status</text>
+  <text x="1340" y="145" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">solid = live   half = env-gated   open = planned</text>
+
+  <circle cx="1350" cy="180" r="5" fill="#34D399"/><text x="1365" y="185" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Auth</text>
+  <circle cx="1350" cy="210" r="5" fill="#34D399"/><text x="1365" y="215" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">CRM</text>
+  <circle cx="1350" cy="240" r="5" fill="#34D399"/><text x="1365" y="245" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">HR</text>
+  <circle cx="1350" cy="270" r="5" fill="#34D399"/><text x="1365" y="275" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Finance</text>
+  <circle cx="1350" cy="300" r="5" fill="#34D399"/><text x="1365" y="305" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Inventory</text>
+  <circle cx="1350" cy="330" r="5" fill="#34D399"/><text x="1365" y="335" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Projects</text>
+  <circle cx="1350" cy="360" r="5" fill="#34D399"/><text x="1365" y="365" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Reports</text>
+  <circle cx="1350" cy="390" r="5" fill="#34D399"/><text x="1365" y="395" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Dashboard</text>
+  <circle cx="1350" cy="420" r="5" fill="#34D399"/><text x="1365" y="425" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Notifications</text>
+  <circle cx="1350" cy="450" r="5" fill="#34D399"/><text x="1365" y="455" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Settings</text>
+
+  <circle cx="1350" cy="500" r="5" fill="none" stroke="#FBBF24" stroke-width="2"/><circle cx="1350" cy="500" r="5" fill="#FBBF24" fill-opacity="0.35"/>
+  <text x="1365" y="505" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">AI (API key)</text>
+
+  <circle cx="1350" cy="530" r="5" fill="none" stroke="#FBBF24" stroke-width="2"/><circle cx="1350" cy="530" r="5" fill="#FBBF24" fill-opacity="0.35"/>
+  <text x="1365" y="535" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Stripe (flags)</text>
+
+  <circle cx="1350" cy="580" r="5" fill="none" stroke="#94A3B8" stroke-width="2"/>
+  <text x="1365" y="585" fill="#CBD5E1" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">PostgreSQL RLS</text>
+  <text x="1365" y="605" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">planned / deferred</text>
+
+  <text x="1340" y="660" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Corrected vs older</text>
+  <text x="1340" y="680" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">diagrams: domain</text>
+  <text x="1340" y="700" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">routers live; repos</text>
+  <text x="1340" y="720" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">on CRM/HR/Finance/</text>
+  <text x="1340" y="740" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Inventory/Projects;</text>
+  <text x="1340" y="760" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">dashboard not</text>
+  <text x="1340" y="780" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">fixture-only.</text>
+
+  <!-- Layer 1: Browser SPA -->
+  <rect x="40" y="90" width="1240" height="95" rx="8" fill="#0F1A2E" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="56" y="118" fill="#60A5FA" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">BROWSER SPA</text>
+  <text x="56" y="145" fill="#F1F5F9" font-family="Inter, Helvetica, Arial, sans-serif" font-size="16" font-weight="600">React 19  |  TypeScript  |  Vite 6  |  React Router 7  |  TanStack Query  |  Zustand</text>
+  <text x="56" y="168" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Axios API client  |  bearer access JWT  |  single-flight refresh  |  permission-aware routes</text>
+
+  <!-- Arrow down -->
+  <line x1="660" y1="185" x2="660" y2="210" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Layer 2: Optional edge -->
+  <rect x="40" y="215" width="1240" height="70" rx="8" fill="#0F1A2E" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="56" y="242" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">OPTIONAL EXTERNAL EDGE</text>
+  <text x="56" y="266" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15">Cloudflare DNS / TLS / WAF   -   <tspan fill="#FBBF24" font-weight="700">UNVERIFIED settings</tspan>  (no in-repo Cloudflare IaC)</text>
+
+  <line x1="660" y1="285" x2="660" y2="310" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Layer 3: FastAPI middleware -->
+  <rect x="40" y="315" width="1240" height="70" rx="8" fill="#0F1A2E" stroke="#14B8A6" stroke-width="1.5"/>
+  <text x="56" y="342" fill="#2DD4BF" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">FASTAPI MIDDLEWARE</text>
+  <text x="56" y="366" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15">CORS allowlist   |   Security headers   |   Request context / correlation ID</text>
+
+  <line x1="660" y1="385" x2="660" y2="410" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Layer 4: API routers -->
+  <rect x="40" y="415" width="1240" height="145" rx="8" fill="#0F1A2E" stroke="#38BDF8" stroke-width="1.5"/>
+  <text x="56" y="442" fill="#38BDF8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">/api/v1 ROUTERS</text>
+
+  <!-- Router chips -->
+  <g font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" fill="#E2E8F0">
+    <rect x="56" y="458" width="70" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="71" y="477">auth</text>
+    <rect x="136" y="458" width="70" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="152" y="477">crm</text>
+    <rect x="216" y="458" width="55" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="229" y="477">hr</text>
+    <rect x="281" y="458" width="85" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="296" y="477">finance</text>
+    <rect x="376" y="458" width="95" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="388" y="477">inventory</text>
+    <rect x="481" y="458" width="90" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="495" y="477">projects</text>
+    <rect x="581" y="458" width="85" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="595" y="477">reports</text>
+    <rect x="676" y="458" width="105" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="687" y="477">dashboard</text>
+    <rect x="791" y="458" width="120" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="800" y="477">notifications</text>
+    <rect x="921" y="458" width="85" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="935" y="477">settings</text>
+
+    <rect x="56" y="498" width="95" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="68" y="517">assistant</text>
+    <rect x="161" y="498" width="80" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="175" y="517">billing</text>
+    <rect x="251" y="498" width="150" height="28" rx="4" fill="#1E293B" stroke="#475569"/><text x="262" y="517">webhooks/stripe</text>
+    <rect x="411" y="498" width="75" height="28" rx="4" fill="#1E293B" stroke="#334155"/><text x="425" y="517">health</text>
+  </g>
+  <text x="56" y="545" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Health + Stripe webhooks unauthenticated (webhooks signature-verified). Domain modules mounted live  -  not placeholders.</text>
+
+  <line x1="660" y1="560" x2="660" y2="585" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Layer 5: AuthZ -->
+  <rect x="40" y="590" width="1240" height="70" rx="8" fill="#0F1A2E" stroke="#A78BFA" stroke-width="1.5"/>
+  <text x="56" y="617" fill="#C4B5FD" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">AUTHZ DEPENDENCIES</text>
+  <text x="56" y="641" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15">JWT validate (signature / expiry / type=access)  +  DB re-validate user / company / roles / permissions  then  require_permission</text>
+
+  <line x1="660" y1="660" x2="660" y2="685" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Layer 6: Services + Repos -->
+  <rect x="40" y="690" width="600" height="85" rx="8" fill="#0F1A2E" stroke="#14B8A6" stroke-width="1.5"/>
+  <text x="56" y="717" fill="#2DD4BF" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">SERVICES</text>
+  <text x="56" y="742" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Auth  |  CRM  |  HR  |  Finance  |  Inventory</text>
+  <text x="56" y="762" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Projects  |  Billing  |  AI agent / tools</text>
+
+  <line x1="640" y1="732" x2="680" y2="732" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="680" y="690" width="600" height="85" rx="8" fill="#0F1A2E" stroke="#38BDF8" stroke-width="1.5"/>
+  <text x="696" y="717" fill="#38BDF8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">TENANT-SCOPED REPOSITORIES</text>
+  <text x="696" y="742" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">BaseRepository subclasses  |  company_id from CurrentUser</text>
+  <text x="696" y="762" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Live on CRM / HR / Finance / Inventory / Projects domain routes</text>
+
+  <line x1="660" y1="775" x2="660" y2="800" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Data / external -->
+  <rect x="40" y="805" width="280" height="70" rx="8" fill="#0F1A2E" stroke="#34D399" stroke-width="1.5"/>
+  <text x="56" y="832" fill="#34D399" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">PostgreSQL</text>
+  <text x="56" y="855" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">System of record  |  composite FKs</text>
+
+  <rect x="340" y="805" width="280" height="70" rx="8" fill="#0F1A2E" stroke="#64748B" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="356" y="832" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">Redis</text>
+  <text x="356" y="855" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Rate limits only (not session store)</text>
+
+  <rect x="640" y="805" width="280" height="70" rx="8" fill="#0F1A2E" stroke="#FBBF24" stroke-width="1.5"/>
+  <text x="656" y="832" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">Stripe</text>
+  <text x="656" y="855" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Billing  |  Connect  |  webhooks</text>
+
+  <rect x="940" y="805" width="340" height="70" rx="8" fill="#0F1A2E" stroke="#FBBF24" stroke-width="1.5"/>
+  <text x="956" y="832" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">OpenAI</text>
+  <text x="956" y="855" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Assistant completions / tool calling</text>
+</svg>

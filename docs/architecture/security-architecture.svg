@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="NexusOS security architecture">
+  <defs>
+    <marker id="sarr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#7DD3C0"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#0B1220"/>
+
+  <text x="40" y="42" fill="#F1F5F9" font-family="Inter, Helvetica, Arial, sans-serif" font-size="26" font-weight="700">NexusOS  -  Security Architecture</text>
+  <text x="40" y="68" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Controls implemented in application code  |  not a claim of independent audit or compliance certification</text>
+
+  <!-- Left column: request path -->
+  <text x="40" y="105" fill="#7DD3C0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="700">REQUEST PATH</text>
+
+  <!-- Client -->
+  <rect x="40" y="120" width="900" height="70" rx="8" fill="#1C1917" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="56" y="148" fill="#F87171" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">CLIENT  -  UNTRUSTED</text>
+  <text x="56" y="172" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Browser / API callers  |  validate all input  |  UI permission gates are not a security boundary</text>
+
+  <line x1="490" y1="190" x2="490" y2="215" stroke="#7DD3C0" stroke-width="2" marker-end="url(#sarr)"/>
+
+  <!-- Edge -->
+  <rect x="40" y="220" width="900" height="60" rx="8" fill="#0F1A2E" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="56" y="245" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">OPTIONAL EDGE (Cloudflare DNS/TLS/WAF)</text>
+  <text x="56" y="266" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Unverified in-repo  -  no Cloudflare IaC; dashboard posture not confirmed from Git</text>
+
+  <line x1="490" y1="280" x2="490" y2="305" stroke="#7DD3C0" stroke-width="2" marker-end="url(#sarr)"/>
+
+  <!-- CORS / headers -->
+  <rect x="40" y="310" width="440" height="90" rx="8" fill="#0F1A2E" stroke="#14B8A6" stroke-width="1.5"/>
+  <text x="56" y="338" fill="#2DD4BF" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">CORS + SECURITY HEADERS</text>
+  <text x="56" y="362" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">CORS_ORIGINS allowlist</text>
+  <text x="56" y="384" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">HSTS when HTTPS / HSTS_ENABLED</text>
+
+  <rect x="500" y="310" width="440" height="90" rx="8" fill="#0F1A2E" stroke="#38BDF8" stroke-width="1.5"/>
+  <text x="516" y="338" fill="#38BDF8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">TRUSTED PROXY ' CLIENT IP</text>
+  <text x="516" y="362" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">TRUSTED_PROXY_MODE / NETWORKS</text>
+  <text x="516" y="384" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">IP feeds rate limits only  -  not tenant selection</text>
+
+  <line x1="490" y1="400" x2="490" y2="425" stroke="#7DD3C0" stroke-width="2" marker-end="url(#sarr)"/>
+
+  <!-- Rate limit -->
+  <rect x="40" y="430" width="900" height="85" rx="8" fill="#1C1917" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="56" y="458" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">REDIS RATE LIMIT (selected auth routes)</text>
+  <text x="56" y="482" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Fixed-window counters by client IP prefix</text>
+  <text x="56" y="504" fill="#F87171" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">Fails open on RedisError  -  request allowed; warning logged</text>
+
+  <line x1="490" y1="515" x2="490" y2="540" stroke="#7DD3C0" stroke-width="2" marker-end="url(#sarr)"/>
+
+  <!-- AuthN -->
+  <rect x="40" y="545" width="900" height="100" rx="8" fill="#0F1A2E" stroke="#A78BFA" stroke-width="1.5"/>
+  <text x="56" y="573" fill="#C4B5FD" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">AUTHENTICATION</text>
+  <text x="56" y="598" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Argon2 password hashing   |   Signed JWT (type=access, algorithm-pinned)</text>
+  <text x="56" y="622" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Refresh tokens: server-side sessions  |  rotation  |  reuse detection revokes sessions</text>
+
+  <line x1="490" y1="645" x2="490" y2="670" stroke="#7DD3C0" stroke-width="2" marker-end="url(#sarr)"/>
+
+  <!-- AuthZ -->
+  <rect x="40" y="675" width="900" height="90" rx="8" fill="#0F1A2E" stroke="#34D399" stroke-width="1.5"/>
+  <text x="56" y="703" fill="#34D399" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">DATABASE AUTHORIZATION</text>
+  <text x="56" y="728" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">get_current_active_user reloads roles/permissions from PostgreSQL</text>
+  <text x="56" y="750" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Token-embedded role is not AuthZ source of truth  |  require_permission AND semantics</text>
+
+  <line x1="490" y1="765" x2="490" y2="790" stroke="#7DD3C0" stroke-width="2" marker-end="url(#sarr)"/>
+
+  <!-- Tenant repos -->
+  <rect x="40" y="795" width="900" height="80" rx="8" fill="#0F1A2E" stroke="#38BDF8" stroke-width="1.5"/>
+  <text x="56" y="823" fill="#38BDF8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">TENANT-SCOPED REPOSITORIES</text>
+  <text x="56" y="848" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Live on domain routes (CRM / HR / Finance / Inventory / Projects)  |  company_id forced from CurrentUser</text>
+
+  <!-- Right column: deliberate non-claims -->
+  <rect x="980" y="120" width="580" height="400" rx="8" fill="#111827" stroke="#334155" stroke-width="1.5"/>
+  <text x="1000" y="155" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="700">DELIBERATELY NOT CLAIMED</text>
+
+  <rect x="1000" y="175" width="540" height="70" rx="6" fill="#0F1A2E" stroke="#64748B" stroke-width="1"/>
+  <text x="1016" y="205" fill="#CBD5E1" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">PostgreSQL RLS</text>
+  <text x="1016" y="228" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Not implemented  -  planned / deferred</text>
+
+  <rect x="1000" y="260" width="540" height="70" rx="6" fill="#0F1A2E" stroke="#64748B" stroke-width="1"/>
+  <text x="1016" y="290" fill="#CBD5E1" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">Content-Security-Policy (CSP)</text>
+  <text x="1016" y="313" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Deferred  -  not in security headers middleware</text>
+
+  <rect x="1000" y="345" width="540" height="70" rx="6" fill="#0F1A2E" stroke="#F59E0B" stroke-width="1"/>
+  <text x="1016" y="375" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">Cloudflare WAF / bot / origin lock</text>
+  <text x="1016" y="398" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Optional edge  -  settings unverified</text>
+
+  <rect x="1000" y="430" width="540" height="70" rx="6" fill="#0F1A2E" stroke="#64748B" stroke-width="1"/>
+  <text x="1016" y="460" fill="#CBD5E1" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="600">Live HSTS / trusted-proxy CIDRs</text>
+  <text x="1016" y="483" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Ops-dependent  |  HSTS_ENABLED defaults false</text>
+
+  <!-- Residual risks panel -->
+  <rect x="980" y="545" width="580" height="330" rx="8" fill="#1C1917" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="1000" y="580" fill="#F87171" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="700">RESIDUAL RISKS (EXPLICIT)</text>
+  <text x="1000" y="615" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">1. Rate limit fails open if Redis errors</text>
+  <text x="1000" y="645" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">2. No PostgreSQL RLS  -  DB compromise</text>
+  <text x="1020" y="668" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">bypasses application filters</text>
+  <text x="1000" y="700" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">3. Stripe / AI flags env-dependent</text>
+  <text x="1000" y="730" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">4. Trusted-proxy misconfig skews IP / HTTPS</text>
+  <text x="1000" y="760" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">5. Webhook tenant mapping ops-sensitive</text>
+  <text x="1000" y="790" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">6. Edge / WAF posture unverified from Git</text>
+  <text x="1000" y="830" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Stripe webhooks: signature-verified,</text>
+  <text x="1000" y="850" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">unauthenticated HTTP (no end-user JWT)</text>
+
+  <!-- Footer -->
+  <text x="40" y="920" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Evidence: backend/tests/security/  |  test_tenant_isolation.py  |  dependencies/auth.py  |  rate_limit.py  |  security_headers.py</text>
+  <text x="40" y="945" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Corrected: tenant repositories power live domain routes  -  do not claim "scoped repository not yet on live routes"</text>
+  <text x="40" y="970" fill="#475569" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">See docs/SECURITY.md  |  docs/MULTI_TENANCY.md  |  docs/ARCHITECTURE.md</text>
+</svg>

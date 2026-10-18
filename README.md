@@ -1,521 +1,322 @@
 # NexusOS
 
-A security-first, multi-tenant business operating platform built with React, TypeScript, FastAPI and PostgreSQL.
+Multi-tenant business operations platform: shared identity, RBAC, and tenant isolation under one API and React application shell, with implemented CRM, HR, finance, inventory, projects/tasks, reporting, notifications, dashboard metrics, AI assistant, and Stripe billing/Connect integrations.
 
-NexusOS is designed to host multiple business capabilities behind a single identity model, permission system and tenant boundary. Rather than shipping product modules first and retrofitting multi-tenancy later, the identity, authorization and isolation layers were built and tested first, so everything added on top inherits them. This repository currently contains that platform foundation, complete and tested, plus the application shell and design system the product modules will be assembled from.
-
----
-
-## Overview
-
-The goal is a unified platform capable of hosting CRM, projects, tasks, finance, HR, inventory, documents and reporting behind shared infrastructure: one identity model, one role and permission system, one tenant boundary, one design system.
-
-The work completed so far is deliberately weighted toward that foundation. Authentication, authorization, tenant isolation, the security middleware layer and the frontend platform are implemented and covered by tests. Most business modules exist as database schema and navigation entries rather than working features, and the sections below are explicit about which is which.
-
-Concretely: the live API surface is 8 `/auth/*` routes plus `/health` and `/ready`. No domain or CRUD endpoints exist yet.
+**Accuracy note:** This README reflects the repository state audited against source on `main` (application root `ai-business-os/ai-business-os/`). It does **not** claim that every module is production-hardened or independently security-audited. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for evidence-based status categories.
 
 ---
 
-## Engineering Approach
+## Table of contents
 
-Building product modules first and adding multi-tenancy later is faster to a demo and structurally difficult to undo. Tenant scoping degrades into a filter that every query is individually responsible for remembering, and one forgotten condition becomes a cross-tenant data leak.
-
-NexusOS inverts that order. Tenant identity is derived from server state rather than accepted from the request, authorization is re-read from the database rather than trusted from a token claim, and the component layer exists before the pages that consume it. A feature added later cannot opt out of these decisions, because they are enforced centrally rather than by convention.
-
-The principles that follow from that:
-
-- **Tenant identity is derived, not trusted.** Nothing in an authenticated request selects its own tenant.
-- **Authorization is re-validated, not assumed.** A valid token proves issuance, not current authority.
-- **Security controls fail closed** where a failure would otherwise grant access.
-- **Shared infrastructure precedes product modules.** Identity, permissions and isolation are solved once, centrally.
-- **UI primitives precede pages.** Tokens and components exist before the screens that consume them.
-- **Documentation distinguishes implemented from planned.** Prepared schema and interface work is labelled as such.
-
----
-
-## Current Status
-
-### ✅ Implemented
-
-**Platform and identity**
-- Multi-tenant data model: companies, users, per-tenant roles, global permission catalogue, sessions, audit log
-- Server-derived tenant identity — authenticated routes accept no tenant identifier from the client
-- UUID v7 primary keys, soft delete, audit columns and tenant columns standardised across tables
-
-**Authentication**
-- Registration with tenant bootstrap (company, default roles, permission grants, owner user)
-- Login, logout, password reset, email verification
-- JWT access tokens with algorithm pinning and token-type validation
-- Refresh tokens with server-side session records, rotation on use, and reuse detection
-- Argon2 password hashing
-
-**Authorization**
-- Role-based access control with per-tenant roles and a global permission catalogue
-- Role and permission evaluation re-read from the database on every authorization-sensitive request
-- Deny-by-default route guards; fail-closed on suspended users and deactivated tenants
-
-**Security**
-- CORS allowlisting with production startup validation
-- Security headers middleware
-- Redis-backed rate limiting on authentication endpoints
-- Trusted-proxy-aware client IP resolution
-- Request context with correlation IDs and structured logging
-- Append-only audit records for authentication events
-- Credential redaction in logs
-- Generic error responses with no internals exposed
-
-**Frontend**
-- React application shell with sidebar, top bar, status bar and command palette
-- Route guards and permission-gated routes with lazy loading
-- API client with bearer injection and single-flight token refresh
-- Design system: design tokens, 31 components, light/dark/system themes
-- Forms with schema validation; shared loading, empty and error states
-- Dashboard interface with KPI, chart and activity widgets
-
-**Quality**
-- Automated test suites for backend and frontend, weighted toward security and tenant behaviour
-- CI pipeline running lint, static type checking, migrations, schema drift check and both test suites
-
-### ◐ Foundation / Prepared
-
-- **Domain models** for CRM, projects and tasks, finance, HR, inventory, documents, notifications, activity and workflows — 38 model classes, modelled and migrated with tenant columns and cross-tenant constraints, with no API endpoints yet
-- **Tenant-scoped repository foundation** — generic tenant filtering, mass-assignment protection, server-side pagination clamping and sort-field allowlisting; implemented and tested, with zero live callers
-- **Dashboard data** — the interface is complete but served by a fixture module, not a live endpoint, pending an aggregate API
-- **Email delivery** — token lifecycle and service boundary complete; no provider wired, delivery currently logs only
-
-### ○ Planned
-
-- CRM workflows (customers, contacts, leads, deals)
-- Project and task workflows
-- Finance workflows (invoicing, expenses, payments)
-- HR workflows (employees, leave, attendance)
-- Inventory workflows (products, warehouses, stock, suppliers)
-- Document management and reporting
-- AI capabilities — conversation and report tables are modelled; no inference code exists
-- PostgreSQL row-level security as a second isolation layer
-
-**There is no AI functionality in this repository.** `OPENAI_API_KEY` is a configuration field declaration with zero usage anywhere in application code. The dashboard's insights panel is a UI component rendering fixture data.
-
-The screens for CRM, projects, tasks, HR, finance, inventory, documents, reports and settings are sidebar navigation placeholders backed by migrated schema. They are not working features.
+1. [What it is](#what-it-is)
+2. [Users and tenancy model](#users-and-tenancy-model)
+3. [Technology stack](#technology-stack)
+4. [Repository layout](#repository-layout)
+5. [Architecture (summary)](#architecture-summary)
+6. [Module status (summary)](#module-status-summary)
+7. [Security controls (summary)](#security-controls-summary)
+8. [Cloudflare (external edge)](#cloudflare-external-edge)
+9. [Local development](#local-development)
+10. [Environment configuration](#environment-configuration)
+11. [Tests and CI](#tests-and-ci)
+12. [Database migrations](#database-migrations)
+13. [Deployment](#deployment)
+14. [Known limitations](#known-limitations)
+15. [Further documentation](#further-documentation)
 
 ---
 
-## System Architecture
+## What it is
 
-A single-page React client talks to a FastAPI service over a versioned REST API, with PostgreSQL as the system of record. Routers stay thin and delegate to services; identity is resolved by dependencies rather than by individual endpoints.
+NexusOS is a **SaaS-style business OS** for small and mid-size teams: customers, deals, invoices, expenses, employees, leave/attendance, inventory, projects/tasks, operational reports, in-app notifications, and an AI assistant that can call tenant-scoped tools.
+
+It is built so that **tenant identity, authentication, and permission checks are central** (FastAPI dependencies + tenant-scoped repositories), rather than bolted on after product screens exist.
+
+---
+
+## Users and tenancy model
+
+| Concept | Meaning in code |
+|--------|------------------|
+| **Tenant** | A `Company` row |
+| **User** | Belongs to exactly one company (`users.company_id`) |
+| **Login selection** | Client supplies **company slug + email + password** at login/register; after auth, APIs do **not** accept a client-chosen tenant id |
+| **Roles / permissions** | Per-tenant roles; global permission catalogue; grants seeded at registration |
+
+Isolation is **application-enforced** (server-derived `company_id` + `BaseRepository` filters + composite FKs). **PostgreSQL RLS is not implemented** (deliberately deferred). Details: [docs/MULTI_TENANCY.md](docs/MULTI_TENANCY.md).
+
+---
+
+## Technology stack
+
+| Layer | Technologies (from manifests / code) |
+|-------|--------------------------------------|
+| Frontend | React 19, TypeScript, Vite 6, React Router 7, TanStack Query 5, React Hook Form, Tailwind (v4 migration on `main`), Stripe.js / React Stripe |
+| Backend | FastAPI 0.115.x, Pydantic v2, SQLAlchemy 2.0 async, Alembic, Argon2, PyJWT, Redis 5.x client, Stripe Python SDK 11.x |
+| Data | PostgreSQL (asyncpg), Redis (rate-limit counters) |
+| AI | OpenAI API via configurable `OPENAI_API_KEY` / `OPENAI_MODEL` (fail-soft when unset) |
+| Payments | Stripe Checkout (hosted + Elements), Stripe Connect onboarding (Accounts v2 path in code), signature-verified webhooks |
+| CI | GitHub Actions [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+
+---
+
+## Repository layout
+
+```
+NexusOS/                              # Git root
+├── README.md                         # This file
+├── SECURITY.md                       # Vulnerability reporting policy
+├── docs/                             # Portfolio / architecture docs (this pass)
+├── .github/workflows/ci.yml          # Active CI (paths into nested app)
+└── ai-business-os/ai-business-os/    # **Application root**
+    ├── backend/                      # FastAPI app, migrations, tests
+    ├── frontend/                     # Vite React SPA
+    ├── docs/                         # Engineering reports, product/ops notes
+    └── nginx/                        # Optional local/proxy samples
+```
+
+All install, migrate, and test commands below use the nested application paths.
+
+---
+
+## Architecture (summary)
 
 ```mermaid
-flowchart TD
-    B[Browser] --> F[React + TypeScript SPA]
-    F --> AC[API client<br/>bearer injection · single-flight refresh]
-    AC --> MW[FastAPI middleware<br/>CORS · security headers · request context]
-    MW --> R[API routers /api/v1]
-    R --> AU[Authentication + authorization<br/>token validation · DB re-validation · RBAC]
-    AU --> S[Service layer]
-    S --> ORM[SQLAlchemy async]
-    ORM --> PG[(PostgreSQL)]
-    R -. rate limit counters .-> RD[(Redis)]
+flowchart LR
+  Browser[Browser SPA] --> FE[Vite React app]
+  FE --> API[FastAPI /api/v1]
+  API --> Auth[AuthZ dependencies]
+  Auth --> Svc[Services]
+  Svc --> Repo[Tenant-scoped repositories]
+  Repo --> PG[(PostgreSQL)]
+  API --> Redis[(Redis rate limits)]
+  API --> Stripe[Stripe API / webhooks]
+  API --> OpenAI[OpenAI API]
 ```
 
-Redis is used solely for shared rate-limit counters. It is not a cache and not a session store.
+Typical authenticated request:
 
-Requests pass through middleware in a fixed order — server error boundary, CORS, security headers, request context — before reaching a router. Each request gets one database session, committed on success and rolled back on any raised exception. Every response, success or failure, uses the same envelope — `{ success, data, message, errors }` — so a client parses one shape.
+1. SPA sends `Authorization: Bearer <access_jwt>`.
+2. Middleware: CORS, security headers, request context / correlation id.
+3. `get_current_user` validates JWT; `get_current_active_user` **reloads user, company, roles, and permissions from PostgreSQL** and sets `company_id` from the DB row (not from a client body field).
+4. `require_permission(...)` / role guards deny by default when grants are missing.
+5. Handlers use repositories constructed with that `company_id`; queries add `WHERE company_id = …` for tenant models.
+6. Domain errors map to a uniform JSON envelope `{ success, data, message, errors }`.
 
-The service layer raises domain errors and never imports `HTTPException`; a single handler translates those errors into responses. HTTP status selection therefore lives at the edge rather than being scattered through business logic.
-
----
-
-## Multi-Tenant Architecture
-
-A company is the tenant. Users, roles and business records carry a company reference, and users are unique by email *within* a company rather than globally, so the same person can hold accounts in two tenants.
-
-At sign-in the client supplies a company slug alongside credentials. This is the only point at which the client influences tenant selection, and it works the way a subdomain would — it selects which tenant to authenticate against and grants nothing on its own.
-
-After authentication:
-
-- **User identity** is resolved server-side. The token's subject claim is used only to locate the user row, which must exist and be active.
-- **Tenant identity** is read from that stored user record. The access token also carries a company identifier; it is ignored.
-- **Roles** are re-read from the database on every authorization-sensitive request, not taken from the token's role claim.
-- **Permissions** are derived from database role grants and are never carried in a token.
-- **Authenticated routes accept no client-provided tenant identifier** — there is no tenant header, path segment or body field.
-
-The result is that a request cannot influence its own tenant scope, and a valid token for one tenant cannot address another.
-
-### Isolation model
-
-Current isolation is **application-level scoping plus relational constraints**:
-
-- Tenant-aware queries are scoped by the server-derived company identifier, and the repository foundation raises rather than running an unscoped query when tenant context is missing.
-- Child tables reference parents by composite foreign key — `(id, company_id)` — so the database rejects any row attaching a record in one tenant to a parent in another, independent of application correctness.
-
-**PostgreSQL Row Level Security is not implemented.** No policies exist and no per-request session variable is set. RLS would make isolation independent of the application layer entirely and is listed under Planned; until it exists, it is not claimed.
+Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
-## Authentication
+## Module status (summary)
 
-```
-Registration → Login → Access token → Refresh session → Rotation → Logout
-```
+Statuses are defined in [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md). Summary:
 
-**Registration** creates the company, seeds default roles and their permission grants, creates the owner user, issues a session and generates an email verification token.
+| Area | Status (evidence-based) |
+|------|-------------------------|
+| Auth (register/login/refresh/logout/verify/reset) | **Implemented** — APIs + tests |
+| RBAC / permissions | **Implemented** — DB re-validation on guarded routes |
+| CRM (customers, contacts, leads, deals, notes) | **Implemented** — APIs + FE pages + tests |
+| HR (employees, leave, attendance) | **Implemented** — APIs + FE + tests |
+| Finance (invoices, payments, expenses) | **Implemented** — APIs + FE + tests |
+| Inventory (products, warehouses, stock) | **Implemented** — APIs + FE |
+| Projects & tasks | **Implemented** — APIs + FE |
+| Reports / dashboard metrics / notifications | **Implemented** — APIs + FE (coverage varies) |
+| Settings (company profile, billing/Connect UI) | **Implemented** — APIs + FE |
+| AI assistant | **Implemented, partially verified** — code + tools; needs live `OPENAI_API_KEY` |
+| Platform billing (SaaS subscription) | **Implemented, partially verified** — Elements/hosted checkout; env-gated |
+| Tenant invoice payments (Stripe Connect) | **Implemented, partially verified** — Connect onboarding + webhooks; env-gated |
+| PostgreSQL RLS | **Planned** — explicitly deferred |
+| Documents module | **Unverified / not a first-class module** in current routers |
 
-**Login** identifies the user by company slug, email and active status, verifies the password and issues a token pair. Failures return one generic message regardless of which element was wrong, so the endpoint cannot be used to enumerate accounts.
-
-**Access tokens** expire after 15 minutes. They are signed with a pinned algorithm, and decoding validates the declared token type, so a refresh token cannot be presented where an access token is expected.
-
-**Refresh tokens** expire after 30 days and rotate on every use. The raw token is never stored — the server keeps a session record holding the token's unique identifier, expiry and revocation timestamp.
-
-**Refresh-token reuse detection:** presenting a refresh token that has already been spent is treated as evidence of theft. Every session belonging to that user is revoked and an audit event is written, so a stolen token buys one use before locking out both parties and surfacing the compromise.
-
-**Logout** revokes the presented session and is idempotent. **Password reset** consumes a single-use token stored as a hash and revokes all sessions for that user. Verification and reset tokens are opaque random values rather than JWTs, specifically so they can be invalidated server-side before expiry.
-
----
-
-## Authorization / RBAC
-
-Roles are per-tenant database rows, not an enum. Registration seeds five: **Owner**, **Admin**, **Manager**, **Employee** and **Viewer**, each granted permissions from a global catalogue of `module.action` strings. Wildcards are expanded once at grant time, so request-time checks are plain set operations with no pattern matching and no implicit matches.
-
-Two authentication dependencies exist, and the split is deliberate:
-
-| Dependency | Cost | Guarantee |
-|---|---|---|
-| Token validation only | No database access | The token is validly signed, unexpired and of the correct type. Its role claim may be stale. |
-| Full identity resolution | One indexed query with eager-loaded relations | Role and permissions are current as of this request; fails closed if the user is missing, soft-deleted, inactive or suspended, or if their company is deactivated or deleted. |
-
-Role and permission guards both build on the second, so every route guard inherits the fresh-from-database check. Permission checks require every listed permission and deny anything missing or unrecognised.
-
-The reason token claims are not treated as authoritative is concrete: it closes the stale-privilege window. Suspending a user or revoking a permission takes effect on their next request rather than whenever their current access token happens to expire.
+> The previous root README claim that the live API was “only `/auth/*` + health” and that CRM/finance/HR were “placeholders only” is **obsolete** relative to `app/api/v1/router.py` and the feature routers under `app/api/v1/`.
 
 ---
 
-## Security Engineering
+## Security controls (summary)
 
-| Control | Implementation |
-|---|---|
-| Password hashing | Argon2 (memory-hard) via passlib |
-| Authentication | JWT access tokens with algorithm pinning and token-type validation |
-| Session management | Server-side session records, refresh rotation, reuse detection |
-| Authorization | RBAC re-validated against database state per request, deny by default |
-| Tenant identity | Derived from stored user record, never accepted from the request |
-| Tenant isolation | Application-level scoping plus composite foreign key constraints |
-| Rate limiting | Redis-backed counters on 6 authentication endpoints, keyed on resolved client IP |
-| Client IP | Trusted-proxy-aware resolver; forwarded headers ignored unless the peer is in a configured network |
-| Security headers | Applied by middleware to every response, including error responses |
-| CORS | Explicit origin allowlist with credentials |
-| Startup validation | Production refuses to start on debug mode, placeholder signing keys, or wildcard/plaintext origins |
-| Audit trail | Append-only records with actor, tenant, action, resolved IP and user agent |
-| Logging | Structured logs with request correlation and credential redaction |
-| Error handling | Uniform envelope; generic messages with no internals or stack traces in responses |
-| Data access | ORM parameter binding throughout; no dynamic SQL |
-| Secrets | Loaded from environment with minimum key length enforced; none committed |
+| Control | Implementation (high level) |
+|---------|-----------------------------|
+| Passwords | Argon2 (`argon2-cffi`) |
+| Tokens | JWT access + rotating refresh sessions; type-pinned decode |
+| AuthZ | `require_permission` / `require_roles` on `get_current_active_user` |
+| Tenant scope | Server-derived `company_id` + repository filters; composite FKs |
+| Rate limits | Redis-backed on selected auth routes; **fails open** if Redis errors |
+| Headers | `SecurityHeadersMiddleware` (HSTS when HTTPS identity or `HSTS_ENABLED`) |
+| Stripe | Signature verification on webhooks; billing/Connect **fail-closed** until flags + secrets |
+| Logging | Structured logging; credential redaction patterns in security tests |
 
-### Deliberately not claimed
-
-Stating what is absent is part of the point:
-
-- **PostgreSQL row-level security** — no policies exist and no per-request session variable is set; isolation is application-level and relational
-- **Content-Security-Policy and Permissions-Policy** — not set; deferred to the static host for a JSON API
-- **JWT issuer and audience claims** — not issued, not validated
-- **Access-token revocation before expiry** — tokens are stateless for their 15-minute life; mitigated by per-request database re-validation
-- **Account lockout after repeated failures** — rate limiting only
-- **Mandatory verified-email login** — verification exists but is not required to authenticate
-- **Fail-closed rate limiting** — the limiter fails open if Redis is unreachable, a deliberate availability trade-off
+Details and residual risks: [docs/SECURITY.md](docs/SECURITY.md).  
+Vulnerability reports: [SECURITY.md](SECURITY.md).
 
 ---
 
-## Frontend Engineering
+## Cloudflare (external edge)
 
-React 19 and TypeScript on Vite, with route-level code splitting and vendor bundles split so charts, motion and table code load independently of the core bundle.
+Cloudflare is **not configured inside this repository** (no Wrangler/Terraform Cloudflare resources checked in). For a public deployment that places DNS/TLS in front of the origin, Cloudflare (or another CDN/WAF) can act as an **external edge**: DNS, TLS termination, and optional WAF/DDoS/bot controls.
 
-- **Routing** — a declarative route table splitting a public authentication shell from an authenticated application shell behind a guard, with permission-gated branches rendering an explicit forbidden state
-- **State** — session state in a small persisted store; server data in a query cache with its own staleness policy, cleared wholesale when a session ends
-- **API client** — attaches the bearer header and unwraps the response envelope into typed data or a typed error
-- **Token refresh** — a 401 triggers at most one retry per request, and concurrent 401s share a single in-flight refresh, so parallel requests cannot invalidate each other through rotation. A failed refresh clears auth state and the query cache, then redirects to sign-in
-- **Design system** — design tokens defining a surface ladder, chart palette, radii, elevation and typography, mapped into Tailwind and consumed by components built on Radix primitives
-- **Forms** — React Hook Form with Zod resolvers, so validation is declared once and shared between form and typed payload
-- **System states** — loading skeletons, empty states, error states with recovery actions, offline detection and toasts as shared components
-- **Themes** — light, dark and system, persisted locally
-- **Accessibility** — visible focus rings on interactive controls, ARIA labelling on icon-only and composite controls, and `prefers-reduced-motion` honoured both in global CSS and in the animation hooks that CSS rules cannot reach
+**From repository evidence alone:** specific Cloudflare WAF rules, edge rate limits, and bot settings are **unverified**. Do not assume they are enabled.
 
-The authentication screens run against the live API. The dashboard is interface-complete but renders fixture data.
+Cloudflare (when used) **complements** application controls; it does **not** replace JWT auth, RBAC, tenant filters, input validation, or Stripe webhook verification.
+
+See [docs/SECURITY.md](docs/SECURITY.md#cloudflare-external-edge) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#external-edge-cloudflare).
 
 ---
 
-## Technology Stack
+## Local development
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, TypeScript, Vite |
-| Routing & state | React Router, TanStack Query, Zustand |
-| UI | Tailwind CSS, Radix UI, Recharts, Framer Motion |
-| Backend | FastAPI, Python 3.12 |
-| Database | PostgreSQL 16 |
-| ORM | SQLAlchemy 2.0 (async, asyncpg) |
-| Migrations | Alembic |
-| Shared counters | Redis 7 |
-| Validation | Zod (frontend), Pydantic v2 (backend) |
-| Auth | passlib with Argon2, PyJWT |
-| Logging | structlog |
-| Testing | pytest, Vitest, Testing Library |
-| Linting & types | ruff, mypy, ESLint, TypeScript |
-| Containers | Docker, Docker Compose, nginx |
-| CI | GitHub Actions (Python 3.12, Node 22) |
+### Prerequisites
 
----
+- Python **3.12+** (CI uses 3.12)
+- Node.js **22+** (CI uses 22)
+- PostgreSQL 16+ and Redis 7+ (local or Docker)
 
-## Testing & Reliability
-
-**Backend** — pytest, running against live PostgreSQL and Redis services in CI rather than mocks. 167 test functions across 20 files, of which 111 sit in a dedicated security suite:
-
-- **Authorization** — permissions hydrated from the database rather than the token; suspended, deactivated and soft-deleted users fail closed; deactivated and deleted companies fail closed for their members; deny-by-default; a stale token role losing to the current database role
-- **Tenant isolation** — cross-tenant reads return not found; querying a tenant model with no company set fails closed; cross-tenant update, restore, delete, count, exists and bulk-fetch all rejected; pagination clamping and sort-field allowlisting
-- **Cross-tenant relationships** — the database rejects records referencing another tenant's parent row
-- **Trusted proxy** — IP and scheme resolution, spoof resistance, CIDR validation, and end-to-end behaviour through the real ASGI application
-- **Plus** request-ID handling, log redaction, exception logging, email-log safety, session expiry, mass-assignment rejection and rate limiting
-
-**Frontend** — Vitest with Testing Library. 89 test cases across 21 files, covering authentication pages, the auth service and validation schemas, and UI primitives.
-
-Coverage is deliberately weighted toward security and tenant behaviour. The dashboard interface and application shell are not meaningfully covered.
-
-**CI** runs on every push and pull request: backend lint, static type checking, migrations, a schema drift check, permission seeding and pytest; then frontend type checking, tests and a production build. Running migrations before tests means a model that has drifted from its migration history fails the build rather than a deployment.
-
----
-
-## Repository Structure
-
-The application lives two levels below the repository root. All development commands run from the application directory.
-
-```
-.
-├── ai-business-os/
-│   └── ai-business-os/          # Application root — run commands from here
-│       ├── backend/
-│       │   ├── app/
-│       │   │   ├── api/v1/          # Routers — auth and health only
-│       │   │   ├── core/            # Config, security, logging, rate limiting, client IP
-│       │   │   ├── db/              # Async session, permission catalogue seed
-│       │   │   ├── dependencies/    # Identity resolution and RBAC guards
-│       │   │   ├── middleware/      # Request context, security headers
-│       │   │   ├── models/          # SQLAlchemy models
-│       │   │   ├── repositories/    # Tenant-scoped repository foundation
-│       │   │   ├── schemas/         # Pydantic request/response models
-│       │   │   └── services/        # Business logic
-│       │   ├── migrations/          # Alembic revisions
-│       │   └── tests/
-│       │       └── security/        # Security and tenant-isolation suites
-│       ├── frontend/
-│       │   └── src/
-│       │       ├── api/             # HTTP client and interceptors
-│       │       ├── components/ui/   # Design system components
-│       │       ├── features/        # Feature modules
-│       │       ├── layouts/         # Application and auth shells
-│       │       ├── pages/           # Route-level components
-│       │       ├── routes/          # Route table and guards
-│       │       ├── stores/          # Session and UI state
-│       │       └── styles/          # Design tokens
-│       ├── docs/                    # Engineering and product notes
-│       ├── .github/workflows/       # CI pipeline
-│       ├── .env.example
-│       ├── docker-compose.yml
-│       └── Makefile
-│
-├── docs/
-│   ├── architecture/            # Architecture diagrams
-│   └── screenshots/             # Product screenshots
-└── SECURITY.md
-```
-
----
-
-## Running Locally
-
-**Requirements:** Docker and Docker Compose for the full stack, or Python 3.12, Node 22, PostgreSQL 16 and Redis 7 to run services individually.
-
-All commands below assume you have first moved into the application directory:
-
-```bash
-cd ai-business-os/ai-business-os
-```
-
-### Full stack with Docker
-
-```bash
-cd ai-business-os/ai-business-os
-cp .env.example .env      # then set SECRET_KEY and review the values
-make dev                  # docker compose up --build
-```
-
-This starts PostgreSQL, Redis, the API and the built frontend. Services listen on:
-
-| Service | Port |
-|---|---|
-| Frontend (nginx) | 3000 |
-| API | 8000 |
-| PostgreSQL | 5432 |
-| Redis | 6379 |
-
-The Compose file provisions a throwaway local database with its own credentials. Use your own values in `.env`; nothing there is intended for any environment other than a local machine.
-
-### Running services individually
-
-Start PostgreSQL and Redis first — either from the Compose file or from a local installation — then point `DATABASE_URL` and `REDIS_URL` at them.
-
-**Backend**
+### Backend
 
 ```bash
 cd ai-business-os/ai-business-os/backend
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-alembic upgrade head          # or, from the application directory: make migrate
-python -m app.db.seed         # seed the permission catalogue
-uvicorn app.main:app --reload # or, from the application directory: make api
+cp ../.env.example ../.env  # or copy into backend per your layout; see template
+# Set DATABASE_URL, REDIS_URL, SECRET_KEY (32+ chars) in your local env file
+alembic upgrade head
+python -m app.db.seed
+uvicorn app.main:app --reload --port 8000
 ```
 
-The API serves on port 8000. Interactive API documentation is available at `/docs` outside production.
+API docs (when `DEBUG`/docs enabled per config): `http://localhost:8000/docs`
 
-**Frontend**
+### Frontend
 
 ```bash
 cd ai-business-os/ai-business-os/frontend
-npm install
-npm run dev                   # or, from the application directory: make web
+cp .env.example .env.local   # set VITE_API_BASE_URL / equivalent per example
+npm ci
+npm run dev
 ```
 
-The Vite dev server runs on port 5173 and proxies `/api` to the backend on port 8000, so no additional configuration is needed for local development.
+Default Vite port is typically `5173` (see frontend config).
 
-### Common commands
+---
 
-Run these from `ai-business-os/ai-business-os`:
+## Environment configuration
+
+Use the templates (placeholders only — never commit real secrets):
+
+- [`ai-business-os/ai-business-os/.env.example`](ai-business-os/ai-business-os/.env.example)
+- [`ai-business-os/ai-business-os/frontend/.env.example`](ai-business-os/ai-business-os/frontend/.env.example)
+
+Important backend variable **names** (non-exhaustive):
+
+| Name | Role |
+|------|------|
+| `SECRET_KEY` | JWT / crypto material |
+| `DATABASE_URL` | Async SQLAlchemy URL (`postgresql+asyncpg://…`) |
+| `REDIS_URL` | Rate limiting |
+| `CORS_ORIGINS` | JSON array of allowed origins |
+| `FRONTEND_URL` | Links for verify/reset and Stripe return URLs |
+| `HSTS_ENABLED` / `TRUSTED_PROXY_*` | TLS / proxy identity (see security docs) |
+| `OPENAI_API_KEY` | AI assistant (optional) |
+| `STRIPE_PLATFORM_*`, `STRIPE_*_ENABLED`, `STRIPE_PRICE_*` | Billing / Connect (fail-closed when disabled) |
+
+Root `.gitignore` ignores `.env*` and `.vercel/` at the repo root; nested app `.gitignore` files also ignore env files under `ai-business-os/`.
+
+---
+
+## Tests and CI
+
+### Backend (from `ai-business-os/ai-business-os/backend`)
 
 ```bash
-make dev        # full stack via Docker — docker compose up --build
-make api        # backend only — cd backend && uvicorn app.main:app --reload
-make web        # frontend only — cd frontend && npm run dev
-make migrate    # apply migrations — alembic upgrade head
-make revision m="description"   # generate a migration
-make test       # backend tests — pytest -q
-make lint       # backend ruff + frontend type check
+# Full suite (local; may include baseline failures outside CI’s scoped gate)
+pytest -q
+
+# CI-scoped gate (matches .github/workflows/ci.yml)
+pytest -q tests/security/ tests/test_tenant_isolation.py \
+  tests/test_invoice_payment_summary_resilience.py \
+  tests/test_invoice_schema_columns.py \
+  tests/test_reports_enum_sql.py \
+  tests/test_unhandled_cors_headers.py
+
+ruff check app --ignore F401,F541,F841
 ```
+
+### Frontend (from `ai-business-os/ai-business-os/frontend`)
 
 ```bash
-cd ai-business-os/ai-business-os/frontend && npm test          # frontend tests
-cd ai-business-os/ai-business-os/frontend && npm run build     # production build
-cd ai-business-os/ai-business-os/backend && mypy app           # backend type check
+npm run typecheck
+npm test
+npm run lint
+npm run build
 ```
 
-### Environment configuration
+### CI
 
-Copy `.env.example` to `.env` in the application directory and fill in values locally. Never commit `.env`. Only variable names are listed here.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on `push` to `main` and pull requests:
 
-**Backend**
+- Backend: ruff (selected ignores), `alembic upgrade head`, seed, **scoped** pytest (security + selected regressions)
+- Frontend: `npm ci`, typecheck, test, build
 
-| Variable | Purpose |
-|---|---|
-| `ENVIRONMENT` | `development`, `staging` or `production` |
-| `DEBUG` | Debug mode; rejected at startup in production |
-| `SECRET_KEY` | JWT signing key; minimum length enforced, placeholders rejected in production |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection string for rate-limit counters |
-| `CORS_ORIGINS` | JSON array of allowed origins; wildcards and plaintext HTTP rejected in production |
-| `FRONTEND_URL` | Base URL used to build verification and password-reset links |
-| `RATE_LIMIT_ENABLED` / `RATE_LIMIT_PER_MINUTE` | Rate limiter toggle and default budget |
-| `HSTS_ENABLED` | Emit HSTS when TLS terminates upstream |
-| `TRUSTED_PROXY_MODE` / `TRUSTED_PROXY_NETWORKS` | Whether and from which networks forwarded headers are trusted |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | Token lifetimes |
-| `SENTRY_DSN` | Optional error tracking |
-| `RESEND_API_KEY` / `EMAIL_FROM` | Reserved for email delivery; provider not yet wired |
-| `OPENAI_API_KEY` | Reserved; declared in configuration only, no inference code exists |
-
-**Frontend** — copy `frontend/.env.example` to `frontend/.env` if you need to override the default:
-
-| Variable | Purpose |
-|---|---|
-| `VITE_API_BASE_URL` | API base path; defaults to `/api/v1` through the Vite dev proxy |
-
-Generate a signing key with:
-
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
+**Note:** CI intentionally does **not** run the entire backend pytest suite as a merge gate (documented baseline debt in the workflow comments).
 
 ---
 
-## Architecture Artifacts
+## Database migrations
 
-Three diagrams document the system as implemented.
+- Tool: **Alembic** under `ai-business-os/ai-business-os/backend/migrations`
+- Apply: `alembic upgrade head`
+- Seed permissions catalogue: `python -m app.db.seed`
 
-**System Architecture** — component map across client, frontend, request edge, application and data tiers.
-
-![System Architecture](docs/architecture/system-architecture.png)
-
-**Security Architecture** — the layered controls a request passes through, including an explicit list of controls not implemented.
-
-![Security Architecture](docs/architecture/security-architecture.png)
-
-**Multi-Tenant Request Flow** — one authenticated request traced end to end, showing where each identity becomes authoritative.
-
-![Multi-Tenant Request Flow](docs/architecture/multitenant-request-flow.png)
+Do not invent migration names here; use `alembic history` / `alembic current` locally against your database.
 
 ---
 
-## Screenshots
+## Deployment
 
-The authentication screens run against the live API. The dashboard is interface-complete but renders fixture data rather than a live endpoint.
+Documented **intent** from ops notes and production hostnames used in prior operations (treat live infra as **externally configured**):
 
-**Dashboard — light**
+| Component | Typical host | Evidence in repo |
+|-----------|--------------|------------------|
+| Frontend SPA | Vercel project linked under `.vercel/` (local only; not committed) | Frontend Vite app; ops docs |
+| Backend API | Railway (or similar) running FastAPI | Ops roadmap docs; no IaC in-repo |
+| PostgreSQL / Redis | Managed services attached to backend | Env templates |
+| Stripe | External SaaS | `stripe` SDK + webhook routes |
 
-![Dashboard, light theme](docs/screenshots/dashboard-light.png)
+Distinguish carefully:
 
-**Dashboard — dark**
+- **In repository:** application code, migrations, CI, env **templates**, engineering docs.
+- **Outside repository / unverified here:** live Railway/Vercel variable values, Cloudflare dashboard toggles, production HSTS/proxy CIDRs.
 
-![Dashboard, dark theme](docs/screenshots/dashboard-dark.png)
-
-**Sign-in**
-
-![Sign-in screen](docs/screenshots/sign-in.png)
-
-**Command palette**
-
-![Global capture command palette](docs/screenshots/command-capture.png)
+Ops notes (historical / operational detail): [`ai-business-os/ai-business-os/docs/ops/`](ai-business-os/ai-business-os/docs/ops/).
 
 ---
 
-## Roadmap
+## Known limitations
 
-- [x] Platform foundation and multi-tenant data model
-- [x] Authentication lifecycle with refresh rotation and reuse detection
-- [x] RBAC with database-revalidated authorization
-- [x] Security middleware layer
-- [x] Frontend application shell and design system
-- [x] Test suites and CI pipeline
-- [ ] Dashboard aggregate endpoint replacing fixture data
-- [ ] CRM workflows
-- [ ] Projects and tasks
-- [ ] Finance
-- [ ] HR
-- [ ] Inventory
-- [ ] Documents and reporting
-- [ ] AI capabilities
-- [ ] PostgreSQL row-level security as a second isolation layer
+- **No PostgreSQL RLS** — isolation is application-level + FK constraints ([RLS decision note](ai-business-os/ai-business-os/docs/reports/Part-03.1/RLS-Decision-Note.md); note that some historical paragraphs in that file predate CRM repository adoption — see MULTI_TENANCY.md).
+- **Rate limiting fails open** if Redis raises errors (`app/core/rate_limit.py`).
+- **Stripe and AI** are env-gated; without keys/flags they stay unavailable (fail-closed / fail-soft respectively).
+- **CI scopes** backend tests; full-suite green is not guaranteed by the merge gate alone.
+- **Trusted-proxy / HSTS production settings** are configuration-dependent and must be verified in the live environment.
+- Some engineering reports under `ai-business-os/ai-business-os/docs/reports/` are **point-in-time** and may contradict current code if not updated.
 
 ---
 
-## Project Status
+## Further documentation
 
-NexusOS is an actively developed portfolio and engineering project. The platform foundation — authentication, authorization, tenant isolation, security middleware and the frontend system — is implemented and tested. Several business modules represented in the database schema and in the navigation are still under development and are labelled accordingly throughout this document.
-
-It is not deployed as a commercial product and has no users or customers.
+| Document | Purpose |
+|----------|---------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | End-to-end system architecture |
+| [docs/MULTI_TENANCY.md](docs/MULTI_TENANCY.md) | Tenant isolation design and verification |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security architecture and residual risks |
+| [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) | Module-by-module evidence-based status |
+| [docs/NEXUSOS_MASTER_AUDIT.md](docs/NEXUSOS_MASTER_AUDIT.md) | Master audit (portfolio source of truth) |
+| [docs/PORTFOLIO_UPDATE_PACKAGE.md](docs/PORTFOLIO_UPDATE_PACKAGE.md) | Portfolio text & diagram update package |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [ai-business-os/ai-business-os/docs/](ai-business-os/ai-business-os/docs/) | Engineering reports, product/ops archives |
 
 ---
 
-## Author
+## License / contributing
 
-**Waley El-Nagdi** — [@waley7337](https://github.com/waley7337)
-
-Sole engineer: system architecture, backend, frontend, database design, security engineering, design system, testing and build pipeline.
-
----
-
-## License
-
-No license is currently specified. All rights reserved.
+See repository license and contribution conventions if present. For security vulnerabilities, follow [SECURITY.md](SECURITY.md) (private disclosure).

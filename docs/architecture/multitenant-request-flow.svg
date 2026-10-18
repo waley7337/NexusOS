@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-label="NexusOS multi-tenant request flow">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#7DD3C0"/>
+    </marker>
+    <marker id="arrAmber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#FBBF24"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="980" fill="#0B1220"/>
+
+  <text x="40" y="42" fill="#F1F5F9" font-family="Inter, Helvetica, Arial, sans-serif" font-size="26" font-weight="700">NexusOS  -  Multi-Tenant Request Flow</text>
+  <text x="40" y="68" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14">Authoritative isolation: application-level tenant scoping + relational constraints  |  PostgreSQL RLS not implemented</text>
+
+  <!-- Callout: RLS -->
+  <rect x="40" y="88" width="1520" height="48" rx="6" fill="#1C1917" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="60" y="118" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="700">PostgreSQL RLS not implemented</text>
+  <text x="340" y="118" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14"> -  isolation is app filters + composite FKs, not row-level security policies</text>
+
+  <!-- Sequence participants -->
+  <g font-family="Inter, Helvetica, Arial, sans-serif">
+    <rect x="60" y="160" width="140" height="44" rx="6" fill="#0F1A2E" stroke="#3B82F6" stroke-width="1.5"/>
+    <text x="95" y="188" fill="#60A5FA" font-size="14" font-weight="600">Browser</text>
+
+    <rect x="280" y="160" width="160" height="44" rx="6" fill="#0F1A2E" stroke="#14B8A6" stroke-width="1.5"/>
+    <text x="310" y="188" fill="#2DD4BF" font-size="14" font-weight="600">FastAPI</text>
+
+    <rect x="520" y="160" width="200" height="44" rx="6" fill="#0F1A2E" stroke="#A78BFA" stroke-width="1.5"/>
+    <text x="545" y="188" fill="#C4B5FD" font-size="14" font-weight="600">dependencies/auth</text>
+
+    <rect x="800" y="160" width="160" height="44" rx="6" fill="#0F1A2E" stroke="#34D399" stroke-width="1.5"/>
+    <text x="825" y="188" fill="#34D399" font-size="14" font-weight="600">PostgreSQL</text>
+
+    <rect x="1040" y="160" width="180" height="44" rx="6" fill="#0F1A2E" stroke="#38BDF8" stroke-width="1.5"/>
+    <text x="1070" y="188" fill="#38BDF8" font-size="14" font-weight="600">Repository</text>
+
+    <rect x="1300" y="160" width="160" height="44" rx="6" fill="#0F1A2E" stroke="#94A3B8" stroke-width="1.5"/>
+    <text x="1335" y="188" fill="#CBD5E1" font-size="14" font-weight="600">Service</text>
+  </g>
+
+  <!-- Lifelines -->
+  <line x1="130" y1="204" x2="130" y2="820" stroke="#1E293B" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="360" y1="204" x2="360" y2="820" stroke="#1E293B" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="620" y1="204" x2="620" y2="820" stroke="#1E293B" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="880" y1="204" x2="880" y2="820" stroke="#1E293B" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="1130" y1="204" x2="1130" y2="820" stroke="#1E293B" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="1380" y1="204" x2="1380" y2="820" stroke="#1E293B" stroke-width="1.5" stroke-dasharray="4 4"/>
+
+  <!-- Step 1: JWT -->
+  <text x="40" y="250" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">1</text>
+  <line x1="130" y1="245" x2="360" y2="245" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="150" y="218" width="190" height="36" rx="4" fill="#111827" stroke="#334155"/>
+  <text x="160" y="241" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">HTTP + Bearer access JWT</text>
+
+  <!-- Step 2: JWT validate -->
+  <text x="40" y="310" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">2</text>
+  <line x1="360" y1="305" x2="620" y2="305" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="380" y="278" width="220" height="36" rx="4" fill="#111827" stroke="#334155"/>
+  <text x="390" y="301" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">get_current_user  |  decode JWT</text>
+
+  <!-- Step 3: Load from DB -->
+  <text x="40" y="380" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">3</text>
+  <line x1="620" y1="375" x2="880" y2="375" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="640" y="338" width="300" height="55" rx="4" fill="#0F1A2E" stroke="#34D399" stroke-width="1.5"/>
+  <text x="650" y="360" fill="#34D399" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">Load user / company / roles</text>
+  <text x="650" y="380" fill="#CBD5E1" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">from DB (get_current_active_user)</text>
+
+  <!-- Step 4: company_id from DB -->
+  <text x="40" y="455" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">4</text>
+  <line x1="880" y1="450" x2="620" y2="450" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="640" y="423" width="320" height="40" rx="4" fill="#0F1A2E" stroke="#FBBF24" stroke-width="1.5"/>
+  <text x="650" y="448" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">company_id from DB row  -  not client field</text>
+
+  <!-- Step 5: require_permission -->
+  <text x="40" y="525" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">5</text>
+  <line x1="360" y1="520" x2="620" y2="520" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="380" y="493" width="280" height="40" rx="4" fill="#111827" stroke="#A78BFA" stroke-width="1.5"/>
+  <text x="390" y="518" fill="#C4B5FD" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="600">require_permission (AND grants)</text>
+
+  <!-- Deny path note -->
+  <text x="380" y="555" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">missing grant ' 403   |   inactive user/company ' 401</text>
+
+  <!-- Step 6: Service -->
+  <text x="40" y="600" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">6</text>
+  <line x1="360" y1="595" x2="1380" y2="595" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="900" y="568" width="280" height="36" rx="4" fill="#111827" stroke="#334155"/>
+  <text x="910" y="591" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Handler ' service with CurrentUser</text>
+
+  <!-- Step 7: Repository WHERE -->
+  <text x="40" y="670" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">7</text>
+  <line x1="1380" y1="665" x2="1130" y2="665" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="1145" y="628" width="300" height="55" rx="4" fill="#0F1A2E" stroke="#38BDF8" stroke-width="1.5"/>
+  <text x="1155" y="650" fill="#38BDF8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">Repository WHERE company_id</text>
+  <text x="1155" y="670" fill="#CBD5E1" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">= trusted CurrentUser.company_id</text>
+
+  <!-- Step 8: PostgreSQL composite FKs -->
+  <text x="40" y="745" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">8</text>
+  <line x1="1130" y1="740" x2="880" y2="740" stroke="#7DD3C0" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="700" y="703" width="360" height="55" rx="4" fill="#0F1A2E" stroke="#34D399" stroke-width="1.5"/>
+  <text x="710" y="725" fill="#34D399" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">PostgreSQL composite FKs</text>
+  <text x="710" y="745" fill="#CBD5E1" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Referential integrity across tenant columns</text>
+
+  <!-- Response -->
+  <text x="40" y="810" fill="#64748B" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">9</text>
+  <line x1="880" y1="805" x2="130" y2="805" stroke="#64748B" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="300" y="778" width="280" height="36" rx="4" fill="#111827" stroke="#334155"/>
+  <text x="310" y="801" fill="#94A3B8" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Uniform JSON envelope response</text>
+
+  <!-- Bottom panels -->
+  <rect x="40" y="850" width="740" height="100" rx="8" fill="#0F1A2E" stroke="#334155" stroke-width="1.5"/>
+  <text x="56" y="878" fill="#7DD3C0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">What is enforced</text>
+  <text x="56" y="902" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Server-derived company_id  |  BaseRepository fail-closed if missing</text>
+  <text x="56" y="924" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Tenant-scoped reads/writes  |  composite FKs  |  deny-by-default permissions</text>
+
+  <rect x="800" y="850" width="760" height="100" rx="8" fill="#1C1917" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="816" y="878" fill="#FBBF24" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="700">Residual risk</text>
+  <text x="816" y="902" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Webhook tenant mapping is ops-sensitive (signature OK ` tenant correctness)</text>
+  <text x="816" y="924" fill="#E2E8F0" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">DB credential compromise bypasses app filters  -  RLS deferred</text>
+</svg>

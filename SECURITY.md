@@ -1,24 +1,35 @@
 # NexusOS Security Policy
 
+## Security architecture
+
+For the technical description of authentication, authorization, tenant isolation, rate limiting, headers, Stripe webhook verification, and residual risks, see:
+
+**[docs/SECURITY.md](docs/SECURITY.md)**
+
+Related:
+
+- [docs/MULTI_TENANCY.md](docs/MULTI_TENANCY.md)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
 ## Supported Versions
 
-NexusOS is currently under active development.
+NexusOS is under active development.
 
-Security fixes are applied to the latest development branch and future production releases.
+Security fixes are applied to the latest `main` branch and subsequent releases.
 
 | Version | Supported |
 |----------|-----------|
-| Main Development Branch | ✅ |
-| Older Development Branches | ❌ |
+| `main` | Yes |
+| Older branches | No guarantee |
 
 ## Reporting a Vulnerability
 
-If you believe you have discovered a security vulnerability in NexusOS, please do **not** create a public GitHub issue.
+If you believe you have discovered a security vulnerability, please **do not** create a public GitHub issue.
 
-Instead, report it privately by contacting:
+Prefer:
 
-- GitHub Security Advisories (preferred once enabled)
-- Email: your security contact address (when available)
+- GitHub Security Advisories (when enabled on the repository)
+- A private contact channel designated by the maintainers
 
 Please include:
 
@@ -29,36 +40,28 @@ Please include:
 
 ## Response Process
 
-Every report will be:
+Reports should be:
 
-1. Acknowledged.
-2. Reproduced.
-3. Assessed for severity.
-4. Fixed.
-5. Verified.
-6. Documented.
-7. Released in the next security update.
+1. Acknowledged
+2. Reproduced
+3. Assessed for severity
+4. Fixed
+5. Verified
+6. Documented
+7. Released in an appropriate update
 
-## Scope
+## Scope (examples)
 
-Examples include:
-
-- Authentication
-- Authorization
-- Multi-tenancy
-- RBAC
-- Session management
-- JWT
-- API security
-- Trusted proxy handling
-- Rate limiting
-- Security headers
-- Database isolation
-- Input validation
+- Authentication and session management
+- Authorization / RBAC
+- Multi-tenant data isolation
+- JWT handling
+- API security (CORS, headers, rate limiting)
+- Trusted-proxy handling
+- Webhook signature validation
+- Input validation and mass assignment
 - Dependency vulnerabilities
 
 ## Disclosure Policy
 
-Please allow adequate time for investigation and remediation before publicly disclosing any vulnerability.
-
-Responsible disclosure helps protect users and the project.
+Please allow adequate time for investigation and remediation before public disclosure.

@@ -1,0 +1,7 @@
+# Local environment overrides (keep templates)
+.env
+.env.*
+!.env.example
+
+# Vercel CLI project link metadata
+.vercel/
