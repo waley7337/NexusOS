@@ -1,0 +1,34 @@
+/* Portfolio-only additions. Everything else — tokens, surfaces, the space
+   field, the shell frame — comes from NexusOS globals.css. */
+
+.portfolio-main {
+  scroll-behavior: smooth;
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-main { scroll-behavior: auto; }
+}
+
+/* Ambient network behind the scrolling content (see NeuralBackground).
+   isolation contains the scanlines' z-index:6 inside this layer, so it sits
+   above the network but never above the content painted after it. */
+.neural-background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+.neural-background-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.scanlines{position:absolute;inset:0;pointer-events:none;z-index:6;background:repeating-linear-gradient(to bottom,transparent,transparent 3px,rgba(0,0,0,.07) 3px,rgba(0,0,0,.07) 4px);opacity:.35}
+
+/* The shell sits on the dark ladder; the body behind the frame matches it
+   so overscroll never flashes a lighter colour. */
+body { background-color: hsl(var(--surface-0)); }
